@@ -1,0 +1,24 @@
+<project name="server" default="jar" basedir=".">
+
+  <target name="clean">
+    <delete dir="${basedir}/build" />
+  </target>
+
+  <target name="compile">
+
+    <mkdir dir="${basedir}/build/classes"/>
+
+    <javac destdir="${basedir}/build/classes" debug="true">
+      <src path="${basedir}/src"/>
+      <include name="**/*.java" />
+    </javac>
+  </target>
+
+  <target name="jar" depends="compile">
+    <jar destfile="${basedir}/build/dbms.jar">
+      <fileset dir="${basedir}/build/classes"
+               includes="**/*.class" />
+    </jar>
+  </target>
+
+</project>
