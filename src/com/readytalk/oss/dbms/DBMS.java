@@ -307,10 +307,10 @@ public interface DBMS {
    *
    * <ul><li>new tuples which either appear in the second revision but
    * not the first or which have changed from the first to the
-   * second, and</li>
+   * second (QueryResult.added()), and</li>
    *
    * <li>obsolete tuples which appear in the first but not the
-   * second.</li></ul>
+   * second (QueryResult.removed()).</li></ul>
    *
    * Note that traditional SQL SELECT query semantics may be achieved
    * by specifying an empty revision as the first parameter and the
