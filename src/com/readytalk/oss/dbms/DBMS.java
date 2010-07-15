@@ -300,10 +300,21 @@ public interface DBMS {
   /**
    * Executes the specified query and returns a diff which represents
    * the changes between the first database revision and the second
-   * concerning that query.  The diff is a QueryResult from which the
-   * list of new or updated result rows are available via
-   * QueryResult.added() and the list of deleted or obsolete result
-   * row are available via QueryResult.removed().
+   * concerning that query.
+   *
+   * The result is two sets of tuples satisfying the query
+   * constraints, including
+   *
+   * <ul><li>new tuples which either appear in the second revision but
+   * not the first or which have changed from the first to the
+   * second, and</li>
+   *
+   * <li>obsolete tuples which appear in the first but not the
+   * second.</li></ul>
+   *
+   * Note that traditional SQL SELECT query semantics may be achieved
+   * by specifying an empty revision as the first parameter and the
+   * database to be queried as the second.
    */
   public QueryResult diff(Database a,
                           Database b,
