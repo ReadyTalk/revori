@@ -21,4 +21,12 @@
     </jar>
   </target>
 
+  <target name="javadoc">
+    <javadoc destdir="${basedir}/build/api">
+      <packageset dir="${basedir}/src">
+        <include name="**"/>
+      </packageset>
+    </javadoc>
+  </target>
+
 </project>
