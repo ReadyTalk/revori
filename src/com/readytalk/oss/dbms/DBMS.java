@@ -13,13 +13,14 @@ import java.io.OutputStream;
  * derived by applying patches composed of inserts, updates and
  * deletes.  It provides methods to do the following:
  *
- * <ul><li>Define a new, empty database revision by supplying a list
- * of tables, each of which has a collection of columns and a primary
- * key defined as a subset of those columns
+ * <ul><li>Define a set of tables, each of which has a collection of
+ * columns and a primary key defined as a subset of those columns
  *
  *   <ul><li>The identity of a row is defined by its primary key, and
  *   this is what we use when comparing rows while calculating diffs
  *   and merges</li></ul></li>
+ *
+ * <li>Define a new, empty database revision</li>
  *
  * <li>Create new revisions by defining and applying SQL-style
  * inserts, updates, and deletes</li>
@@ -27,7 +28,7 @@ import java.io.OutputStream;
  * <li>Calculate diffs between revisions and serialize them for
  * replication and persistence
  *
- *   <ul><li>To generate a snapshot of an entire database, calculate a
+ *   <ul><li>To generate a snapshot of an entire revision, calculate a
  *   diff between the empty revision and the revision of
  *   interest</li></ul></li>
  *
@@ -36,7 +37,7 @@ import java.io.OutputStream;
  *
  * <li>Define queries using SQL-style relational semantics</li>
  *
- * <li>Execute queries by supplying two database revisions
+ * <li>Execute queries by supplying two revisions
  *
  *   <ul><li>The result is two sets of tuples satisfying the query
  *   constraints:
@@ -50,19 +51,63 @@ import java.io.OutputStream;
  *
  *   <li>Note that traditional query semantics may be achieved by
  *   specifying an empty revision as the first parameter and the
- *   database to be queried as the second</li></ul></li></ul>
+ *   revision to be queried as the second</li></ul></li></ul>
  */
 public interface DBMS {
   /**
-   * These are the possible column types which may be specified when
-   * defining a column.
+   * These are the possible types which may be specified when defining
+   * a column.
    */
   public enum ColumnType {
-    Integer32,   // int
-      Integer64, // long
-      String,    // String
-      ByteArray, // instance of DBMS.ByteArray (see below)
-      Object;    // any object instance of any type
+    /**
+     * Indicates a column capable of storing instances of
+     * java.lang.Integer.
+     */
+    Integer32,
+
+      /**
+       * Indicates a column capable of storing instances of
+       * java.lang.Long.
+       */
+      Integer64,
+
+      /**
+       * Indicates a column capable of storing instances of
+       * java.lang.String.
+       */
+      String,
+
+      /**
+       * Indicates a column capable of storing instances of
+       * com.readytalk.oss.dbms.DBMS.ByteArray.
+       */
+      ByteArray,
+
+      /**
+       * Indicates a column capable of storing instances of
+       * java.lang.Object.
+       */
+      Object;
+  }
+
+  /**
+   * These are the possible types which may be specified when defining
+   * a join.
+   */
+  public enum JoinType {
+    /**
+     * Indicates a left outer join which matches each row in the left
+     * table to a row in the right table (or null if there is no
+     * corresponding row).
+     */
+    LeftOuter,
+
+      /**
+       * Indicates an inner join which matches each row in the first
+       * table to a row in the second (excluding rows which have no
+       * match) according to the specified test.
+       */
+      Inner;
   }
 
   /**
@@ -76,35 +121,32 @@ public interface DBMS {
   }
 
   /**
-   * Opaque type representing a column identifier for use in data
-   * definition and later to identify a column of interest in a query
-   * or update.
+   * Opaque type representing a column for use in data definition and
+   * later to identify a column of interest in a query or update.
    */
   public interface Column { }
 
   /**
-   * Opaque type representing a table identifier for use in data
-   * definition and later to identify a column of interest in a query
-   * or update.
+   * Opaque type representing a table for use in data definition and
+   * later to identify a column of interest in a query or update.
    */
   public interface Table { }
 
   /**
-   * Opaque type representing an immutable database revision.
+   * Opaque type representing a set of tables.
    */
   public interface Database { }
+
+  /**
+   * Opaque type representing an immutable database revision.
+   */
+  public interface Revision { }
 
   /**
    * Opaque type representing an expression (e.g. constant, column
    * reference, or query predicate) for use in queries and updates.
    */
   public interface Expression { }
-
-  /**
-   * Opaque type representing an expression that will evaluate to a
-   * boolean value.
-   */
-  public interface BooleanExpression extends Expression { }
 
   /**
    * Opaque type representing a source (e.g. table reference or join)
@@ -123,7 +165,7 @@ public interface DBMS {
 
   /**
    * Opaque type representing a specific reference to a table.  A
-   * query may make multiple references to the same tablw (e.g. when
+   * query may make multiple references to the same table (e.g. when
    * joining a table with itself), in which case it is useful to
    * represent those references as separate objects for
    * disambiguation.
@@ -152,8 +194,8 @@ public interface DBMS {
 
   /**
    * Opaque type representing a series of inserts, updates, and/or
-   * deletes which may be applied to a database revision to produce a
-   * new revision.
+   * deletes which may be applied to a revision to produce a new
+   * revision.
    */
   public interface Patch { }
 
@@ -167,9 +209,9 @@ public interface DBMS {
 
   /**
    * Two lists of rows produced by the execution of a query diff,
-   * consisting of any rows added or updated and any removed.  See
-   * {@link #diff(Database, Database, Query) diff(Database, Database,
-   * Query)} for details.
+   * consisting of any rows added or updated and any removed or made
+   * obsolete, respectively.  See {@link #diff(Revision, Revision,
+   * Query) diff(Revision, Revision, Query)} for details.
    */
   public interface QueryResult {
     public ResultIterator added();
@@ -191,38 +233,37 @@ public interface DBMS {
    */
   public interface ConflictResolver {
     public Row resolveConflict(Table table,
-                               Database base,
+                               Revision base,
                                Row baseRow,
-                               Database forkA,
+                               Revision forkA,
                                Row forkARow,
-                               Database forkB,
+                               Revision forkB,
                                Row forkBRow);
   }
 
   /**
-   * Defines a column identifier which is associated with the
-   * specified type.  The type specified here will be used for dynamic
-   * type checking whenever a value is inserted or updated in this
-   * column of a table.
+   * Defines a column which is associated with the specified type.
+   * The type specified here will be used for dynamic type checking
+   * whenever a value is inserted or updated in this column of a
+   * table.
    */
   public Column column(ColumnType type);
 
   /**
-   * Defines a table identifier which is associated with the specified
-   * set of columns and a primary key.  The primary key is defined as
-   * an ordered list of one or more columns where the order defines
-   * the indexing order as in an SQL DBMS.  The combination of columns
-   * in the primary key determine the unique identity of each row in
-   * the table.
+   * Defines a table which is associated with the specified set of
+   * columns and a primary key.  The primary key is defined as an
+   * ordered list of one or more columns where the order defines the
+   * indexing order as in an SQL DBMS.  The combination of columns in
+   * the primary key determine the unique identity of each row in the
+   * table.
    */
   public Table table(Set<Column> columns,
                      List<Column> primaryKey);
 
   /**
-   * Defines an empty database revision which is associated with the
-   * specified set of table identifiers.
+   * Defines an empty database revision.
    */
-  public Database database(Set<Table> tables);
+  public Revision revision();
 
   /**
    * Defines a table reference which may be used to unambigously refer
@@ -259,36 +300,27 @@ public interface DBMS {
    * Defines a boolean expression which, when evaluated, answers the
    * question whether the parameter expressions are equal.
    */
-  public BooleanExpression equal(Expression a,
-                                 Expression b);
+  public Expression equal(Expression a,
+                          Expression b);
 
   /**
-   * Defines a left outer join which matches each row in the left
-   * table to a row in the right table (or null if there is no
-   * corresponding row) according to the specified criterium.
+   * Defines a join which matches each row in the left table to a row
+   * in the right table according to the specified join type and test.
    */
-  public Source leftJoin(TableReference left,
-                         TableReference right,
-                         BooleanExpression criterium);
-
-  /**
-   * Defines a left outer join which matches each row in the first
-   * table to a row in the second (excluding rows which have no match)
-   * according to the specified criterium.
-   */
-  public Source innerJoin(TableReference a,
-                          TableReference b,
-                          BooleanExpression criterium);
+  public Source join(JoinType type,
+                     TableReference left,
+                     TableReference right,
+                     Expression test);
 
   /**
    * Defines a query template (AKA prepared statement) with the
    * specified expressions to be evaluated, the source from which any
    * column references in the expression list should be resoved, and
-   * the criterium for selecting from that source.
+   * the test for selecting from that source.
    */
   public QueryTemplate queryTemplate(List<Expression> expressions,
                                      Source source,
-                                     BooleanExpression criterium);
+                                     Expression test);
 
   /**
    * Defines a query by matching a template with any parameter values
@@ -299,8 +331,8 @@ public interface DBMS {
 
   /**
    * Executes the specified query and returns a diff which represents
-   * the changes between the first database revision and the second
-   * concerning that query.
+   * the changes between the first revision and the second concerning
+   * that query.
    *
    * The result is two sets of tuples satisfying the query
    * constraints, including
@@ -314,10 +346,10 @@ public interface DBMS {
    *
    * Note that traditional SQL SELECT query semantics may be achieved
    * by specifying an empty revision as the first parameter and the
-   * database to be queried as the second.
+   * revision to be queried as the second.
    */
-  public QueryResult diff(Database a,
-                          Database b,
+  public QueryResult diff(Revision a,
+                          Revision b,
                           Query query);
 
   /**
@@ -332,20 +364,20 @@ public interface DBMS {
   /**
    * Defines a patch template (AKA prepared statement) which
    * represents an update operation on the specified table to be
-   * applied to rows satisfying the specified criterium.  The values
+   * applied to rows satisfying the specified test.  The values
    * to be inserted are specified as a map of columns to expressions.
    */
   public PatchTemplate updateTemplate(Table table,
-                                      BooleanExpression criterium,
+                                      Expression test,
                                       Map<Column, Expression> values);
 
   /**
    * Defines a patch template (AKA prepared statement) which
    * represents a delete operation on the specified table to be
-   * applied to rows satisfying the specified criterium.
+   * applied to rows satisfying the specified test.
    */
   public PatchTemplate deleteTemplate(Table table,
-                                      BooleanExpression constraint);
+                                      Expression test);
 
   /**
    * Defines a patch by matching a template with any parameter values
@@ -358,26 +390,26 @@ public interface DBMS {
    * Defines a patch which combines the effect of several patches
    * applied in sequence.
    */
-  public Patch sequence(Patch ... sequence);
+  public Patch sequence(List<Patch> sequence);
 
   /**
-   * Creates a new database revision which is the result of applying
-   * the specified patch to the specified revision.
+   * Creates a new revision which is the result of applying the
+   * specified patch to the specified revision.
    **/
-  public Database apply(Database database,
+  public Revision apply(Revision revision,
                         Patch patch);
 
   /**
    * Calculates a patch which represents the changes from the first
-   * database revision specified to the second.
+   * revision specified to the second.
    **/
-  public Patch diff(Database a,
-                    Database b);
+  public Patch diff(Revision a,
+                    Revision b);
 
   /**
-   * Creates a new database revision which merges the changes
-   * introduced in forkA relative to base with the changes introduced
-   * in forkB relative to base.  The result is determined as follows:
+   * Creates a new revision which merges the changes introduced in
+   * forkA relative to base with the changes introduced in forkB
+   * relative to base.  The result is determined as follows:
    *
    * <ul><li>If a row was inserted into only one of the forks, or if
    * it was inserted into both with the same values, include the
@@ -388,7 +420,7 @@ public interface DBMS {
    * include an insert of that row in the result</li>
    *
    * <li>If a row was updated in one fork but not the other, include
-   * the insert in the result</li>
+   * the update in the result</li>
    *
    * <li>If a row was updated in both forks such that no values
    * conflict, create a new row composed of the changed values from
@@ -402,9 +434,9 @@ public interface DBMS {
    * <li>If a row was updated in one fork but deleted in another,
    * include the delete in the result</li></ul>
    */
-  public Database merge(Database base,
-                        Database forkA,
-                        Database forkB,
+  public Revision merge(Revision base,
+                        Revision forkA,
+                        Revision forkB,
                         ConflictResolver conflictResolver);
 
   /**
