@@ -24,7 +24,7 @@
   <target name="javadoc">
     <javadoc destdir="${basedir}/build/api">
       <packageset dir="${basedir}/src">
-        <include name="**"/>
+        <include name="com/readytalk/oss/dbms"/>
       </packageset>
     </javadoc>
   </target>
