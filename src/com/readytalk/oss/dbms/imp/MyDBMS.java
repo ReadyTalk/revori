@@ -16,7 +16,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class MyDBMS implements DBMS {
   private static final boolean Debug = true;
+  private static final int TableDepth = 1;
+  private static final int IndexStartDepth = 2;
+  private static final int MaxIndexDepth = 8;
+  private static final int MaxDepth = IndexStartDepth + MaxIndexDepth;
   private static final int NodeStackSize = 64;
+
   private static final Comparable Undefined = new Comparable() {
       public int compareTo(Object o) {
         throw new UnsupportedOperationException();
@@ -46,16 +51,6 @@ public class MyDBMS implements DBMS {
 
   private static int nextId() {
     return nextId.getAndIncrement();
-  }
-
-  private static int max(int ... numbers) {
-    int max = Integer.MIN_VALUE;
-    for (int n: numbers) {
-      if (n > max) {
-        max = n;
-      }
-    }
-    return max;
   }
 
   private enum BoundType {
@@ -120,10 +115,6 @@ public class MyDBMS implements DBMS {
       this.next = basis;
       basis.previous = this;
     }
-  }
-
-  private static NodeStack getStack() {
-    return new NodeStack();
   }
 
   private static void push(NodeStack s, Node n) {
@@ -233,7 +224,6 @@ public class MyDBMS implements DBMS {
   private static class MyRevision implements Revision {
     public final Object token;
     public Node root;
-    public int maxDepth;
 
     public MyRevision(Object token, Node root) {
       this.token = token;
@@ -1922,11 +1912,11 @@ public class MyDBMS implements DBMS {
 
             case Unchanged:
               if (rightBaseStack == null) {
-                rightBaseStack = getStack();
+                rightBaseStack = new NodeStack();
               }
 
               if (rightForkStack == null) {
-                rightForkStack = getStack();
+                rightForkStack = new NodeStack();
               }
 
               rightIterator = right.iterator
@@ -1936,7 +1926,7 @@ public class MyDBMS implements DBMS {
 
             case Inserted:
               if (rightForkStack == null) {
-                rightForkStack = getStack();
+                rightForkStack = new NodeStack();
               }
 
               rightIterator = right.iterator
@@ -1946,7 +1936,7 @@ public class MyDBMS implements DBMS {
 
             case Deleted:
               if (rightForkStack == null) {
-                rightForkStack = getStack();
+                rightForkStack = new NodeStack();
               }
 
               rightIterator = right.iterator
@@ -2044,18 +2034,6 @@ public class MyDBMS implements DBMS {
     }
   }
 
-  private static class MyQuery implements Query {
-    public final MyQueryTemplate template;
-    public final Object[] parameters;
-
-    public MyQuery(MyQueryTemplate template,
-                   Object[] parameters)
-    {
-      this.template = template;
-      this.parameters = parameters;
-    }
-  }
-
   private interface SourceVisitor {
     public void visit(Source source);
   }
@@ -2089,28 +2067,29 @@ public class MyDBMS implements DBMS {
 
     public MyQueryResult(MyRevision base,
                          MyRevision fork,
-                         MyQuery query)
+                         MyQueryTemplate template,
+                         Object[] parameters)
     {
       if (base == fork) {
         expressions = null;
         iterator = null;
       } else {
         ChangeFinder finder = new ChangeFinder(base, fork);
-        MySource source = query.template.source;
+        MySource source = template.source;
         source.visit(finder);
 
         if (finder.foundChanged) {
-          expressions = new ArrayList(query.template.expressions.size());
+          expressions = new ArrayList(template.expressions.size());
 
-          ExpressionContext context = new ExpressionContext(query.parameters);
+          ExpressionContext context = new ExpressionContext(parameters);
 
-          for (MyExpression e: query.template.expressions) {
+          for (MyExpression e: template.expressions) {
             expressions.add(e.makeLiveExpression(context));
           }
 
           iterator = source.iterator
-            (base, getStack(), fork, getStack(),
-             query.template.test.makeLiveExpression(context), context, false);
+            (base, new NodeStack(), fork, new NodeStack(),
+             template.test.makeLiveExpression(context), context, false);
         } else {
           expressions = null;
           iterator = null;
@@ -2143,16 +2122,14 @@ public class MyDBMS implements DBMS {
       this.parameterCount = parameterCount;
     }
 
-    public abstract MyRevision apply(Object token,
-                                     Object[] parameters,
-                                     MyRevision base);
+    public abstract void apply(MyPatchContext context,
+                               Object[] parameters);
   }
 
   // todo: teach this about updating multiple indexes:
-  private static class UpdateContext {
-    public final Object token;
+  private static class MyPatchContext implements PatchContext {
+    public Object token;
     public final NodeStack stack;
-    public final int size;
     public final Comparable[] keys;
     public final Node[] blazedRoots;
     public final Node[] blazedLeaves;
@@ -2160,19 +2137,17 @@ public class MyDBMS implements DBMS {
     public final BlazeResult blazeResult = new BlazeResult();
     public MyRevision result;
 
-    public UpdateContext(Object token,
-                         MyRevision result,
-                         NodeStack stack,
-                         int size)
+    public MyPatchContext(Object token,
+                          MyRevision result,
+                          NodeStack stack)
     {
       this.token = token;
       this.result = result;
       this.stack = stack;
-      this.size = size;
-      keys = new Comparable[size];
-      blazedRoots = new Node[size];
-      blazedLeaves = new Node[size];
-      found = new Node[size];
+      keys = new Comparable[MaxDepth];
+      blazedRoots = new Node[MaxDepth];
+      blazedLeaves = new Node[MaxDepth];
+      found = new Node[MaxDepth];
     }
 
     public void setKey(int index, Comparable key) {
@@ -2180,9 +2155,7 @@ public class MyDBMS implements DBMS {
         keys[index] = key;
         found[index] = null;
         blazedLeaves[index] = null;
-        if (index + 1 < size) {
-          blazedRoots[index + 1] = null;          
-        }
+        blazedRoots[index + 1] = null;          
       }
     }
 
@@ -2264,10 +2237,6 @@ public class MyDBMS implements DBMS {
             result = getRevision(token, result, root);
           }
 
-          if (size > result.maxDepth) {
-            result.maxDepth = size;
-          }
-
           blazedRoots[0] = root;
           blazedRoots[1] = (Node) blazeResult.node.value;
           return blazeResult.node;
@@ -2289,26 +2258,31 @@ public class MyDBMS implements DBMS {
 
   private static class InsertTemplate extends MyPatchTemplate {
     public final MyTable table;
-    public final Map<MyColumn, MyExpression> values;
+    public final List<MyColumn> columns;
+    public final List<MyExpression> values;
 
     public InsertTemplate(int parameterCount,
                           MyTable table,
-                          Map<MyColumn, MyExpression> values)
+                          List<MyColumn> columns,
+                          List<MyExpression> values)
     {
       super(parameterCount);
       this.table = table;
+      this.columns = columns;
       this.values = values;
     }
 
-    public MyRevision apply(Object token,
-                            Object[] parameters,
-                            MyRevision base)
+    public void apply(MyPatchContext context,
+                      Object[] parameters)
     {
-      ExpressionContext context = new ExpressionContext(parameters);
+      ExpressionContext expressionContext = new ExpressionContext(parameters);
 
       Map<MyColumn, LiveExpression> map = new TreeMap();
-      for (Map.Entry<MyColumn, MyExpression> e: values.entrySet()) {
-        map.put(e.getKey(), e.getValue().makeLiveExpression(context));
+      Iterator<MyColumn> columnIterator = columns.iterator();
+      Iterator<MyExpression> valueIterator = values.iterator();
+      while (columnIterator.hasNext()) {
+        map.put(columnIterator.next(),
+                valueIterator.next().makeLiveExpression(expressionContext));
       }
       
       Object[] tuple = new Object[table.columns.size()];
@@ -2318,24 +2292,21 @@ public class MyDBMS implements DBMS {
         }
       }
 
-      UpdateContext updateContext = new UpdateContext
-        (token, base, getStack(), table.primaryKey.columns.size() + 2);
-
-      updateContext.setKey(0, table);
-      updateContext.setKey(1, table.primaryKey);
+      context.setKey(0, table);
+      context.setKey(1, table.primaryKey);
 
       List<MyColumn> columns = table.primaryKey.columns;
       int i;
       for (i = 0; i < columns.size() - 1; ++i) {
-        updateContext.setKey
-          (i + 2, (Comparable) map.get(columns.get(i)).evaluate());
+        context.setKey
+          (i + IndexStartDepth,
+           (Comparable) map.get(columns.get(i)).evaluate());
       }
 
       // todo: throw duplicate key exception if applicable
-      updateContext.insertOrUpdate
-        (i + 2, (Comparable) map.get(columns.get(i)).evaluate(), tuple);
-
-      return updateContext.result;
+      context.insertOrUpdate
+        (i + IndexStartDepth,
+         (Comparable) map.get(columns.get(i)).evaluate(), tuple);
     }
   }
 
@@ -2354,52 +2325,54 @@ public class MyDBMS implements DBMS {
   private static class UpdateTemplate extends MyPatchTemplate {
     public final MyTableReference tableReference;
     public final MyExpression test;
-    public final Map<MyColumn, MyExpression> values;
+    public final List<MyColumn> columns;
+    public final List<MyExpression> values;
 
     public UpdateTemplate(int parameterCount,
                           MyTableReference tableReference,
                           MyExpression test,
-                          Map<MyColumn, MyExpression> values)
+                          List<MyColumn> columns,
+                          List<MyExpression> values)
     {
       super(parameterCount);
       this.tableReference = tableReference;
       this.test = test;
+      this.columns = columns;
       this.values = values;
     }
 
-    public MyRevision apply(Object token,
-                            Object[] parameters,
-                            MyRevision base)
+    public void apply(MyPatchContext context,
+                      Object[] parameters)
     {
-      ExpressionContext context = new ExpressionContext(parameters);
+      ExpressionContext expressionContext = new ExpressionContext(parameters);
 
       LiveExpression[] template = new LiveExpression
         [tableReference.table.columns.size()];
+
       for (int i = 0; i < template.length; ++i) {
         template[i] = UndefinedExpression;
       }
-      for (Map.Entry<MyColumn, MyExpression> e: values.entrySet()) {
-        template[columnIndex(tableReference.table, e.getKey())]
-          = e.getValue().makeLiveExpression(context);
+      
+      Iterator<MyColumn> columnIterator = columns.iterator();
+      Iterator<MyExpression> valueIterator = values.iterator();
+      while (columnIterator.hasNext()) {
+        template[columnIndex(tableReference.table, columnIterator.next())]
+          = valueIterator.next().makeLiveExpression(expressionContext);
       }
 
       List<MyColumn> keyColumns = tableReference.table.primaryKey.columns;
       LiveExpression[] key = new LiveExpression[keyColumns.size()];
       for (int i = 0; i < key.length; ++i) {
         key[i] = findColumnReference
-          (context, tableReference, keyColumns.get(i));
+          (expressionContext, tableReference, keyColumns.get(i));
       }
 
       MyTableReference.MySourceIterator iterator = tableReference.iterator
-        (EmptyRevision, null, base, getStack(),
-         test.makeLiveExpression(context), context, false);
+        (EmptyRevision, null, context.result, new NodeStack(),
+         test.makeLiveExpression(expressionContext), expressionContext, false);
 
-      UpdateContext updateContext = new UpdateContext
-        (token, base, getStack(),
-         tableReference.table.primaryKey.columns.size() + 2);
-
-      updateContext.setKey(0, tableReference.table);
-      updateContext.setKey(1, tableReference.table.primaryKey);
+      context.setKey(0, tableReference.table);
+      context.setKey(1, tableReference.table.primaryKey);
 
       Object[] tuple = new Object[template.length];
 
@@ -2407,7 +2380,7 @@ public class MyDBMS implements DBMS {
         ResultType type = iterator.nextRow();
         switch (type) {
         case End:
-          return updateContext.result;
+          return;
       
         case Inserted: {
           Object[] original = (Object[]) iterator.pair.fork.value;
@@ -2422,12 +2395,13 @@ public class MyDBMS implements DBMS {
 
           int i;
           for (i = 0; i < key.length - 1; ++i) {
-            updateContext.setKey(i + 2, (Comparable) key[i].evaluate());
+            context.setKey(i + IndexStartDepth,
+                                 (Comparable) key[i].evaluate());
           }
 
           // todo: throw duplicate key exception if applicable
-          updateContext.insertOrUpdate
-            (i + 2, (Comparable) key[i].evaluate(), tuple);
+          context.insertOrUpdate
+            (i + IndexStartDepth, (Comparable) key[i].evaluate(), tuple);
         } break;
 
         default:
@@ -2450,69 +2424,46 @@ public class MyDBMS implements DBMS {
       this.test = test;
     }
 
-    public MyRevision apply(Object token,
-                            Object[] parameters,
-                            MyRevision base)
+    public void apply(MyPatchContext context,
+                      Object[] parameters)
     {
-      ExpressionContext context = new ExpressionContext(parameters);
+      ExpressionContext expressionContext = new ExpressionContext(parameters);
 
       List<MyColumn> keyColumns = tableReference.table.primaryKey.columns;
       LiveExpression[] key = new LiveExpression[keyColumns.size()];
       for (int i = 0; i < key.length; ++i) {
         key[i] = findColumnReference
-          (context, tableReference, keyColumns.get(i));
+          (expressionContext, tableReference, keyColumns.get(i));
       }
 
       MyTableReference.MySourceIterator iterator = tableReference.iterator
-        (EmptyRevision, null, base, getStack(),
-         test.makeLiveExpression(context), context, false);
+        (EmptyRevision, null, context.result, new NodeStack(),
+         test.makeLiveExpression(expressionContext), expressionContext, false);
 
-      UpdateContext updateContext = new UpdateContext
-        (token, base, getStack(),
-         tableReference.table.primaryKey.columns.size() + 2);
-
-      updateContext.setKey(0, tableReference.table);
-      updateContext.setKey(1, tableReference.table.primaryKey);
+      context.setKey(0, tableReference.table);
+      context.setKey(1, tableReference.table.primaryKey);
 
       while (true) {
         ResultType type = iterator.nextRow();
         switch (type) {
         case End:
-          return updateContext.result;
+          return;
       
         case Inserted: {
           int i;
           for (i = 0; i < key.length - 1; ++i) {
-            updateContext.setKey(i + 2, (Comparable) key[i].evaluate());
+            context.setKey
+              (i + IndexStartDepth, (Comparable) key[i].evaluate());
           }
 
-          updateContext.delete(i + 2, (Comparable) key[i].evaluate());
+          context.delete
+            (i + IndexStartDepth, (Comparable) key[i].evaluate());
         } break;
 
         default:
           throw new RuntimeException("unexpected result type: " + type);
         }
       }
-    }
-  }
-
-  private interface MyPatch extends Patch {
-    public MyRevision apply(Object token, MyRevision base);
-  }
-
-  private static class SinglePatch implements MyPatch {
-    public final MyPatchTemplate template;
-    public final Object[] parameters;
-
-    public SinglePatch(MyPatchTemplate template,
-                       Object[] parameters)
-    {
-      this.template = template;
-      this.parameters = parameters;
-    }
-
-    public MyRevision apply(Object token, MyRevision base) {
-      return template.apply(token, parameters, base);
     }
   }
 
@@ -2558,6 +2509,12 @@ public class MyDBMS implements DBMS {
         throw new IllegalArgumentException
           ("column not created by this implementation");
       }
+    }
+
+    if (copyOfColumns.size() > MaxIndexDepth) {
+      throw new IllegalArgumentException
+        ("too many columns in index (maximum is " + MaxIndexDepth
+         + "; got " + copyOfColumns.size() + ")");
     }
 
     return new MyIndex(copyOfColumns, unique);
@@ -2751,9 +2708,21 @@ public class MyDBMS implements DBMS {
       (counter.count, copyOfExpressions, mySource, myTest);
   }
 
-  public Query query(QueryTemplate template,
-                     Object ... parameters)
+  public QueryResult diff(Revision base,
+                          Revision fork,
+                          QueryTemplate template,
+                          Object ... parameters)
   {
+    MyRevision myBase;
+    MyRevision myFork;
+    try {
+      myBase = (MyRevision) base;
+      myFork = (MyRevision) fork;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("revision not created by this implementation");        
+    }
+
     MyQueryTemplate myTemplate;
     try {
       myTemplate = (MyQueryTemplate) template;
@@ -2769,36 +2738,12 @@ public class MyDBMS implements DBMS {
          + parameters.length + ")");
     }
 
-    return new MyQuery(myTemplate, copy(parameters));
-  }
-
-  public QueryResult diff(Revision base,
-                          Revision fork,
-                          Query query)
-  {
-    MyRevision myBase;
-    MyRevision myFork;
-    try {
-      myBase = (MyRevision) base;
-      myFork = (MyRevision) fork;
-    } catch (ClassCastException e) {
-      throw new IllegalArgumentException
-        ("revision not created by this implementation");        
-    }
-
-    MyQuery myQuery;
-    try {
-      myQuery = (MyQuery) query;
-    } catch (ClassCastException e) {
-      throw new IllegalArgumentException
-        ("query not created by this implementation");        
-    }
-
-    return new MyQueryResult(myBase, myFork, myQuery);
+    return new MyQueryResult(myBase, myFork, myTemplate, copy(parameters));
   }
 
   public PatchTemplate insertTemplate(Table table,
-                                      Map<Column, Expression> values)
+                                      List<Column> columns,
+                                      List<Expression> values)
   {
     MyTable myTable;
     try {
@@ -2810,25 +2755,37 @@ public class MyDBMS implements DBMS {
 
     ParameterCounter counter = new ParameterCounter();
 
-    Map copyOfValues = new HashMap(values);
+    List copyOfColumns = new ArrayList(columns);
+    List copyOfValues = new ArrayList(values);
+
+    if (copyOfColumns.size() != copyOfValues.size()) {
+      throw new IllegalArgumentException
+        ("column and value lists must be of equal length");
+    }
+
     Set set = new HashSet(myTable.columns);
-    for (Object o: copyOfValues.entrySet()) {
-      Map.Entry entry = (Map.Entry) o;
-      if (! (entry.getKey() instanceof MyColumn)) {
+    for (Object o: copyOfColumns) {
+      if (! (o instanceof MyColumn)) {
         throw new IllegalArgumentException
           ("column not created by this implementation");
       }
 
-      if (! (set.contains(entry.getKey()))) {
+      if (! (set.contains(o))) {
         throw new IllegalArgumentException
           ("column not part of specified table");
       }
 
-      set.remove(entry.getKey());
+      set.remove(o);
+    }
 
+    if (set.size() != 0) {
+      throw new IllegalArgumentException("not enough columns specified");
+    }
+
+    for (Object o: copyOfValues) {
       MyExpression myExpression;
       try {
-        myExpression = (MyExpression) entry.getValue();
+        myExpression = (MyExpression) o;
       } catch (ClassCastException e) {
         throw new IllegalArgumentException
           ("expression not created by this implementation");
@@ -2837,16 +2794,14 @@ public class MyDBMS implements DBMS {
       myExpression.visit(counter);
     }
 
-    if (set.size() != 0) {
-      throw new IllegalArgumentException("not enough columns specified");
-    }
-
-    return new InsertTemplate(counter.count, myTable, copyOfValues);
+    return new InsertTemplate
+      (counter.count, myTable, copyOfColumns, copyOfValues);
   }
 
   public PatchTemplate updateTemplate(TableReference tableReference,
                                       Expression test,
-                                      Map<Column, Expression> values)
+                                      List<Column> columns,
+                                      List<Expression> values)
   {
     MyTableReference myTableReference;
     try {
@@ -2868,25 +2823,37 @@ public class MyDBMS implements DBMS {
 
     myTest.visit(counter);
 
-    Map copyOfValues = new HashMap(values);
+    List copyOfColumns = new ArrayList(columns);
+    List copyOfValues = new ArrayList(values);
+
+    if (copyOfColumns.size() != copyOfValues.size()) {
+      throw new IllegalArgumentException
+        ("column and value lists must be of equal length");
+    }
+
     Set set = new HashSet(myTableReference.table.columns);
-    for (Object o: copyOfValues.entrySet()) {
-      Map.Entry entry = (Map.Entry) o;
-      if (! (entry.getKey() instanceof MyColumn)) {
+    for (Object o: copyOfColumns) {
+      if (! (o instanceof MyColumn)) {
         throw new IllegalArgumentException
           ("column not created by this implementation");
       }
 
-      if (! (set.contains(entry.getKey()))) {
+      if (! (set.contains(o))) {
         throw new IllegalArgumentException
-          ("column not part of specified table");        
+          ("column not part of specified table");
       }
 
-      set.remove(entry.getKey());
+      set.remove(o);
+    }
 
+    if (set.size() != 0) {
+      throw new IllegalArgumentException("not enough columns specified");
+    }
+
+    for (Object o: copyOfValues) {
       MyExpression myExpression;
       try {
-        myExpression = (MyExpression) entry.getValue();
+        myExpression = (MyExpression) o;
       } catch (ClassCastException e) {
         throw new IllegalArgumentException
           ("expression not created by this implementation");
@@ -2896,7 +2863,7 @@ public class MyDBMS implements DBMS {
     }
 
     return new UpdateTemplate
-      (counter.count, myTableReference, myTest, copyOfValues);
+      (counter.count, myTableReference, myTest, copyOfColumns, copyOfValues);
   }
 
   public PatchTemplate deleteTemplate(TableReference tableReference,
@@ -2925,9 +2892,34 @@ public class MyDBMS implements DBMS {
     return new DeleteTemplate(counter.count, myTableReference, myTest);
   }
 
-  public Patch patch(PatchTemplate template,
-                     Object ... parameters)
+  public PatchContext patchContext(Revision base) {
+    MyRevision myBase;
+    try {
+      myBase = (MyRevision) base;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("revision not created by this implementation");
+    }
+
+    return new MyPatchContext(new Object(), myBase, new NodeStack());
+  }
+
+  public void apply(PatchContext context,
+                    PatchTemplate template,
+                    Object ... parameters)
   {
+    MyPatchContext myContext;
+    try {
+      myContext = (MyPatchContext) context;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("patch context not created by this implementation");        
+    }
+
+    if (myContext.token == null) {
+      throw new IllegalStateException("patch context already committed");
+    }
+
     MyPatchTemplate myTemplate;
     try {
       myTemplate = (MyPatchTemplate) template;
@@ -2943,30 +2935,21 @@ public class MyDBMS implements DBMS {
          + parameters.length + ")");
     }
 
-    return new SinglePatch(myTemplate, copy(parameters));
+    myTemplate.apply(myContext, copy(parameters));
   }
 
-  public Revision apply(Object token,
-                        Revision revision,
-                        Patch patch)
-  {
-    MyRevision myRevision;
+  public Revision commit(PatchContext context) {
+    MyPatchContext myContext;
     try {
-      myRevision = (MyRevision) revision;
+      myContext = (MyPatchContext) context;
     } catch (ClassCastException e) {
       throw new IllegalArgumentException
-        ("revision not created by this implementation");
+        ("patch context not created by this implementation");        
     }
 
-    MyPatch myPatch;
-    try {
-      myPatch = (MyPatch) patch;
-    } catch (ClassCastException e) {
-      throw new IllegalArgumentException
-        ("patch not created by this implementation");
-    }
+    myContext.token = null;
 
-    return myPatch.apply(token, myRevision);
+    return myContext.result;
   }
 
   public Revision merge(Revision base,
@@ -3009,17 +2992,14 @@ public class MyDBMS implements DBMS {
                                            MyRevision right,
                                            ConflictResolver conflictResolver)
   {
-    Object token = new Object();
+    MyPatchContext context = new MyPatchContext
+      (new Object(), left, new NodeStack());
 
-    final int size = max(base.maxDepth, left.maxDepth, right.maxDepth);
-
-    UpdateContext context = new UpdateContext(token, left, getStack(), size);
-
-    MergeIterator[] iterators = new MergeIterator[size];
+    MergeIterator[] iterators = new MergeIterator[MaxDepth];
     
-    NodeStack baseStack = getStack();
-    NodeStack leftStack = getStack();
-    NodeStack rightStack = getStack();
+    NodeStack baseStack = new NodeStack();
+    NodeStack leftStack = new NodeStack();
+    NodeStack rightStack = new NodeStack();
 
     iterators[0] = new MergeIterator
       (base.root, baseStack, left.root, leftStack, right.root, rightStack);
@@ -3112,10 +3092,11 @@ public class MyDBMS implements DBMS {
         } else if (descend) {
           context.setKey(depth, triple.left.key);
 
-          if (depth == 1) {
+          if (depth == TableDepth) {
             table = (MyTable) triple.left.key;
-          } else if (depth == 2) {
-            bottom = ((MyIndex) triple.left.key).columns.size() + 2;
+          } else if (depth == IndexStartDepth) {
+            bottom = ((MyIndex) triple.left.key).columns.size()
+              + IndexStartDepth;
           }
           
           ++ depth;

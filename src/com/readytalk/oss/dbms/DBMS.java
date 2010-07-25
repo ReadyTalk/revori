@@ -7,9 +7,9 @@ import java.util.List;
 /**
  * This interface defines an API for using a revision-oriented
  * relational database management system.  The design centers on
- * database revisions from which new revisions may be derived by
- * applying patches composed of inserts, updates and deletes.  It
- * provides methods to do the following:<p>
+ * immutable database revisions from which new revisions may be
+ * derived by applying patches composed of inserts, updates and
+ * deletes.  It provides methods to do the following:<p>
  *
  * <ul><li>Define a set of tables, each of which has a collection of
  * columns and a primary key defined as a subset of those columns
@@ -313,12 +313,6 @@ public interface DBMS {
   public interface QueryTemplate { }
 
   /**
-   * Opaque type representing a query which combines a query template
-   * with a set of specific parameters.
-   */
-  public interface Query { }
-
-  /**
    * Opaque type representing the template for an insert, update, or
    * delete which is not bound to any specific parameters, analogous
    * to a prepared statement in JDBC.
@@ -326,11 +320,11 @@ public interface DBMS {
   public interface PatchTemplate { }
 
   /**
-   * Opaque type representing a series of inserts, updates, and/or
-   * deletes which may be applied to a revision to produce a new
+   * Opaque type used for incrementally defining a new revision by
+   * applying a series of inserts, updates, and/or deletes to a base
    * revision.
    */
-  public interface Patch { }
+  public interface PatchContext { }
 
   /**
    * Represents an iterative view of a list of rows produced via
@@ -467,16 +461,16 @@ public interface DBMS {
                                      Expression test);
 
   /**
-   * Defines a query by matching a template with any parameter values
-   * referred to by that template.
-   */
-  public Query query(QueryTemplate template,
-                     Object ... parameters);
-
-  /**
    * Executes the specified query and returns a diff which represents
    * the changes between the first revision and the second concerning
    * that query.<p>
+   *
+   * The query is defined by visiting the nodes of the expression
+   * trees referred to by the specified query template and resolving
+   * any parameter expressions found using the values of the specified
+   * parameter array.  The expression trees nodes are visited
+   * left-to-right in the order they were specified in
+   * queryTemplate(List<Expression>, Source, Expression).<p>
    *
    * The result is two sets of tuples satisfying the query
    * constraints, including<p>
@@ -490,30 +484,40 @@ public interface DBMS {
    *
    * Note that traditional SQL SELECT query semantics may be achieved
    * by specifying an empty revision as the first parameter and the
-   * revision to be queried as the second.
+   * revision to be queried as the second.<p>
+   *
+   * The items of each row in the result are visited in the same order
+   * as the expressions were specified in
+   * queryTemplate(List<Expression>, Source, Expression).
    */
   public QueryResult diff(Revision base,
                           Revision fork,
-                          Query query);
+                          QueryTemplate template,
+                          Object ... parameters);
 
   /**
    * Defines a patch template (AKA prepared statement) which
    * represents an insert operation on the specified table.  The
-   * values to be inserted are specified as a map of columns to
-   * expressions.
+   * values to be inserted are specified as two ordered lists of equal
+   * length: a list of columns and a list of expressions representing
+   * the values to be placed into those columns.
    */
   public PatchTemplate insertTemplate(Table table,
-                                      Map<Column, Expression> values);
+                                      List<Column> columns,
+                                      List<Expression> values);
 
   /**
    * Defines a patch template (AKA prepared statement) which
    * represents an update operation on the specified table to be
-   * applied to rows satisfying the specified test.  The values
-   * to be inserted are specified as a map of columns to expressions.
+   * applied to rows satisfying the specified test.  The
+   * values to be updated are specified as two ordered lists of equal
+   * length: a list of columns and a list of expressions representing
+   * the values to be placed into those columns.
    */
   public PatchTemplate updateTemplate(TableReference tableReference,
                                       Expression test,
-                                      Map<Column, Expression> values);
+                                      List<Column> columns,
+                                      List<Expression> values);
 
   /**
    * Defines a patch template (AKA prepared statement) which
@@ -524,40 +528,36 @@ public interface DBMS {
                                       Expression test);
 
   /**
-   * Defines a patch by matching a template with any parameter values
-   * referred to by that template.
+   * Creates a new patch context for use in incrementally defining a
+   * new revision based on the specified base revision.
    */
-  public Patch patch(PatchTemplate template,
-                     Object ... parameters);
+  public PatchContext patchContext(Revision base);
 
   /**
-   * Creates a new revision which is the result of applying the
-   * specified patch to the specified revision.<p>
+   * Applies the specified patch to the specified patch context.<p>
    *
-   * The token parameter determines which parts of the input revision
-   * may be considered mutable.  Only elements in the revision which
-   * are tagged with the specified token may be modified -- all others
-   * must be considered immutable and replaced to build the new
-   * revision.<p>
+   * The patch is defined by visiting the nodes of the expression
+   * trees referred to by the specified patch template and resolving
+   * any parameter expressions found using the values of the specified
+   * parameter array.  The expression tree nodes are visited
+   * left-to-right in the order they where specified when defining the
+   * patch template.
    *
-   * The purpose of the token mechanism is to allow the application to
-   * apply a series of patches efficiently by specifying the same
-   * token for each one.  Otherwise, the DBMS implementation would
-   * have to conservatively assume every revision is immutable and
-   * that it must create new copies of each structural and tuple
-   * element involved in applying each patch, leading to much more
-   * frequent object creation and copying for large batches of
-   * updates.<p>
-   *
-   * One consequence of this optimization is that it is that the
-   * application controls the mutability of revisions and is thus
-   * responsible for preserving each revision which must remain
-   * unchanged by "throwing away" any tokens used to produce it so
-   * that they cannot be reused.
-   **/
-  public Revision apply(Object token,
-                        Revision revision,
-                        Patch patch);
+   * @throws IllegalStateException if the specified patch context has
+   * already been committed
+   */
+  public void apply(PatchContext context,
+                    PatchTemplate template,
+                    Object ... parameters);
+
+  /**
+   * Commits the specified patch context, producing a revision which
+   * reflects the base revision with which was created plus any
+   * patches applied thereafter.  This call invalidates the specified
+   * context; any further attempts to apply patches with it will
+   * result in IllegalStateExceptions.
+   */
+  public Revision commit(PatchContext context);
 
   /**
    * Creates a new revision which merges the changes introduced in the
