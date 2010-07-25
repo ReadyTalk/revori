@@ -333,9 +333,9 @@ public interface DBMS {
    * an update (ResultType.Deleted).  Once the last row has been
    * visited, ResultType.End.<p>
    *
-   * See {@link #diff(Revision, Revision, Query) diff(Revision,
-   * Revision, Query)} for details on the algorithm used to generate
-   * the list.
+   * See {@link #diff(Revision, Revision, QueryTemplate, Object[])
+   * diff(Revision, Revision, QueryTemplate, Object[])} for details on
+   * the algorithm used to generate the list.
    */
   public interface QueryResult {
     public ResultType nextRow();
@@ -470,7 +470,8 @@ public interface DBMS {
    * any parameter expressions found using the values of the specified
    * parameter array.  The expression trees nodes are visited
    * left-to-right in the order they were specified in
-   * queryTemplate(List<Expression>, Source, Expression).<p>
+   * {@link #queryTemplate(List, Source, Expression)
+   * queryTemplate(List, Source, Expression)}.<p>
    *
    * The result is two sets of tuples satisfying the query
    * constraints, including<p>
@@ -488,7 +489,8 @@ public interface DBMS {
    *
    * The items of each row in the result are visited in the same order
    * as the expressions were specified in
-   * queryTemplate(List<Expression>, Source, Expression).
+   * {@link #queryTemplate(List, Source, Expression)
+   * queryTemplate(List, Source, Expression)}.
    */
   public QueryResult diff(Revision base,
                           Revision fork,
@@ -540,8 +542,8 @@ public interface DBMS {
    * trees referred to by the specified patch template and resolving
    * any parameter expressions found using the values of the specified
    * parameter array.  The expression tree nodes are visited
-   * left-to-right in the order they where specified when defining the
-   * patch template.
+   * left-to-right in the order they where specified when the patch
+   * template was defined.
    *
    * @throws IllegalStateException if the specified patch context has
    * already been committed
