@@ -1,5 +1,7 @@
 package com.readytalk.oss.dbms.imp;
 
+import static com.readytalk.oss.dbms.imp.Util.list;
+
 import com.readytalk.oss.dbms.DBMS;
 
 import java.util.Collection;
@@ -7,7 +9,6 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.TreeMap;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -26,6 +27,10 @@ public class MyDBMS implements DBMS {
       public int compareTo(Object o) {
         throw new UnsupportedOperationException();
       }
+      
+      public String toString() {
+        return "undefined";
+      }
     };
   private static final LiveExpression UndefinedExpression
     = new Constant(Undefined);
@@ -41,6 +46,7 @@ public class MyDBMS implements DBMS {
   static {
     NullNode.left = NullNode;
     NullNode.right = NullNode;
+    NullNode.value = NullNode;
   }
 
   private static void expect(boolean v) {
@@ -117,6 +123,16 @@ public class MyDBMS implements DBMS {
     }
   }
 
+  private static NodeStack popStack(NodeStack s) {
+    expect(s.previous == null);
+    expect(s.next.previous == s);
+
+    s = s.next;
+    s.previous = null;
+
+    return s;
+  }
+
   private static void push(NodeStack s, Node n) {
     if (s.top != null) {
       s.array[s.index++] = s.top;
@@ -155,7 +171,7 @@ public class MyDBMS implements DBMS {
     s.index = s.base;
   }
 
-  private static class MyColumn implements Column {
+  private static class MyColumn implements Column, Comparable<MyColumn> {
     public final ColumnType type;
     public final int id;
 
@@ -164,7 +180,7 @@ public class MyDBMS implements DBMS {
       this.id = nextId();
     }
 
-    public int compareTo(MyIndex o) {
+    public int compareTo(MyColumn o) {
       return id - o.id;
     }
   }
@@ -751,6 +767,10 @@ public class MyDBMS implements DBMS {
                                        BoundType boundType,
                                        boolean high)
   {
+    if (n == NullNode) {
+      return 0;
+    }
+
     int difference = compare(n.key, key, boundType, high);
     if (difference > 0) {
       n = n.left;
@@ -793,27 +813,29 @@ public class MyDBMS implements DBMS {
     }
   }
 
-  private static void descend(NodeStack n, int oppositeDirection) {
+  private static void descend(NodeStack stack, int oppositeDirection) {
     if (oppositeDirection > 0) {
-      push(n, n.top.left);
+      push(stack, stack.top.left);
     } else {
-      push(n, n.top.right);
+      push(stack, stack.top.right);
     }
   }
 
-  private static void next(NodeStack n) {
-    if (n.top.right != NullNode) {
-      push(n, n.top.right);
+  private static void next(NodeStack stack) {
+    if (stack.top.right != NullNode) {
+      push(stack, stack.top.right);
     } else {
-      while (n.top != null && peek(n).right == n.top) {
-        pop(n);
-      }
+      ascendNext(stack);
     }
   }
 
-  private static void ascendNext(NodeStack n) {
-    while (n.top != null && peek(n).right == n.top) {
-      pop(n);
+  private static void ascendNext(NodeStack stack) {
+    while (stack.index != stack.base && peek(stack).right == stack.top) {
+      pop(stack);
+    }
+
+    if (stack.index == stack.base) {
+      clear(stack);
     }
   }
 
@@ -825,6 +847,7 @@ public class MyDBMS implements DBMS {
     public final Iterator<EvaluatedInterval> intervalIterator;
     public final boolean visitUnchanged;
     public EvaluatedInterval currentInterval;
+    public boolean foundStart;
 
     public DiffIterator(Node baseRoot,
                         NodeStack base,
@@ -915,32 +938,32 @@ public class MyDBMS implements DBMS {
         }
       }
       
-      if (compare
-          ((Comparable) base.top, interval.low, interval.lowBoundType, false)
-          < 0)
+      if (base.top == NullNode || compare
+          (base.top.key, interval.low, interval.lowBoundType, false) < 0)
       {
         clear(base);
       }
 
-      if (compare
-          ((Comparable) fork.top, interval.low, interval.lowBoundType, false)
-          < 0)
+      if (fork.top == NullNode || compare
+          (fork.top.key, interval.low, interval.lowBoundType, false) < 0)
       {
         clear(fork);
       }
     }
 
     private boolean next(EvaluatedInterval interval, DiffPair pair) {
-      if (base.top == null && fork.top == null) {
+      if (! foundStart) {
         findStart(interval);
+        
+        foundStart = true;
       }
 
       while (true) {
-        int baseDifference = compare
-          ((Comparable) base.top, interval.high, interval.highBoundType, true);
+        int baseDifference = base.top == null ? 1 : compare
+          (base.top.key, interval.high, interval.highBoundType, true);
 
-        int forkDifference = compare
-          ((Comparable) fork.top, interval.high, interval.highBoundType, true);
+        int forkDifference = fork.top == null ? 1 : compare
+          (fork.top.key, interval.high, interval.highBoundType, true);
       
         if (baseDifference <= 0) {
           if (forkDifference <= 0) {
@@ -1292,8 +1315,8 @@ public class MyDBMS implements DBMS {
                               ExpressionContext expressionContext,
                               boolean visitUnchanged)
       {
-        this.base = find(base.root, table);
-        this.fork = find(fork.root, table);
+        this.base = (Node) find(base.root, table).value;
+        this.fork = (Node) find(fork.root, table).value;
         this.test = test;
         this.visitUnchanged = visitUnchanged;
 
@@ -1346,10 +1369,10 @@ public class MyDBMS implements DBMS {
         this.plan = best;
 
         plan.iterators[0] = new DiffIterator
-          (this.base == null ? null : find(this.base, plan.index),
-           baseStack = new NodeStack(baseStack),
-           this.fork == null ? null : find(this.fork, plan.index),
-           forkStack = new NodeStack(forkStack),
+          ((Node) find(this.base, plan.index).value,
+           this.baseStack = new NodeStack(baseStack),
+           (Node) find(this.fork, plan.index).value,
+           this.forkStack = new NodeStack(forkStack),
            plan.scans[0].evaluate().iterator(),
            visitUnchanged);
 
@@ -1368,9 +1391,11 @@ public class MyDBMS implements DBMS {
             }
 
             if (reference != null) {
-              reference.index = i++;
+              reference.index = i;
               columnReferences.add(reference);
             }
+
+            ++i;
           }
         }
       }
@@ -1405,6 +1430,9 @@ public class MyDBMS implements DBMS {
               r.value = Undefined;
             }
 
+            popStack(baseStack);
+            popStack(forkStack);
+
             return ResultType.End;
           } else {
             ascend();
@@ -1413,7 +1441,11 @@ public class MyDBMS implements DBMS {
       }
 
       private boolean test(Node node) {
-        if (node != null) {
+        if (node == null) {
+          for (LiveColumnReference r: columnReferences) {
+            r.value = Undefined;
+          }
+        } else {
           Object[] tuple = (Object[]) node.value;
         
           for (LiveColumnReference r: columnReferences) {
@@ -1430,15 +1462,15 @@ public class MyDBMS implements DBMS {
         
         LiveColumnReference reference = plan.references[depth];
         if (reference != null) {
-          reference.value = base == null ? fork.key : base.key;
+          reference.value = base == NullNode ? fork.key : base.key;
         }
 
         ++ depth;
 
         plan.iterators[depth] = new DiffIterator
-          (base == null ? null : (Node) base.value,
+          ((Node) base.value,
            baseStack = new NodeStack(baseStack),
-           fork == null ? null : (Node) fork.value,
+           (Node) fork.value,
            forkStack = new NodeStack(forkStack),
            plan.scans[depth].evaluate().iterator(),
            visitUnchanged);
@@ -1454,8 +1486,8 @@ public class MyDBMS implements DBMS {
           reference.value = Undefined;
         }
 
-        baseStack = baseStack.next;
-        forkStack = forkStack.next;
+        baseStack = popStack(baseStack);
+        forkStack = popStack(forkStack);
       }
     }
 
@@ -2151,7 +2183,7 @@ public class MyDBMS implements DBMS {
     }
 
     public void setKey(int index, Comparable key) {
-      if (! equal(keys[index], key)) {
+      if (! equal(key, keys[index])) {
         keys[index] = key;
         found[index] = null;
         blazedLeaves[index] = null;
@@ -2238,6 +2270,7 @@ public class MyDBMS implements DBMS {
           }
 
           blazedRoots[0] = root;
+          blazedLeaves[0] = blazeResult.node;
           blazedRoots[1] = (Node) blazeResult.node.value;
           return blazeResult.node;
         } else {
@@ -2277,7 +2310,7 @@ public class MyDBMS implements DBMS {
     {
       ExpressionContext expressionContext = new ExpressionContext(parameters);
 
-      Map<MyColumn, LiveExpression> map = new TreeMap();
+      Map<MyColumn, LiveExpression> map = new HashMap();
       Iterator<MyColumn> columnIterator = columns.iterator();
       Iterator<MyExpression> valueIterator = values.iterator();
       while (columnIterator.hasNext()) {
@@ -2287,8 +2320,8 @@ public class MyDBMS implements DBMS {
       
       Object[] tuple = new Object[table.columns.size()];
       { int i = 0;
-        for (LiveExpression e: map.values()) {
-          tuple[i++] = e.evaluate();
+        for (MyColumn c: table.columns) {
+          tuple[i++] = map.get(c).evaluate();
         }
       }
 
@@ -3073,8 +3106,7 @@ public class MyDBMS implements DBMS {
         }
 
         if (conflict) {
-          Row baseRow = triple.base == null
-            ? null : new MyRow(table, (Object[]) triple.base.value);
+          Row baseRow = new MyRow(table, (Object[]) triple.base.value);
           Row leftRow = new MyRow(table, (Object[]) triple.left.value);
           Row rightRow = new MyRow(table, (Object[]) triple.right.value);
           Row row = conflictResolver.resolveConflict
@@ -3102,7 +3134,7 @@ public class MyDBMS implements DBMS {
           ++ depth;
 
           iterators[depth] = new MergeIterator
-            (triple.base == null ? null : (Node) triple.base.value,
+            ((Node) triple.base.value,
              baseStack = new NodeStack(baseStack),
              (Node) triple.left.value,
              leftStack = new NodeStack(leftStack),
@@ -3116,9 +3148,9 @@ public class MyDBMS implements DBMS {
 
         -- depth;
 
-        baseStack = baseStack.next;
-        leftStack = leftStack.next;
-        rightStack = rightStack.next;
+        baseStack = popStack(baseStack);
+        leftStack = popStack(leftStack);
+        rightStack = popStack(rightStack);
       }
     }
 
@@ -3136,7 +3168,7 @@ public class MyDBMS implements DBMS {
         return n;
       }
     }
-    return null;
+    return NullNode;
   }
 
   private static Node leftRotate(Object token, Node n) {
@@ -3163,6 +3195,10 @@ public class MyDBMS implements DBMS {
                             Node root,
                             Comparable key)
   {
+    if (root == null) {
+      root = NullNode;
+    }
+
     stack = new NodeStack(stack);
     Node newRoot = getNode(token, root);
 
@@ -3180,6 +3216,7 @@ public class MyDBMS implements DBMS {
         push(stack, new_);
       } else {
         result.node = new_;
+        popStack(stack);
         return newRoot;
       }
     }
@@ -3264,6 +3301,7 @@ public class MyDBMS implements DBMS {
 
     newRoot.red = false;
 
+    popStack(stack);
     return newRoot;
   }
 
@@ -3277,7 +3315,7 @@ public class MyDBMS implements DBMS {
       n = n.left;
     }
 
-      push(stack, n);
+    push(stack, n);
   }
 
   private static void successor(Object token,
@@ -3332,6 +3370,7 @@ public class MyDBMS implements DBMS {
     }
 
     if (old == NullNode) {
+      popStack(stack);
       return root;
     }
 
@@ -3353,6 +3392,7 @@ public class MyDBMS implements DBMS {
 
     if (stack.top == null) {
       child.red = false;
+      popStack(stack);
       return child;
     } else if (dead == stack.top.left) {
       stack.top.left = child;
@@ -3474,16 +3514,25 @@ public class MyDBMS implements DBMS {
       child.red = false;
     }
 
+    popStack(stack);
     return newRoot;
   }
 
-  private static List list(Object ... elements) {
-    return toList(elements);
-  }
-
-  private static List toList(Object[] elements) {
-    List list = new ArrayList(elements.length);
-    for (Object o: elements) list.add(o);
-    return list;
+  private static void dump(Node node, java.io.PrintStream out, int depth) {
+    if (node == NullNode) {
+      return;
+    } else {
+      for (int i = 0; i < depth; ++i) {
+        out.print("  ");
+      }
+      if (node.value instanceof Node) {
+        out.println(node.key + ": subtree");
+        dump((Node) node.value, out, depth + 2);
+      } else {
+        out.println(node.key + ": " + node.value);
+      }
+      dump(node.left, out, depth + 1);
+      dump(node.right, out, depth + 1);
+    }
   }
 }

@@ -1,7 +1,7 @@
 <project name="server" default="jar" basedir=".">
 
   <target name="clean">
-    <delete dir="${basedir}/build" />
+    <delete dir="${basedir}/build"/>
   </target>
 
   <target name="compile">
@@ -9,15 +9,16 @@
     <mkdir dir="${basedir}/build/classes"/>
 
     <javac destdir="${basedir}/build/classes" debug="true">
+      <compilerarg line="-Xmaxerrs 10"/>
       <src path="${basedir}/src"/>
-      <include name="**/*.java" />
+      <include name="**/*.java"/>
     </javac>
   </target>
 
   <target name="jar" depends="compile">
     <jar destfile="${basedir}/build/dbms.jar">
       <fileset dir="${basedir}/build/classes"
-               includes="**/*.class" />
+               includes="**/*.class"/>
     </jar>
   </target>
 
@@ -27,6 +28,25 @@
         <include name="com/readytalk/oss/dbms"/>
       </packageset>
     </javadoc>
+  </target>
+
+  <target name="compile-test" depends="compile">
+
+    <mkdir dir="${basedir}/build/test"/>
+
+    <javac destdir="${basedir}/build/test"
+           classpath="${basedir}/build/classes"
+           debug="true">
+      <compilerarg line="-Xmaxerrs 10"/>
+      <src path="${basedir}/test"/>
+      <include name="**/*.java"/>
+    </javac>
+  </target>
+
+  <target name="test" depends="compile-test">
+    <java classpath="${basedir}/build/test:${basedir}/build/classes"
+          classname="Test"
+          failonerror="true"/>
   </target>
 
 </project>

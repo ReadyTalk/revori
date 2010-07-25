@@ -560,7 +560,7 @@ public interface DBMS {
   public Revision commit(PatchContext context);
 
   /**
-   * Creates a new revision which merges the changes introduced in the
+   * Defines a new revision which merges the changes introduced in the
    * "left" fork relative to base with the changes introduced in
    * "right" fork relative to base.  The result is determined as
    * follows:<p>
