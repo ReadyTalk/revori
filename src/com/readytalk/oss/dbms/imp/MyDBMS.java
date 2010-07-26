@@ -1015,9 +1015,6 @@ public class MyDBMS implements DBMS {
         int baseDifference = base.top == null ? 1 : compare
           (base.top.key, interval.high, interval.highBoundType, true);
 
-        if (fork.top == NullNode) throw new RuntimeException();
-        if (fork.top != null && fork.top.key == null) throw new NullPointerException();
-
         int forkDifference = fork.top == null ? 1 : compare
           (fork.top.key, interval.high, interval.highBoundType, true);
       
@@ -2478,6 +2475,8 @@ public class MyDBMS implements DBMS {
         template[i] = UndefinedExpression;
       }
       
+      LiveExpression liveTest = test.makeLiveExpression(expressionContext);
+
       Iterator<MyColumn> columnIterator = columns.iterator();
       Iterator<MyExpression> valueIterator = values.iterator();
       while (columnIterator.hasNext()) {
@@ -2487,7 +2486,7 @@ public class MyDBMS implements DBMS {
 
       MyTableReference.MySourceIterator iterator = tableReference.iterator
         (EmptyRevision, NullNodeStack, context.result, new NodeStack(),
-         test.makeLiveExpression(expressionContext), expressionContext, false);
+         liveTest, expressionContext, false);
 
       List<MyColumn> keyColumns = tableReference.table.primaryKey.columns;
       LiveExpression[] key = new LiveExpression[keyColumns.size()];
@@ -2511,7 +2510,7 @@ public class MyDBMS implements DBMS {
           Object[] original = (Object[]) iterator.pair.fork.value;
           for (int i = 0; i < tuple.length; ++i) {
             LiveExpression v = template[i];
-            if (v == Undefined) {
+            if (v == UndefinedExpression) {
               tuple[i] = original[i];
             } else {
               tuple[i] = v.evaluate();
@@ -2969,10 +2968,6 @@ public class MyDBMS implements DBMS {
       }
 
       set.remove(o);
-    }
-
-    if (set.size() != 0) {
-      throw new IllegalArgumentException("not enough columns specified");
     }
 
     for (Object o: copyOfValues) {

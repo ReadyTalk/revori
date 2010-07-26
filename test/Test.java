@@ -37,11 +37,11 @@ public class Test {
   private static void testSimpleInsertDiffs() {
     DBMS dbms = new MyDBMS();
 
-    Column id = dbms.column(ColumnType.Integer32);
+    Column number = dbms.column(ColumnType.Integer32);
     Column name = dbms.column(ColumnType.String);
-    Table users = dbms.table
-      (set(id, name),
-       dbms.index(list(id), true),
+    Table numbers = dbms.table
+      (set(number, name),
+       dbms.index(list(number), true),
        EmptyIndexSet);
 
     Revision tail = dbms.revision();
@@ -51,35 +51,35 @@ public class Test {
     dbms.apply
       (context,
        dbms.insertTemplate
-       (users,
-        list(id, name),
+       (numbers,
+        list(number, name),
         list(dbms.constant(42),
-             dbms.constant("elroy"))));
+             dbms.constant("forty two"))));
 
-    Revision elroy = dbms.commit(context);
+    Revision first = dbms.commit(context);
 
-    TableReference usersReference = dbms.tableReference(users);
+    TableReference numbersReference = dbms.tableReference(numbers);
     QueryTemplate queryTemplate = dbms.queryTemplate
-      (list((Expression) dbms.columnReference(usersReference, name)),
-        usersReference,
+      (list((Expression) dbms.columnReference(numbersReference, name)),
+        numbersReference,
         dbms.operation
         (BinaryOperationType.Equal,
-         dbms.columnReference(usersReference, id),
+         dbms.columnReference(numbersReference, number),
          dbms.parameter()));
 
-    QueryResult result = dbms.diff(tail, elroy, queryTemplate, 42);
+    QueryResult result = dbms.diff(tail, first, queryTemplate, 42);
 
     expectEqual(result.nextRow(), ResultType.Inserted);
-    expectEqual(result.nextItem(), "elroy");
+    expectEqual(result.nextItem(), "forty two");
     expectEqual(result.nextRow(), ResultType.End);
 
-    result = dbms.diff(elroy, tail, queryTemplate, 42);
+    result = dbms.diff(first, tail, queryTemplate, 42);
 
     expectEqual(result.nextRow(), ResultType.Deleted);
-    expectEqual(result.nextItem(), "elroy");
+    expectEqual(result.nextItem(), "forty two");
     expectEqual(result.nextRow(), ResultType.End);
 
-    result = dbms.diff(tail, elroy, queryTemplate, 43);
+    result = dbms.diff(tail, first, queryTemplate, 43);
 
     expectEqual(result.nextRow(), ResultType.End);
 
@@ -87,7 +87,7 @@ public class Test {
 
     expectEqual(result.nextRow(), ResultType.End);
 
-    result = dbms.diff(elroy, elroy, queryTemplate, 42);
+    result = dbms.diff(first, first, queryTemplate, 42);
 
     expectEqual(result.nextRow(), ResultType.End);
   }
@@ -95,18 +95,18 @@ public class Test {
   private static void testLargerInsertDiffs() {
     DBMS dbms = new MyDBMS();
 
-    Column id = dbms.column(ColumnType.Integer32);
+    Column number = dbms.column(ColumnType.Integer32);
     Column name = dbms.column(ColumnType.String);
-    Table users = dbms.table
-      (set(id, name),
-       dbms.index(list(id), true),
+    Table numbers = dbms.table
+      (set(number, name),
+       dbms.index(list(number), true),
        EmptyIndexSet);
 
     Revision tail = dbms.revision();
 
     PatchTemplate insertTemplate = dbms.insertTemplate
-      (users,
-       list(id, name),
+      (numbers,
+       list(number, name),
        list(dbms.parameter(),
             dbms.parameter()));
 
@@ -121,13 +121,13 @@ public class Test {
 
     Revision first = dbms.commit(context);
 
-    TableReference usersReference = dbms.tableReference(users);
+    TableReference numbersReference = dbms.tableReference(numbers);
     QueryTemplate queryTemplate = dbms.queryTemplate
-      (list((Expression) dbms.columnReference(usersReference, name)),
-        usersReference,
+      (list((Expression) dbms.columnReference(numbersReference, name)),
+        numbersReference,
         dbms.operation
         (BinaryOperationType.Equal,
-         dbms.columnReference(usersReference, id),
+         dbms.columnReference(numbersReference, number),
          dbms.parameter()));
 
     QueryResult result = dbms.diff(tail, first, queryTemplate, 42);
@@ -195,18 +195,18 @@ public class Test {
   private static void testDeleteDiffs() {
     DBMS dbms = new MyDBMS();
 
-    Column id = dbms.column(ColumnType.Integer32);
+    Column number = dbms.column(ColumnType.Integer32);
     Column name = dbms.column(ColumnType.String);
-    Table users = dbms.table
-      (set(id, name),
-       dbms.index(list(id), true),
+    Table numbers = dbms.table
+      (set(number, name),
+       dbms.index(list(number), true),
        EmptyIndexSet);
 
     Revision tail = dbms.revision();
 
     PatchTemplate insertTemplate = dbms.insertTemplate
-      (users,
-       list(id, name),
+      (numbers,
+       list(number, name),
        list(dbms.parameter(),
             dbms.parameter()));
 
@@ -221,20 +221,20 @@ public class Test {
 
     Revision first = dbms.commit(context);
 
-    TableReference usersReference = dbms.tableReference(users);
+    TableReference numbersReference = dbms.tableReference(numbers);
     QueryTemplate queryTemplate = dbms.queryTemplate
-      (list((Expression) dbms.columnReference(usersReference, name)),
-        usersReference,
+      (list((Expression) dbms.columnReference(numbersReference, name)),
+        numbersReference,
         dbms.operation
         (BinaryOperationType.Equal,
-         dbms.columnReference(usersReference, id),
+         dbms.columnReference(numbersReference, number),
          dbms.parameter()));
 
     PatchTemplate deleteTemplate = dbms.deleteTemplate
-      (usersReference,
+      (numbersReference,
        dbms.operation
        (BinaryOperationType.Equal,
-        dbms.columnReference(usersReference, id),
+        dbms.columnReference(numbersReference, number),
         dbms.parameter()));
 
     context = dbms.patchContext(first);
@@ -326,6 +326,129 @@ public class Test {
     result = dbms.diff(second, first, queryTemplate, 2);
 
     expectEqual(result.nextRow(), ResultType.End);
+
+    context = dbms.patchContext(second);
+
+    dbms.apply(context, deleteTemplate, 44);
+    dbms.apply(context, deleteTemplate,  2);
+    dbms.apply(context, deleteTemplate,  8);
+
+    Revision third = dbms.commit(context);
+
+    result = dbms.diff(second, third, queryTemplate, 44);
+
+    expectEqual(result.nextRow(), ResultType.Deleted);
+    expectEqual(result.nextItem(), "forty four");
+    expectEqual(result.nextRow(), ResultType.End);
+
+    result = dbms.diff(third, second, queryTemplate, 44);
+
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "forty four");
+    expectEqual(result.nextRow(), ResultType.End);
+
+    result = dbms.diff(tail, third, queryTemplate, 44);
+
+    expectEqual(result.nextRow(), ResultType.End);
+
+    result = dbms.diff(tail, third, queryTemplate, 42);
+
+    expectEqual(result.nextRow(), ResultType.End);
+  }
+
+  private static void testUpdateDiffs() {
+    DBMS dbms = new MyDBMS();
+
+    Column number = dbms.column(ColumnType.Integer32);
+    Column name = dbms.column(ColumnType.String);
+    Table numbers = dbms.table
+      (set(number, name),
+       dbms.index(list(number), true),
+       EmptyIndexSet);
+
+    Revision tail = dbms.revision();
+
+    PatchTemplate insertTemplate = dbms.insertTemplate
+      (numbers,
+       list(number, name),
+       list(dbms.parameter(),
+            dbms.parameter()));
+
+    PatchContext context = dbms.patchContext(tail);
+
+    dbms.apply(context, insertTemplate,  1, "one");
+    dbms.apply(context, insertTemplate,  2, "two");
+    dbms.apply(context, insertTemplate,  3, "three");
+    dbms.apply(context, insertTemplate,  4, "four");
+    dbms.apply(context, insertTemplate,  5, "five");
+    dbms.apply(context, insertTemplate,  6, "six");
+    dbms.apply(context, insertTemplate,  6, "seven");
+    dbms.apply(context, insertTemplate,  8, "eight");
+    dbms.apply(context, insertTemplate,  9, "nine");
+    dbms.apply(context, insertTemplate, 10, "ten");
+    dbms.apply(context, insertTemplate, 11, "eleven");
+    dbms.apply(context, insertTemplate, 12, "twelve");
+    dbms.apply(context, insertTemplate, 13, "thirteen");
+
+    Revision first = dbms.commit(context);
+
+    TableReference numbersReference = dbms.tableReference(numbers);
+
+    PatchTemplate updateTemplate = dbms.updateTemplate
+      (numbersReference,
+       dbms.operation
+       (BinaryOperationType.Equal,
+        dbms.columnReference(numbersReference, number),
+        dbms.parameter()),
+       list(name),
+       list(dbms.parameter()));
+
+    context = dbms.patchContext(first);
+
+    dbms.apply(context, updateTemplate, 1, "ichi");
+
+    Revision second = dbms.commit(context);
+
+    QueryTemplate queryTemplate = dbms.queryTemplate
+      (list((Expression) dbms.columnReference(numbersReference, name)),
+        numbersReference,
+        dbms.operation
+        (BinaryOperationType.Equal,
+         dbms.columnReference(numbersReference, number),
+         dbms.parameter()));
+
+    QueryResult result = dbms.diff(first, second, queryTemplate, 1);
+
+    expectEqual(result.nextRow(), ResultType.Deleted);
+    expectEqual(result.nextItem(), "one");
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "ichi");
+    expectEqual(result.nextRow(), ResultType.End);
+
+    result = dbms.diff(second, first, queryTemplate, 1);
+
+    expectEqual(result.nextRow(), ResultType.Deleted);
+    expectEqual(result.nextItem(), "ichi");
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "one");
+    expectEqual(result.nextRow(), ResultType.End);
+
+    result = dbms.diff(first, second, queryTemplate, 2);
+
+    expectEqual(result.nextRow(), ResultType.End);
+
+    result = dbms.diff(tail, first, queryTemplate, 1);
+
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "one");
+    expectEqual(result.nextRow(), ResultType.End);
+
+    result = dbms.diff(tail, second, queryTemplate, 1);
+
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "ichi");
+    expectEqual(result.nextRow(), ResultType.End);
+
   }
 
   public static void main(String[] args) {
@@ -334,5 +457,7 @@ public class Test {
     testLargerInsertDiffs();
 
     testDeleteDiffs();
+
+    testUpdateDiffs();
   }
 }
