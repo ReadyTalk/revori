@@ -17,6 +17,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class MyDBMS implements DBMS {
   private static final boolean Debug = true;
+
+  private static final boolean VerboseDiff = false;
+
   private static final int TableDepth = 1;
   private static final int IndexStartDepth = 2;
   private static final int MaxIndexDepth = 8;
@@ -42,6 +45,7 @@ public class MyDBMS implements DBMS {
   private static final Node NullNode = new Node(new Object(), null);
   private static final MyRevision EmptyRevision
     = new MyRevision(new Object(), NullNode);
+  private static final NodeStack NullNodeStack = new NodeStack((Node[]) null);
 
   static {
     NullNode.left = NullNode;
@@ -107,10 +111,14 @@ public class MyDBMS implements DBMS {
     public Node top;
     public int index;
 
-    public NodeStack() {
-      this.array = new Node[NodeStackSize];
+    public NodeStack(Node[] array) {
+      this.array = array;
       this.base = 0;
       this.next = null;
+    }
+
+    public NodeStack() {
+      this(new Node[NodeStackSize]);
     }
 
     public NodeStack(NodeStack basis) {
@@ -151,13 +159,18 @@ public class MyDBMS implements DBMS {
   }
 
   private static void pop(NodeStack s, int count) {
-    expect(s.top != null && s.index - count + 1 > s.base);
+    expect(count > 0);
+    expect(s.top != null);
 
-    s.index -= count - 1;
+    if (s.index - count < s.base) {
+      expect(s.index - count == s.base - 1);
 
-    if (s.index == s.base) {
+      s.index -= count - 1;
       s.top = null;
     } else {
+      expect(s.index - count >= s.base);
+
+      s.index -= count;
       s.top = s.array[s.index];
     }
   }
@@ -363,7 +376,22 @@ public class MyDBMS implements DBMS {
   private static boolean equal(Object left,
                                Object right)
   {
-    return left.equals(right);
+    return left == right || left.equals(right);
+  }
+
+  private static boolean equal(Object[] left,
+                               Object[] right)
+  {
+    if (left == right) {
+      return true;
+    } else {
+      for (int i = 0; i < left.length; ++i) {
+        if (! equal(left[i], right[i])) {
+          return false;
+        }
+      }
+      return true;
+    }
   }
 
   private static int compare(Comparable left,
@@ -822,20 +850,30 @@ public class MyDBMS implements DBMS {
   }
 
   private static void next(NodeStack stack) {
+    Node then = stack.top;
+
     if (stack.top.right != NullNode) {
       push(stack, stack.top.right);
+
+      while (stack.top.left != NullNode) {
+        push(stack, stack.top.left);
+      }
     } else {
       ascendNext(stack);
     }
   }
 
   private static void ascendNext(NodeStack stack) {
+    Node then = stack.top;
+
     while (stack.index != stack.base && peek(stack).right == stack.top) {
       pop(stack);
     }
 
     if (stack.index == stack.base) {
       clear(stack);
+    } else {
+      pop(stack);
     }
   }
 
@@ -874,6 +912,7 @@ public class MyDBMS implements DBMS {
 
       while (true) {
         if (intervalIterator.hasNext()) {
+          foundStart = false;
           currentInterval = intervalIterator.next();
           if (next(currentInterval, pair)) {
             return true;
@@ -938,16 +977,30 @@ public class MyDBMS implements DBMS {
         }
       }
       
-      if (base.top == NullNode || compare
-          (base.top.key, interval.low, interval.lowBoundType, false) < 0)
+      if (base.top != null
+          && (base.top == NullNode || compare
+              (base.top.key, interval.low, interval.lowBoundType, false) < 0))
       {
         clear(base);
       }
 
-      if (fork.top == NullNode || compare
-          (fork.top.key, interval.low, interval.lowBoundType, false) < 0)
+      if (VerboseDiff) {
+        System.out.println("base start from "
+                           + (base.top == null ? "nothing" : base.top.key));
+        dump(baseRoot, System.out, 0);
+      }
+
+      if (fork.top != null
+          && (fork.top == NullNode || compare
+              (fork.top.key, interval.low, interval.lowBoundType, false) < 0))
       {
         clear(fork);
+      }
+
+      if (VerboseDiff) {
+        System.out.println("fork start from "
+                           + (fork.top == null ? "nothing" : fork.top.key));
+        dump(forkRoot, System.out, 0);
       }
     }
 
@@ -961,6 +1014,9 @@ public class MyDBMS implements DBMS {
       while (true) {
         int baseDifference = base.top == null ? 1 : compare
           (base.top.key, interval.high, interval.highBoundType, true);
+
+        if (fork.top == NullNode) throw new RuntimeException();
+        if (fork.top != null && fork.top.key == null) throw new NullPointerException();
 
         int forkDifference = fork.top == null ? 1 : compare
           (fork.top.key, interval.high, interval.highBoundType, true);
@@ -1041,6 +1097,20 @@ public class MyDBMS implements DBMS {
     push(s, s.top.left);
   }
 
+  private static int compareForMerge(Node a, Node b) {
+    if (a == null) {
+      if (b == null) {
+        return 0;
+      } else {
+        return 1;
+      }
+    } else if (b == null) {
+      return -1;
+    } else {
+      return compare(a.key, b.key);
+    }
+  }
+
   private static class MergeTriple {
     public Node base;
     public Node left;
@@ -1106,6 +1176,11 @@ public class MyDBMS implements DBMS {
             descendLeft(base);
           } else {
             // left < right = base
+
+            // todo: if right.top == base.top and we're basing the
+            // merge result on left, we can break here instead of
+            // descending further
+
             if (right.top.left == NullNode && base.top.left == NullNode) {
               while (left.top.left != NullNode) {
                 push(left, left.top.left);
@@ -1154,10 +1229,9 @@ public class MyDBMS implements DBMS {
 
     public boolean next(MergeTriple triple) {
       while (true) {
-        int leftBase = compare((Comparable) left.top, (Comparable) base.top);
+        int leftBase = compareForMerge(left.top, base.top);
         if (leftBase > 0) {
-          int rightBase = compare
-            ((Comparable) right.top, (Comparable) base.top);
+          int rightBase = compareForMerge(right.top, base.top);
           if (rightBase > 0) {
             // base < right/left
             triple.left = null;
@@ -1178,6 +1252,10 @@ public class MyDBMS implements DBMS {
               triple.base = null;
               MyDBMS.next(left);
             } else {
+              // todo: if right.top == base.top and we're basing the
+              // merge result on left, we can skip this part of the
+              // tree
+
               triple.left = null;
               triple.right = right.top;
               triple.base = base.top;
@@ -1186,8 +1264,7 @@ public class MyDBMS implements DBMS {
             }
           }
         } else if (leftBase < 0) {
-          int rightBase = compare
-            ((Comparable) right.top, (Comparable) base.top);
+          int rightBase = compareForMerge(right.top, base.top);
           if (rightBase >= 0) {
             // left < right <= base
             triple.left = left.top;
@@ -1195,7 +1272,7 @@ public class MyDBMS implements DBMS {
             triple.base = null;
             MyDBMS.next(left);
           } else {
-            int leftRight = compareForDescent(left.top, right.top);
+            int leftRight = compareForMerge(left.top, right.top);
             if (leftRight > 0) {
               // right < left < base
               triple.left = null;
@@ -1225,8 +1302,7 @@ public class MyDBMS implements DBMS {
             }
           }
         } else {
-          int rightBase = compare
-            ((Comparable) right.top, (Comparable) base.top);
+          int rightBase = compareForMerge(right.top, base.top);
           if (rightBase > 0) {
             // left = base < right
             if (left.top == null && base.top == null) {
@@ -1415,10 +1491,14 @@ public class MyDBMS implements DBMS {
                 if (pair.base == pair.fork) {
                   expect(visitUnchanged);
                   return ResultType.Unchanged;
+                } else if (pair.fork == null) {
+                  return ResultType.Deleted;
+                } else if (! equal((Object[]) pair.base.value,
+                                   (Object[]) pair.fork.value))
+                {
+                  testFork = true;
+                  return ResultType.Deleted;                  
                 }
-
-                testFork = true;
-                return ResultType.Deleted;
               } else if (test(pair.fork)) {
                 return ResultType.Inserted;
               }
@@ -1441,19 +1521,17 @@ public class MyDBMS implements DBMS {
       }
 
       private boolean test(Node node) {
-        if (node == null) {
-          for (LiveColumnReference r: columnReferences) {
-            r.value = Undefined;
-          }
-        } else {
+        if (node != null) {
           Object[] tuple = (Object[]) node.value;
         
           for (LiveColumnReference r: columnReferences) {
             r.value = tuple[r.index];
           }
-        }
 
-        return test.evaluate() == Boolean.TRUE;
+          return test.evaluate() == Boolean.TRUE;
+        } else {
+          return false;
+        }
       }
 
       private void descend(DiffPair pair) {
@@ -1962,7 +2040,7 @@ public class MyDBMS implements DBMS {
               }
 
               rightIterator = right.iterator
-                (EmptyRevision, null, fork, rightForkStack, test,
+                (EmptyRevision, NullNodeStack, fork, rightForkStack, test,
                  expressionContext, true);
               break;
 
@@ -1972,7 +2050,7 @@ public class MyDBMS implements DBMS {
               }
 
               rightIterator = right.iterator
-                (EmptyRevision, null, base, rightForkStack, test,
+                (EmptyRevision, NullNodeStack, base, rightForkStack, test,
                  expressionContext, true);
               break;
 
@@ -2187,7 +2265,7 @@ public class MyDBMS implements DBMS {
         keys[index] = key;
         found[index] = null;
         blazedLeaves[index] = null;
-        blazedRoots[index + 1] = null;          
+        blazedRoots[index + 1] = null;
       }
     }
 
@@ -2213,14 +2291,21 @@ public class MyDBMS implements DBMS {
           }
         } else {
           Node original = find(index);
+          Node parent = find(index - 1);
 
-          if (original.left == NullNode && original.right == NullNode) {
+          if (original == NullNode) {
+            throw new RuntimeException();
+          } else if (original == parent
+                     && original.left == NullNode
+                     && original.right == NullNode)
+          {
             delete(index - 1);
           } else {
-            blaze(index = 1);
-            root = MyDBMS.delete(token, stack, original, keys[index]);
+            root = MyDBMS.delete
+              (token, stack, (Node) blaze(index - 1).value, keys[index]);
+            blazedLeaves[index - 1].value = root;
             blazedRoots[index] = root;
-            blaze(index - 1).value = root;
+            blazedLeaves[index] = null;
           }
         }
       } else {
@@ -2237,7 +2322,7 @@ public class MyDBMS implements DBMS {
             root = MyDBMS.find(result.root, keys[0]);
             found[0] = root;
           } else {
-            root = MyDBMS.find(find(index - 1), keys[0]);
+            root = MyDBMS.find((Node) find(index - 1).value, keys[index]);
             found[index] = root;
           }
         }
@@ -2249,11 +2334,18 @@ public class MyDBMS implements DBMS {
       blazedLeaves[index] = null;
       Node root = MyDBMS.delete(token, stack, blazedRoots[index], keys[index]);
       blazedRoots[index] = root;
+      blazedLeaves[index] = null;
       if (root == null) {
         if (index == 0) {
           result.root = MyDBMS.delete(token, stack, result.root, keys[0]);
         } else {
           deleteBlazed(index - 1);
+        }
+      } else {
+        if (index == 0) {
+          result.root = root;
+        } else {
+          blazedLeaves[index - 1].value = root;
         }
       }
     }
@@ -2393,16 +2485,16 @@ public class MyDBMS implements DBMS {
           = valueIterator.next().makeLiveExpression(expressionContext);
       }
 
+      MyTableReference.MySourceIterator iterator = tableReference.iterator
+        (EmptyRevision, NullNodeStack, context.result, new NodeStack(),
+         test.makeLiveExpression(expressionContext), expressionContext, false);
+
       List<MyColumn> keyColumns = tableReference.table.primaryKey.columns;
       LiveExpression[] key = new LiveExpression[keyColumns.size()];
       for (int i = 0; i < key.length; ++i) {
         key[i] = findColumnReference
           (expressionContext, tableReference, keyColumns.get(i));
       }
-
-      MyTableReference.MySourceIterator iterator = tableReference.iterator
-        (EmptyRevision, null, context.result, new NodeStack(),
-         test.makeLiveExpression(expressionContext), expressionContext, false);
 
       context.setKey(0, tableReference.table);
       context.setKey(1, tableReference.table.primaryKey);
@@ -2462,16 +2554,16 @@ public class MyDBMS implements DBMS {
     {
       ExpressionContext expressionContext = new ExpressionContext(parameters);
 
+      MyTableReference.MySourceIterator iterator = tableReference.iterator
+        (EmptyRevision, NullNodeStack, context.result, new NodeStack(),
+         test.makeLiveExpression(expressionContext), expressionContext, false);
+
       List<MyColumn> keyColumns = tableReference.table.primaryKey.columns;
       LiveExpression[] key = new LiveExpression[keyColumns.size()];
       for (int i = 0; i < key.length; ++i) {
         key[i] = findColumnReference
           (expressionContext, tableReference, keyColumns.get(i));
       }
-
-      MyTableReference.MySourceIterator iterator = tableReference.iterator
-        (EmptyRevision, null, context.result, new NodeStack(),
-         test.makeLiveExpression(expressionContext), expressionContext, false);
 
       context.setKey(0, tableReference.table);
       context.setKey(1, tableReference.table.primaryKey);
@@ -3207,13 +3299,13 @@ public class MyDBMS implements DBMS {
     while (old != NullNode) {
       int difference = compare(key, old.key);
       if (difference < 0) {
+        push(stack, new_);
         old = old.left;
         new_ = new_.left = getNode(token, old);
-        push(stack, new_);
       } else if (difference > 0) {
+        push(stack, new_);
         old = old.right;
         new_ = new_.right = getNode(token, old);
-        push(stack, new_);
       } else {
         result.node = new_;
         popStack(stack);
@@ -3226,6 +3318,7 @@ public class MyDBMS implements DBMS {
 
     // rebalance
     new_.red = true;
+
     while (stack.top != null && stack.top.red) {
       if (stack.top == peek(stack).left) {
         if (peek(stack).right.red) {
@@ -3252,7 +3345,7 @@ public class MyDBMS implements DBMS {
           peek(stack).red = true;
 
           Node n = rightRotate(token, peek(stack));
-          if (stack.index > stack.base + 1) {
+          if (stack.index <= stack.base + 1) {
             newRoot = n;
           } else if (peek(stack, 1).right == peek(stack)) {
             peek(stack, 1).right = n;
@@ -3287,7 +3380,7 @@ public class MyDBMS implements DBMS {
           peek(stack).red = true;
 
           Node n = leftRotate(token, peek(stack));
-          if (stack.index > stack.base + 1) {
+          if (stack.index <= stack.base + 1) {
             newRoot = n;
           } else if (peek(stack, 1).right == peek(stack)) {
             peek(stack, 1).right = n;
@@ -3357,13 +3450,13 @@ public class MyDBMS implements DBMS {
     while (old != NullNode) {
       int difference = compare(key, old.key);
       if (difference < 0) {
+        push(stack, new_);
         old = old.left;
         new_ = new_.left = getNode(token, old);
-        push(stack, new_);
       } else if (difference > 0) {
+        push(stack, new_);
         old = old.right;
         new_ = new_.right = getNode(token, old);
-        push(stack, new_);
       } else {
         break;
       }
@@ -3385,9 +3478,11 @@ public class MyDBMS implements DBMS {
     
     Node child;
     if (dead.left != NullNode) {
-      child = dead.left;
+      child = getNode(token, dead.left);
+    } else if (dead.right != NullNode) {
+      child = getNode(token, dead.right);
     } else {
-      child = dead.right;
+      child = NullNode;
     }
 
     if (stack.top == null) {
@@ -3401,6 +3496,7 @@ public class MyDBMS implements DBMS {
     }
 
     if (dead != new_) {
+      new_.key = dead.key;
       new_.value = dead.value;
     }
 
@@ -3410,6 +3506,7 @@ public class MyDBMS implements DBMS {
         if (child == stack.top.left) {
           Node sibling = stack.top.right = getNode(token, stack.top.right);
           if (sibling.red) {
+            expect(sibling.token == token);
             sibling.red = false;
             stack.top.red = true;
             
@@ -3421,7 +3518,9 @@ public class MyDBMS implements DBMS {
             } else {
               peek(stack).left = n;
             }
-            push(stack, n);
+            Node parent = stack.top;
+            stack.top = n;
+            push(stack, parent);
 
             sibling = stack.top.right;
           }
@@ -3461,6 +3560,7 @@ public class MyDBMS implements DBMS {
           // this is just the above code with left and right swapped:
           Node sibling = stack.top.left = getNode(token, stack.top.left);
           if (sibling.red) {
+            expect(sibling.token == token);
             sibling.red = false;
             stack.top.red = true;
             
@@ -3472,7 +3572,9 @@ public class MyDBMS implements DBMS {
             } else {
               peek(stack).right = n;
             }
-            push(stack, n);
+            Node parent = stack.top;
+            stack.top = n;
+            push(stack, parent);
 
             sibling = stack.top.left;
           }
@@ -3511,6 +3613,7 @@ public class MyDBMS implements DBMS {
         }
       }
 
+      expect(child.token == token);
       child.red = false;
     }
 
@@ -3525,6 +3628,7 @@ public class MyDBMS implements DBMS {
       for (int i = 0; i < depth; ++i) {
         out.print("  ");
       }
+      out.print(node.red ? "(r) " : "(b) ");
       if (node.value instanceof Node) {
         out.println(node.key + ": subtree");
         dump((Node) node.value, out, depth + 2);
