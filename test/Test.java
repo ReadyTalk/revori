@@ -61,11 +61,11 @@ public class Test {
     TableReference numbersReference = dbms.tableReference(numbers);
     QueryTemplate queryTemplate = dbms.queryTemplate
       (list((Expression) dbms.columnReference(numbersReference, name)),
-        numbersReference,
-        dbms.operation
-        (BinaryOperationType.Equal,
-         dbms.columnReference(numbersReference, number),
-         dbms.parameter()));
+       numbersReference,
+       dbms.operation
+       (BinaryOperationType.Equal,
+        dbms.columnReference(numbersReference, number),
+        dbms.parameter()));
 
     QueryResult result = dbms.diff(tail, first, queryTemplate, 42);
 
@@ -124,11 +124,11 @@ public class Test {
     TableReference numbersReference = dbms.tableReference(numbers);
     QueryTemplate queryTemplate = dbms.queryTemplate
       (list((Expression) dbms.columnReference(numbersReference, name)),
-        numbersReference,
-        dbms.operation
-        (BinaryOperationType.Equal,
-         dbms.columnReference(numbersReference, number),
-         dbms.parameter()));
+       numbersReference,
+       dbms.operation
+       (BinaryOperationType.Equal,
+        dbms.columnReference(numbersReference, number),
+        dbms.parameter()));
 
     QueryResult result = dbms.diff(tail, first, queryTemplate, 42);
 
@@ -224,11 +224,11 @@ public class Test {
     TableReference numbersReference = dbms.tableReference(numbers);
     QueryTemplate queryTemplate = dbms.queryTemplate
       (list((Expression) dbms.columnReference(numbersReference, name)),
-        numbersReference,
-        dbms.operation
-        (BinaryOperationType.Equal,
-         dbms.columnReference(numbersReference, number),
-         dbms.parameter()));
+       numbersReference,
+       dbms.operation
+       (BinaryOperationType.Equal,
+        dbms.columnReference(numbersReference, number),
+        dbms.parameter()));
 
     PatchTemplate deleteTemplate = dbms.deleteTemplate
       (numbersReference,
@@ -382,7 +382,7 @@ public class Test {
     dbms.apply(context, insertTemplate,  4, "four");
     dbms.apply(context, insertTemplate,  5, "five");
     dbms.apply(context, insertTemplate,  6, "six");
-    dbms.apply(context, insertTemplate,  6, "seven");
+    dbms.apply(context, insertTemplate,  7, "seven");
     dbms.apply(context, insertTemplate,  8, "eight");
     dbms.apply(context, insertTemplate,  9, "nine");
     dbms.apply(context, insertTemplate, 10, "ten");
@@ -411,11 +411,11 @@ public class Test {
 
     QueryTemplate queryTemplate = dbms.queryTemplate
       (list((Expression) dbms.columnReference(numbersReference, name)),
-        numbersReference,
-        dbms.operation
-        (BinaryOperationType.Equal,
-         dbms.columnReference(numbersReference, number),
-         dbms.parameter()));
+       numbersReference,
+       dbms.operation
+       (BinaryOperationType.Equal,
+        dbms.columnReference(numbersReference, number),
+        dbms.parameter()));
 
     QueryResult result = dbms.diff(first, second, queryTemplate, 1);
 
@@ -449,6 +449,186 @@ public class Test {
     expectEqual(result.nextItem(), "ichi");
     expectEqual(result.nextRow(), ResultType.End);
 
+    context = dbms.patchContext(second);
+
+    dbms.apply(context, updateTemplate, 11, "ju ichi");
+    dbms.apply(context, updateTemplate,  6, "roku");
+    dbms.apply(context, updateTemplate,  7, "shichi");
+
+    Revision third = dbms.commit(context);
+
+    QueryTemplate unconditionalQueryTemplate = dbms.queryTemplate
+      (list((Expression) dbms.columnReference(numbersReference, name)),
+       numbersReference,
+       dbms.constant(true));
+
+    result = dbms.diff(second, third, unconditionalQueryTemplate);
+
+    expectEqual(result.nextRow(), ResultType.Deleted);
+    expectEqual(result.nextItem(), "six");
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "roku");
+    expectEqual(result.nextRow(), ResultType.Deleted);
+    expectEqual(result.nextItem(), "seven");
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "shichi");
+    expectEqual(result.nextRow(), ResultType.Deleted);
+    expectEqual(result.nextItem(), "eleven");
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "ju ichi");
+    expectEqual(result.nextRow(), ResultType.End);
+  }
+
+  private static void testMultilevelIndexes() {
+    DBMS dbms = new MyDBMS();
+
+    Column country = dbms.column(ColumnType.String);
+    Column state = dbms.column(ColumnType.String);
+    Column city = dbms.column(ColumnType.String);
+    Column zip = dbms.column(ColumnType.Integer32);
+    Column color = dbms.column(ColumnType.String);
+    Table places = dbms.table
+      (set(country, state, city, zip, color),
+       dbms.index(list(country, state, city), true),
+       EmptyIndexSet);
+
+    Revision tail = dbms.revision();
+
+    PatchTemplate insertTemplate = dbms.insertTemplate
+      (places,
+       list(country, state, city, zip, color),
+       list(dbms.parameter(),
+            dbms.parameter(),
+            dbms.parameter(),
+            dbms.parameter(),
+            dbms.parameter()));
+    
+    PatchContext context = dbms.patchContext(tail);
+
+    dbms.apply(context, insertTemplate,
+               "USA", "Colorado", "Denver", 80209, "teal");
+    dbms.apply(context, insertTemplate,
+               "USA", "Colorado", "Glenwood Springs", 81601, "orange");
+    dbms.apply(context, insertTemplate,
+               "USA", "New York", "New York", 10001, "blue");
+    dbms.apply(context, insertTemplate,
+               "France", "N/A", "Paris", 0, "pink");
+    dbms.apply(context, insertTemplate,
+               "England", "N/A", "London", 0, "red");
+    dbms.apply(context, insertTemplate,
+               "China", "N/A", "Beijing", 0, "red");
+    dbms.apply(context, insertTemplate,
+               "China", "N/A", "Shanghai", 0, "green");
+
+    Revision first = dbms.commit(context);
+
+    TableReference placesReference = dbms.tableReference(places);
+
+    QueryTemplate stateQueryTemplate = dbms.queryTemplate
+      (list((Expression) dbms.columnReference(placesReference, color),
+            (Expression) dbms.columnReference(placesReference, zip)),
+       placesReference,
+       dbms.operation
+       (BinaryOperationType.Equal,
+        dbms.columnReference(placesReference, state),
+        dbms.parameter()));
+
+    QueryResult result = dbms.diff
+      (tail, first, stateQueryTemplate, "Colorado");
+
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "teal");
+    expectEqual(result.nextItem(), 80209);
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "orange");
+    expectEqual(result.nextItem(), 81601);
+    expectEqual(result.nextRow(), ResultType.End);
+
+    result = dbms.diff(first, tail, stateQueryTemplate, "Colorado");
+
+    expectEqual(result.nextRow(), ResultType.Deleted);
+    expectEqual(result.nextItem(), "teal");
+    expectEqual(result.nextItem(), 80209);
+    expectEqual(result.nextRow(), ResultType.Deleted);
+    expectEqual(result.nextItem(), "orange");
+    expectEqual(result.nextItem(), 81601);
+    expectEqual(result.nextRow(), ResultType.End);
+
+    result = dbms.diff(tail, first, stateQueryTemplate, "N/A");
+
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "red");
+    expectEqual(result.nextItem(), 0);
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "green");
+    expectEqual(result.nextItem(), 0);
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "red");
+    expectEqual(result.nextItem(), 0);
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "pink");
+    expectEqual(result.nextItem(), 0);
+    expectEqual(result.nextRow(), ResultType.End);
+
+    QueryTemplate countryQueryTemplate = dbms.queryTemplate
+      (list((Expression) dbms.columnReference(placesReference, color),
+            (Expression) dbms.columnReference(placesReference, city)),
+       placesReference,
+       dbms.operation
+       (BinaryOperationType.Equal,
+        dbms.columnReference(placesReference, country),
+        dbms.parameter()));
+
+    result = dbms.diff(tail, first, countryQueryTemplate, "France");
+
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "pink");
+    expectEqual(result.nextItem(), "Paris");
+    expectEqual(result.nextRow(), ResultType.End);
+
+    result = dbms.diff(tail, first, countryQueryTemplate, "China");
+
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "red");
+    expectEqual(result.nextItem(), "Beijing");
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "green");
+    expectEqual(result.nextItem(), "Shanghai");
+    expectEqual(result.nextRow(), ResultType.End);
+
+    QueryTemplate countryStateCityQueryTemplate = dbms.queryTemplate
+      (list((Expression) dbms.columnReference(placesReference, color),
+            (Expression) dbms.columnReference(placesReference, city)),
+       placesReference,
+       dbms.operation
+       (BinaryOperationType.And,
+        dbms.operation
+        (BinaryOperationType.And,
+         dbms.operation
+         (BinaryOperationType.Equal,
+          dbms.columnReference(placesReference, country),
+          dbms.parameter()),
+         dbms.operation
+         (BinaryOperationType.Equal,
+          dbms.columnReference(placesReference, state),
+          dbms.parameter())),
+        dbms.operation
+         (BinaryOperationType.Equal,
+          dbms.columnReference(placesReference, city),
+          dbms.parameter())));
+
+    result = dbms.diff(tail, first, countryStateCityQueryTemplate,
+                       "France", "Colorado", "Paris");
+
+    expectEqual(result.nextRow(), ResultType.End);
+
+    result = dbms.diff(tail, first, countryStateCityQueryTemplate,
+                       "France", "N/A", "Paris");
+
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "pink");
+    expectEqual(result.nextItem(), "Paris");
+    expectEqual(result.nextRow(), ResultType.End);
   }
 
   public static void main(String[] args) {
@@ -459,5 +639,7 @@ public class Test {
     testDeleteDiffs();
 
     testUpdateDiffs();
+
+    testMultilevelIndexes();
   }
 }

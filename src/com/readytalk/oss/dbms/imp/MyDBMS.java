@@ -40,6 +40,8 @@ public class MyDBMS implements DBMS {
   private static final Object Dummy = new Object();
   private static final Interval UnboundedInterval
     = new Interval(UndefinedExpression, UndefinedExpression);
+  private static final EvaluatedInterval UnboundedEvaluatedInterval
+    = new EvaluatedInterval(Undefined, Undefined);
   private static final Unknown UnknownInterval = new Unknown();
   private static final AtomicInteger nextId = new AtomicInteger();
   private static final Node NullNode = new Node(new Object(), null);
@@ -126,6 +128,7 @@ public class MyDBMS implements DBMS {
 
       this.array = basis.array;
       this.base = basis.index;
+      this.index = this.base;
       this.next = basis;
       basis.previous = this;
     }
@@ -184,17 +187,13 @@ public class MyDBMS implements DBMS {
     s.index = s.base;
   }
 
-  private static class MyColumn implements Column, Comparable<MyColumn> {
+  private static class MyColumn implements Column {
     public final ColumnType type;
     public final int id;
 
     public MyColumn(ColumnType type) {
       this.type = type;
       this.id = nextId();
-    }
-
-    public int compareTo(MyColumn o) {
-      return id - o.id;
     }
   }
 
@@ -295,9 +294,6 @@ public class MyDBMS implements DBMS {
       this(low, BoundType.Inclusive, high, BoundType.Inclusive);
     }
   }
-
-  private static final EvaluatedInterval UnboundedEvaluatedInterval
-    = new EvaluatedInterval(Undefined, Undefined);
 
   private static interface Scan {
     public boolean isUseful();
@@ -524,7 +520,7 @@ public class MyDBMS implements DBMS {
 
     Comparable high;
     BoundType highBoundType;
-    int highDifference = compare(left.high, false, right.high, false);
+    int highDifference = compare(left.high, true, right.high, true);
     if (highDifference > 0) {
       high = right.high;
       highBoundType = right.highBoundType;
@@ -562,7 +558,7 @@ public class MyDBMS implements DBMS {
 
     Comparable high;
     BoundType highBoundType;
-    int highDifference = compare(left.high, false, right.high, false);
+    int highDifference = compare(left.high, true, right.high, true);
     if (highDifference > 0) {
       high = left.high;
       highBoundType = left.highBoundType;
@@ -1537,15 +1533,15 @@ public class MyDBMS implements DBMS {
         
         LiveColumnReference reference = plan.references[depth];
         if (reference != null) {
-          reference.value = base == NullNode ? fork.key : base.key;
+          reference.value = base == null ? fork.key : base.key;
         }
 
         ++ depth;
 
         plan.iterators[depth] = new DiffIterator
-          ((Node) base.value,
+          (base == null ? NullNode : (Node) base.value,
            baseStack = new NodeStack(baseStack),
-           (Node) fork.value,
+           fork == null ? NullNode : (Node) fork.value,
            forkStack = new NodeStack(forkStack),
            plan.scans[depth].evaluate().iterator(),
            visitUnchanged);
@@ -1616,6 +1612,22 @@ public class MyDBMS implements DBMS {
     {
       this.tableReference = tableReference;
       this.column = column;
+    }
+
+    public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      } else if (o instanceof MyColumnReference) {
+        MyColumnReference r = (MyColumnReference) o;
+        return r.tableReference.equals(tableReference)
+          && r.column.equals(column);
+      } else {
+        return false;
+      }
+    }
+
+    public int hashCode() {
+      return tableReference.hashCode() ^ column.hashCode();
     }
 
     public void visit(ExpressionVisitor visitor) {
@@ -2243,6 +2255,7 @@ public class MyDBMS implements DBMS {
     public final Node[] found;
     public final BlazeResult blazeResult = new BlazeResult();
     public MyRevision result;
+    public int max;
 
     public MyPatchContext(Object token,
                           MyRevision result,
@@ -2258,7 +2271,8 @@ public class MyDBMS implements DBMS {
     }
 
     public void setKey(int index, Comparable key) {
-      if (! equal(key, keys[index])) {
+      if (max < index || ! equal(key, keys[index])) {
+        max = index;
         keys[index] = key;
         found[index] = null;
         blazedLeaves[index] = null;
@@ -2597,7 +2611,6 @@ public class MyDBMS implements DBMS {
 
   private static class ParameterCounter implements ExpressionVisitor {
     public final Set<Parameter> parameters = new HashSet();
-    public final Set<MyColumnReference> columnReferences = new HashSet();
     public int count;
 
     public void visit(Expression e) {
@@ -2609,13 +2622,6 @@ public class MyDBMS implements DBMS {
         } else {
           parameters.add(pe);
           ++ count;
-        }
-      } else if (e instanceof MyColumnReference) {
-        MyColumnReference cr = (MyColumnReference) e;
-        if (columnReferences.contains(cr)) {
-          throw new IllegalArgumentException("duplicate column reference");
-        } else {
-          columnReferences.add(cr);
         }
       }
     }
