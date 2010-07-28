@@ -359,10 +359,10 @@ public interface DBMS {
     public Row resolveConflict(Table table,
                                Revision base,
                                Row baseRow,
-                               Revision forkA,
-                               Row forkARow,
-                               Revision forkB,
-                               Row forkBRow);
+                               Revision left,
+                               Row leftRow,
+                               Revision right,
+                               Row rightRow);
   }
 
   /**

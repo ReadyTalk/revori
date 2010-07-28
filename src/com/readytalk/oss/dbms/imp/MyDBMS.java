@@ -487,9 +487,9 @@ public class MyDBMS implements DBMS {
     if (difference == 0) {
       if (rightBoundType == BoundType.Exclusive) {
         if (rightHigh) {
-          return -1;
-        } else {
           return 1;
+        } else {
+          return -1;
         }
       } else {
         return 0;
@@ -818,19 +818,8 @@ public class MyDBMS implements DBMS {
       n = n.right;
       if (n == NullNode) {
         return 0;
-      } else if (compare(n.key, key, boundType, high) <= 0) {
-        return -1;
       } else {
-        while (n != NullNode && compare(n.key, key, boundType, high) > 0) {
-          n = n.left;
-        }
-
-        if (n == NullNode) {
-          // todo: cache this result so we don't have to loop every time
-          return 0;
-        } else {
-          return -1;
-        }
+        return -1;
       }
     } else {
       return 0;
@@ -860,8 +849,6 @@ public class MyDBMS implements DBMS {
   }
 
   private static void ascendNext(NodeStack stack) {
-    Node then = stack.top;
-
     while (stack.index != stack.base && peek(stack).right == stack.top) {
       pop(stack);
     }
@@ -909,6 +896,8 @@ public class MyDBMS implements DBMS {
       while (true) {
         if (intervalIterator.hasNext()) {
           foundStart = false;
+          clear(base);
+          clear(fork);
           currentInterval = intervalIterator.next();
           if (next(currentInterval, pair)) {
             return true;
@@ -1764,6 +1753,9 @@ public class MyDBMS implements DBMS {
         switch (type) {
         case Equal:
           return leftValue.equals(rightValue);
+
+        case NotEqual:
+          return ! leftValue.equals(rightValue);
 
         case GreaterThan:
           return ((Comparable) leftValue).compareTo(rightValue) > 0;
@@ -3211,6 +3203,9 @@ public class MyDBMS implements DBMS {
             context.insertOrUpdate
               (depth, triple.right.key, triple.right.value);
           } else {
+            // todo: if the row is not equivalent with respect to the
+            // primary key, either reject it or reset the key path in
+            // the patch context so it is inserted in the right place
             context.insertOrUpdate
               (depth, triple.right.key, makeTuple(table, row));
           }
