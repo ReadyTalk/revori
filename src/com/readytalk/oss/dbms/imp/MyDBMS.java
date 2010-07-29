@@ -19,6 +19,7 @@ public class MyDBMS implements DBMS {
   private static final boolean Debug = true;
 
   private static final boolean VerboseDiff = false;
+  private static final boolean VerboseTest = false;
 
   private static final int TableDepth = 1;
   private static final int IndexStartDepth = 2;
@@ -37,7 +38,15 @@ public class MyDBMS implements DBMS {
     };
   private static final LiveExpression UndefinedExpression
     = new Constant(Undefined);
-  private static final Object Dummy = new Object();
+  private static final Comparable Dummy = new Comparable() {
+      public int compareTo(Object o) {
+        throw new UnsupportedOperationException();
+      }
+      
+      public String toString() {
+        return "dummy";
+      }
+    };
   private static final Interval UnboundedInterval
     = new Interval(UndefinedExpression, UndefinedExpression);
   private static final EvaluatedInterval UnboundedEvaluatedInterval
@@ -124,19 +133,22 @@ public class MyDBMS implements DBMS {
     }
 
     public NodeStack(NodeStack basis) {
-      expect(basis.previous == null);
+      expect(basis.array == null || basis.previous == null);
 
       this.array = basis.array;
       this.base = basis.index;
       this.index = this.base;
       this.next = basis;
-      basis.previous = this;
+
+      if (basis.array != null) {
+        basis.previous = this;
+      }
     }
   }
 
   private static NodeStack popStack(NodeStack s) {
     expect(s.previous == null);
-    expect(s.next.previous == s);
+    expect(s.array == null || s.next.previous == s);
 
     s = s.next;
     s.previous = null;
@@ -344,7 +356,8 @@ public class MyDBMS implements DBMS {
     }
 
     public boolean isUseful() {
-      return low.evaluate() != Undefined || high.evaluate() != Undefined;
+      return low.evaluate(false) != Undefined 
+        || high.evaluate(false) != Undefined;
     }
 
     public boolean isUnknown() {
@@ -352,27 +365,36 @@ public class MyDBMS implements DBMS {
     }
 
     public boolean isSpecific() {
-      return low.evaluate() != Undefined && high.evaluate() != Undefined;
+      return low.evaluate(false) != Undefined
+        && high.evaluate(false) != Undefined;
     }
 
     public List<EvaluatedInterval> evaluate() {
       return list
         (new EvaluatedInterval
-         ((Comparable) low.evaluate(), lowBoundType,
-          (Comparable) high.evaluate(), highBoundType));
+         ((Comparable) low.evaluate(false), lowBoundType,
+          (Comparable) high.evaluate(false), highBoundType));
     }
   }
 
   private static int compare(Comparable left,
                              Comparable right)
   {
-    return ((Comparable) left).compareTo(right);
+    if (left == right) {
+      return 0;
+    } else if (left == Dummy) {
+      return -1;
+    } else if (right == Dummy) {
+      return 1;
+    } else {
+      return ((Comparable) left).compareTo(right);
+    }
   }
 
   private static boolean equal(Object left,
                                Object right)
   {
-    return left == right || left.equals(right);
+    return left == right || (left != null && left.equals(right));
   }
 
   private static boolean equal(Object[] left,
@@ -746,7 +768,7 @@ public class MyDBMS implements DBMS {
   }
 
   private static interface LiveExpression extends Expression {
-    public Object evaluate();
+    public Object evaluate(boolean convertDummyToNull);
     public Scan makeScan(LiveColumnReference reference);
   }
 
@@ -779,6 +801,8 @@ public class MyDBMS implements DBMS {
                                    ExpressionContext expressionContext,
                                    boolean visitUnchanged);
     public void visit(SourceVisitor visitor);
+    public void visit(ExpressionContext expressionContext,
+                      ColumnReferenceVisitor visitor);
   }
 
   private static class DiffPair {
@@ -1355,6 +1379,7 @@ public class MyDBMS implements DBMS {
       public final Node base;
       public final Node fork;
       public final LiveExpression test;
+      public final ExpressionContext expressionContext;
       public final boolean visitUnchanged;
       public final List<LiveColumnReference> columnReferences
         = new ArrayList();
@@ -1376,6 +1401,7 @@ public class MyDBMS implements DBMS {
         this.base = (Node) find(base.root, table).value;
         this.fork = (Node) find(fork.root, table).value;
         this.test = test;
+        this.expressionContext = expressionContext;
         this.visitUnchanged = visitUnchanged;
 
         Plan best = null;
@@ -1470,14 +1496,16 @@ public class MyDBMS implements DBMS {
           if (plan.iterators[depth].next(pair)) {
             if (depth == plan.size - 1) {
               if (test(pair.base)) {
-                if (pair.base == pair.fork) {
-                  expect(visitUnchanged);
-                  return ResultType.Unchanged;
-                } else if (pair.fork == null) {
+                if (pair.fork == null) {
                   return ResultType.Deleted;
-                } else if (! equal((Object[]) pair.base.value,
-                                   (Object[]) pair.fork.value))
+                } else if (pair.base == pair.fork
+                           || equal((Object[]) pair.base.value,
+                                    (Object[]) pair.fork.value))
                 {
+                  if (visitUnchanged) {
+                    return ResultType.Unchanged;
+                  }
+                } else {
                   testFork = true;
                   return ResultType.Deleted;                  
                 }
@@ -1488,6 +1516,11 @@ public class MyDBMS implements DBMS {
               descend(pair);
             }
           } else if (depth == 0) {
+            // todo: be defensive to ensure we can safely keep
+            // returning ResultType.End if the application calls
+            // nextRow again after this.  The popStack calls below
+            // should not be called more than once.
+
             for (LiveColumnReference r: columnReferences) {
               r.value = Undefined;
             }
@@ -1510,7 +1543,16 @@ public class MyDBMS implements DBMS {
             r.value = tuple[r.index];
           }
 
-          return test.evaluate() == Boolean.TRUE;
+          Object result = test.evaluate(false);
+
+          if (VerboseTest) {
+            for (LiveColumnReference r: expressionContext.columnReferences) {
+              System.out.print(r.value + " ");
+            }
+            System.out.println(": " + result);
+          }
+
+          return result != Boolean.FALSE;
         } else {
           return false;
         }
@@ -1572,6 +1614,19 @@ public class MyDBMS implements DBMS {
 
     public void visit(SourceVisitor visitor) {
       visitor.visit(this);
+    }
+
+    public void visit(ExpressionContext expressionContext,
+                      ColumnReferenceVisitor visitor)
+    {
+      for (MyColumn column: table.columns) {
+        LiveColumnReference reference = findColumnReference
+          (expressionContext, this, column);
+
+        if (reference != null) {
+          visitor.visit(reference);
+        }
+      }
     }
   }
 
@@ -1650,13 +1705,17 @@ public class MyDBMS implements DBMS {
       this.column = column;
     }
 
-    public Object evaluate() {
-      return value;
+    public Object evaluate(boolean convertDummyToNull) {
+      return convertDummyToNull && value == Dummy ? null : value ;
     }
 
     public Scan makeScan(LiveColumnReference reference) {
       throw new UnsupportedOperationException();
     }
+  }
+
+  private interface ColumnReferenceVisitor {
+    public void visit(LiveColumnReference r);
   }
 
   private static class Constant implements MyExpression, LiveExpression {
@@ -1666,7 +1725,7 @@ public class MyDBMS implements DBMS {
       this.value = value;
     }
 
-    public Object evaluate() {
+    public Object evaluate(boolean convertDummyToNull) {
       return value;
     }
 
@@ -1741,9 +1800,9 @@ public class MyDBMS implements DBMS {
       this.right = right;
     }
 
-    public Object evaluate() {
-      Object leftValue = left.evaluate();
-      Object rightValue = right.evaluate();
+    public Object evaluate(boolean convertDummyToNull) {
+      Object leftValue = left.evaluate(convertDummyToNull);
+      Object rightValue = right.evaluate(convertDummyToNull);
 
       if (leftValue == null || rightValue == null) {
         return false;
@@ -1777,7 +1836,7 @@ public class MyDBMS implements DBMS {
 
     public Scan makeScan(LiveColumnReference reference) {
       if (left == reference) {
-        if (right.evaluate() == Undefined) {
+        if (right.evaluate(false) == Undefined) {
           return UnknownInterval;
         } else {
           switch (type) {
@@ -1806,7 +1865,7 @@ public class MyDBMS implements DBMS {
           }
         }
       } else if (right == reference) {
-        if (left.evaluate() == Undefined) {
+        if (left.evaluate(false) == Undefined) {
           return UnknownInterval;
         } else {
           switch (type) {
@@ -1881,9 +1940,9 @@ public class MyDBMS implements DBMS {
       this.right = right;
     }
 
-    public Object evaluate() {
-      Object leftValue = left.evaluate();
-      Object rightValue = right.evaluate();
+    public Object evaluate(boolean convertDummyToNull) {
+      Object leftValue = left.evaluate(convertDummyToNull);
+      Object rightValue = right.evaluate(convertDummyToNull);
 
       if (leftValue == null || rightValue == null) {
         return false;
@@ -1952,8 +2011,8 @@ public class MyDBMS implements DBMS {
       this.operand = operand;
     }
 
-    public Object evaluate() {
-      Object value = operand.evaluate();
+    public Object evaluate(boolean convertDummyToNull) {
+      Object value = operand.evaluate(convertDummyToNull);
 
       if (value == null) {
         return false;
@@ -1995,6 +2054,11 @@ public class MyDBMS implements DBMS {
       public NodeStack rightForkStack;
       public ResultType leftType;
       public SourceIterator rightIterator;
+      public boolean sawRightUnchanged;
+      public boolean sawRightInsert;
+      public boolean sawRightDelete;
+      public boolean sawRightEnd;
+      public boolean setUndefinedReferences;
 
       public MySourceIterator(MyRevision base,
                               NodeStack baseStack,
@@ -2013,8 +2077,36 @@ public class MyDBMS implements DBMS {
           (base, baseStack, fork, forkStack, test, expressionContext, true);
       }
 
+      private void setUndefinedReferences() {
+        setUndefinedReferences = true;
+
+        right.visit
+          (expressionContext, new ColumnReferenceVisitor() {
+              public void visit(LiveColumnReference r) {
+                r.value = Dummy;
+              }
+            });
+      }
+
       public ResultType nextRow() {
         while (true) {
+          if (sawRightEnd) {
+            if (setUndefinedReferences) {
+              setUndefinedReferences = false;
+              right.visit
+                (expressionContext, new ColumnReferenceVisitor() {
+                    public void visit(LiveColumnReference r) {
+                      r.value = Undefined;
+                    }
+                  });
+            }
+            sawRightUnchanged = false;
+            sawRightInsert = false;
+            sawRightDelete = false;
+            sawRightEnd = false;
+            rightIterator = null;
+          }
+
           if (rightIterator == null) {
             leftType = leftIterator.nextRow();
             switch (leftType) {
@@ -2032,7 +2124,8 @@ public class MyDBMS implements DBMS {
 
               rightIterator = right.iterator
                 (base, rightBaseStack, fork, rightForkStack, test,
-                 expressionContext, visitUnchanged);
+                 expressionContext,
+                 visitUnchanged || type == JoinType.LeftOuter);
               break;
 
             case Inserted:
@@ -2063,15 +2156,51 @@ public class MyDBMS implements DBMS {
           ResultType rightType = rightIterator.nextRow();
           switch (rightType) {
           case End:
-            rightIterator = null;
+            sawRightEnd = true;
+            if (type == JoinType.LeftOuter) {
+              switch (leftType) {
+              case Unchanged:
+                if (sawRightInsert) {
+                  if (! (sawRightDelete || sawRightUnchanged)) {
+                    setUndefinedReferences();
+                    return ResultType.Deleted;
+                  }
+                } else if (sawRightDelete && ! sawRightUnchanged) {
+                  setUndefinedReferences();
+                  return ResultType.Inserted;
+                }
+                break;
+
+              case Inserted:
+                if (! sawRightInsert) {
+                  setUndefinedReferences();
+                  return ResultType.Inserted;
+                }
+                break;
+              
+              case Deleted:
+                if (! sawRightInsert) {
+                  setUndefinedReferences();
+                  return ResultType.Deleted;
+                }
+                break;
+
+              default: throw new RuntimeException
+                  ("unexpected result type: " + leftType);
+              }
+            }
             break;
 
           case Unchanged:
+            sawRightUnchanged = true;
             expect(leftType == ResultType.Unchanged);
-            expect(visitUnchanged);
-            return ResultType.Unchanged;
+            if (visitUnchanged) {
+              return ResultType.Unchanged;
+            }
+            break;
 
           case Inserted:
+            sawRightInsert = true;
             switch (leftType) {
             case Unchanged:
             case Inserted:
@@ -2085,6 +2214,7 @@ public class MyDBMS implements DBMS {
             }
 
           case Deleted:
+            sawRightDelete = true;
             expect(leftType == ResultType.Unchanged);
             return ResultType.Deleted;
 
@@ -2124,6 +2254,12 @@ public class MyDBMS implements DBMS {
     public void visit(SourceVisitor visitor) {
       left.visit(visitor);
       right.visit(visitor);
+    }
+
+    public void visit(ExpressionContext expressionContext,
+                      ColumnReferenceVisitor visitor) {
+      left.visit(expressionContext, visitor);
+      right.visit(expressionContext, visitor);
     }
   }
 
@@ -2221,7 +2357,7 @@ public class MyDBMS implements DBMS {
       if (iterator == null || nextItemIndex > expressions.size()) {
         throw new NoSuchElementException();
       } else {
-        return expressions.get(nextItemIndex++).evaluate();
+        return expressions.get(nextItemIndex++).evaluate(true);
       }      
     }
   }
@@ -2416,7 +2552,7 @@ public class MyDBMS implements DBMS {
       Object[] tuple = new Object[table.columns.size()];
       { int i = 0;
         for (MyColumn c: table.columns) {
-          tuple[i++] = map.get(c).evaluate();
+          tuple[i++] = map.get(c).evaluate(false);
         }
       }
 
@@ -2428,13 +2564,13 @@ public class MyDBMS implements DBMS {
       for (i = 0; i < columns.size() - 1; ++i) {
         context.setKey
           (i + IndexStartDepth,
-           (Comparable) map.get(columns.get(i)).evaluate());
+           (Comparable) map.get(columns.get(i)).evaluate(false));
       }
 
       // todo: throw duplicate key exception if applicable
       context.insertOrUpdate
         (i + IndexStartDepth,
-         (Comparable) map.get(columns.get(i)).evaluate(), tuple);
+         (Comparable) map.get(columns.get(i)).evaluate(false), tuple);
     }
   }
 
@@ -2519,19 +2655,19 @@ public class MyDBMS implements DBMS {
             if (v == UndefinedExpression) {
               tuple[i] = original[i];
             } else {
-              tuple[i] = v.evaluate();
+              tuple[i] = v.evaluate(false);
             }
           }
 
           int i;
           for (i = 0; i < key.length - 1; ++i) {
             context.setKey(i + IndexStartDepth,
-                                 (Comparable) key[i].evaluate());
+                                 (Comparable) key[i].evaluate(false));
           }
 
           // todo: throw duplicate key exception if applicable
           context.insertOrUpdate
-            (i + IndexStartDepth, (Comparable) key[i].evaluate(), tuple);
+            (i + IndexStartDepth, (Comparable) key[i].evaluate(false), tuple);
         } break;
 
         default:
@@ -2583,11 +2719,11 @@ public class MyDBMS implements DBMS {
           int i;
           for (i = 0; i < key.length - 1; ++i) {
             context.setKey
-              (i + IndexStartDepth, (Comparable) key[i].evaluate());
+              (i + IndexStartDepth, (Comparable) key[i].evaluate(false));
           }
 
           context.delete
-            (i + IndexStartDepth, (Comparable) key[i].evaluate());
+            (i + IndexStartDepth, (Comparable) key[i].evaluate(false));
         } break;
 
         default:

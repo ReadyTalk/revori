@@ -750,15 +750,11 @@ public class Test {
 
     result = dbms.diff(tail, first, greaterThan, 12);
 
-    System.out.println("---");
-
     expectEqual(result.nextRow(), ResultType.Inserted);
     expectEqual(result.nextItem(), "thirteen");
     expectEqual(result.nextRow(), ResultType.End);
 
     result = dbms.diff(tail, first, greaterThan, 11);
-
-    System.out.println("---");
 
     expectEqual(result.nextRow(), ResultType.Inserted);
     expectEqual(result.nextItem(), "twelve");
@@ -1081,8 +1077,6 @@ public class Test {
     result = dbms.diff
       (tail, first, greaterThanAndLessThanOrNotLessThanOrEqual, 3, 7, 10);
 
-    System.out.println("---");
-
     expectEqual(result.nextRow(), ResultType.Inserted);
     expectEqual(result.nextItem(), "four");
     expectEqual(result.nextRow(), ResultType.Inserted);
@@ -1325,6 +1319,7 @@ public class Test {
     expectEqual(result.nextRow(), ResultType.Inserted);
     expectEqual(result.nextItem(), "tom");
     expectEqual(result.nextItem(), "big bucks");
+    expectEqual(result.nextRow(), ResultType.Inserted);
     expectEqual(result.nextItem(), "tom");
     expectEqual(result.nextItem(), "moneybags");
     expectEqual(result.nextRow(), ResultType.Inserted);
@@ -1402,7 +1397,7 @@ public class Test {
 
     PatchTemplate colorInsert = dbms.insertTemplate
       (colors,
-       list(nickname, color),
+       list(string, color),
        list(dbms.parameter(),
             dbms.parameter()));
 
@@ -1463,6 +1458,10 @@ public class Test {
       (tail, first, namesInnerNicknamesInnerColors);
 
     expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "tom");
+    expectEqual(result.nextItem(), "big bucks");
+    expectEqual(result.nextItem(), "red");
+    expectEqual(result.nextRow(), ResultType.Inserted);
     expectEqual(result.nextItem(), "tim");
     expectEqual(result.nextItem(), "eight ball");
     expectEqual(result.nextItem(), "sky blue");
@@ -1472,7 +1471,7 @@ public class Test {
     expectEqual(result.nextItem(), "green");
     expectEqual(result.nextRow(), ResultType.End);
 
-    QueryTemplate namesInnerNicknamesLeftColors = dbms.queryTemplate
+    QueryTemplate namesLeftNicknamesInnerColors = dbms.queryTemplate
       (list((Expression) dbms.columnReference(namesReference, name),
             (Expression) dbms.columnReference(nicknamesReference, nickname),
             (Expression) dbms.columnReference(colorsReference, color)),
@@ -1494,12 +1493,12 @@ public class Test {
          dbms.columnReference(colorsReference, string),
          dbms.columnReference(nicknamesReference, nickname))));
     
-    result = dbms.diff(tail, first, namesInnerNicknamesLeftColors);
+    result = dbms.diff(tail, first, namesLeftNicknamesInnerColors);
 
     expectEqual(result.nextRow(), ResultType.Inserted);
     expectEqual(result.nextItem(), "tom");
-    expectEqual(result.nextItem(), "moneybags");
-    expectEqual(result.nextItem(), null);
+    expectEqual(result.nextItem(), "big bucks");
+    expectEqual(result.nextItem(), "red");
     expectEqual(result.nextRow(), ResultType.Inserted);
     expectEqual(result.nextItem(), "tim");
     expectEqual(result.nextItem(), "eight ball");
@@ -1508,13 +1507,9 @@ public class Test {
     expectEqual(result.nextItem(), "tod");
     expectEqual(result.nextItem(), "baldy");
     expectEqual(result.nextItem(), "green");
-    expectEqual(result.nextRow(), ResultType.Inserted);
-    expectEqual(result.nextItem(), "tes");
-    expectEqual(result.nextItem(), "knuckles");
-    expectEqual(result.nextItem(), null);
     expectEqual(result.nextRow(), ResultType.End);
 
-    QueryTemplate namesLeftNicknamesInnerColors = dbms.queryTemplate
+    QueryTemplate namesInnerNicknamesLeftColors = dbms.queryTemplate
       (list((Expression) dbms.columnReference(namesReference, name),
             (Expression) dbms.columnReference(nicknamesReference, nickname),
             (Expression) dbms.columnReference(colorsReference, color)),
@@ -1536,8 +1531,16 @@ public class Test {
          dbms.columnReference(colorsReference, string),
          dbms.columnReference(nicknamesReference, nickname))));
     
-    result = dbms.diff(tail, first, namesLeftNicknamesInnerColors);
+    result = dbms.diff(tail, first, namesInnerNicknamesLeftColors);
 
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "tom");
+    expectEqual(result.nextItem(), "big bucks");
+    expectEqual(result.nextItem(), "red");
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "tom");
+    expectEqual(result.nextItem(), "moneybags");
+    expectEqual(result.nextItem(), null);
     expectEqual(result.nextRow(), ResultType.Inserted);
     expectEqual(result.nextItem(), "tim");
     expectEqual(result.nextItem(), "eight ball");
@@ -1546,6 +1549,10 @@ public class Test {
     expectEqual(result.nextItem(), "tod");
     expectEqual(result.nextItem(), "baldy");
     expectEqual(result.nextItem(), "green");
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "tes");
+    expectEqual(result.nextItem(), "knuckles");
+    expectEqual(result.nextItem(), null);
     expectEqual(result.nextRow(), ResultType.End);
 
     QueryTemplate namesInnerLastnamesLeftNicknamesLeftColors
@@ -1561,15 +1568,15 @@ public class Test {
          namesReference,
          lastnamesReference),
         dbms.join
-        (JoinType.Inner,
+        (JoinType.LeftOuter,
          nicknamesReference,
          colorsReference)),
        dbms.operation
        (BinaryOperationType.And,
         dbms.operation
         (BinaryOperationType.Equal,
-         dbms.columnReference(namesReference, id),
-         dbms.columnReference(lastnamesReference, id)),
+         dbms.columnReference(namesReference, name),
+         dbms.columnReference(lastnamesReference, name)),
         dbms.operation
         (BinaryOperationType.And,
          dbms.operation
@@ -1587,13 +1594,13 @@ public class Test {
     expectEqual(result.nextRow(), ResultType.Inserted);
     expectEqual(result.nextItem(), "tom");
     expectEqual(result.nextItem(), "thumb");
-    expectEqual(result.nextItem(), "moneybags");
-    expectEqual(result.nextItem(), null);
+    expectEqual(result.nextItem(), "big bucks");
+    expectEqual(result.nextItem(), "red");
     expectEqual(result.nextRow(), ResultType.Inserted);
     expectEqual(result.nextItem(), "tom");
     expectEqual(result.nextItem(), "thumb");
-    expectEqual(result.nextItem(), "big bucks");
-    expectEqual(result.nextItem(), "red");
+    expectEqual(result.nextItem(), "moneybags");
+    expectEqual(result.nextItem(), null);
     expectEqual(result.nextRow(), ResultType.Inserted);
     expectEqual(result.nextItem(), "ted");
     expectEqual(result.nextItem(), "thomson");
