@@ -21,10 +21,11 @@ public class MyDBMS implements DBMS {
   private static final boolean VerboseDiff = false;
   private static final boolean VerboseTest = false;
 
-  private static final int TableDepth = 1;
-  private static final int IndexStartDepth = 2;
+  private static final int TableDepth = 0;
+  private static final int IndexDepth = 1;
+  private static final int IndexBodyDepth = 2;
   private static final int MaxIndexDepth = 8;
-  private static final int MaxDepth = IndexStartDepth + MaxIndexDepth;
+  private static final int MaxDepth = IndexBodyDepth + MaxIndexDepth;
   private static final int NodeStackSize = 64;
 
   private static final Comparable Undefined = new Comparable() {
@@ -2392,10 +2393,10 @@ public class MyDBMS implements DBMS {
       this.token = token;
       this.result = result;
       this.stack = stack;
-      keys = new Comparable[MaxDepth];
-      blazedRoots = new Node[MaxDepth];
-      blazedLeaves = new Node[MaxDepth];
-      found = new Node[MaxDepth];
+      keys = new Comparable[MaxDepth + 1];
+      blazedRoots = new Node[MaxDepth + 1];
+      blazedLeaves = new Node[MaxDepth + 1];
+      found = new Node[MaxDepth + 1];
     }
 
     public void setKey(int index, Comparable key) {
@@ -2563,13 +2564,13 @@ public class MyDBMS implements DBMS {
       int i;
       for (i = 0; i < columns.size() - 1; ++i) {
         context.setKey
-          (i + IndexStartDepth,
+          (i + IndexBodyDepth,
            (Comparable) map.get(columns.get(i)).evaluate(false));
       }
 
       // todo: throw duplicate key exception if applicable
       context.insertOrUpdate
-        (i + IndexStartDepth,
+        (i + IndexBodyDepth,
          (Comparable) map.get(columns.get(i)).evaluate(false), tuple);
     }
   }
@@ -2661,13 +2662,13 @@ public class MyDBMS implements DBMS {
 
           int i;
           for (i = 0; i < key.length - 1; ++i) {
-            context.setKey(i + IndexStartDepth,
-                                 (Comparable) key[i].evaluate(false));
+            context.setKey
+              (i + IndexBodyDepth, (Comparable) key[i].evaluate(false));
           }
 
           // todo: throw duplicate key exception if applicable
           context.insertOrUpdate
-            (i + IndexStartDepth, (Comparable) key[i].evaluate(false), tuple);
+            (i + IndexBodyDepth, (Comparable) key[i].evaluate(false), tuple);
         } break;
 
         default:
@@ -2719,11 +2720,11 @@ public class MyDBMS implements DBMS {
           int i;
           for (i = 0; i < key.length - 1; ++i) {
             context.setKey
-              (i + IndexStartDepth, (Comparable) key[i].evaluate(false));
+              (i + IndexBodyDepth, (Comparable) key[i].evaluate(false));
           }
 
           context.delete
-            (i + IndexStartDepth, (Comparable) key[i].evaluate(false));
+            (i + IndexBodyDepth, (Comparable) key[i].evaluate(false));
         } break;
 
         default:
@@ -3249,7 +3250,7 @@ public class MyDBMS implements DBMS {
     MyPatchContext context = new MyPatchContext
       (new Object(), left, new NodeStack());
 
-    MergeIterator[] iterators = new MergeIterator[MaxDepth];
+    MergeIterator[] iterators = new MergeIterator[MaxDepth + 1];
     
     NodeStack baseStack = new NodeStack();
     NodeStack leftStack = new NodeStack();
@@ -3327,7 +3328,8 @@ public class MyDBMS implements DBMS {
         }
 
         if (conflict) {
-          Row baseRow = new MyRow(table, (Object[]) triple.base.value);
+          Row baseRow = triple.base == null
+            ? null : new MyRow(table, (Object[]) triple.base.value);
           Row leftRow = new MyRow(table, (Object[]) triple.left.value);
           Row rightRow = new MyRow(table, (Object[]) triple.right.value);
           Row row = conflictResolver.resolveConflict
@@ -3350,9 +3352,9 @@ public class MyDBMS implements DBMS {
 
           if (depth == TableDepth) {
             table = (MyTable) triple.left.key;
-          } else if (depth == IndexStartDepth) {
+          } else if (depth == IndexDepth) {
             bottom = ((MyIndex) triple.left.key).columns.size()
-              + IndexStartDepth;
+              + IndexBodyDepth - 1;
           }
           
           ++ depth;

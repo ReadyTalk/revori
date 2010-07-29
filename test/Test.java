@@ -1675,7 +1675,7 @@ public class Test {
        numbersReference,
        dbms.constant(true));
 
-    QueryResult result = dbms.diff(tail, base, any);
+    QueryResult result = dbms.diff(tail, merge, any);
 
     expectEqual(result.nextRow(), ResultType.Inserted);
     expectEqual(result.nextItem(), "one");
@@ -1683,8 +1683,6 @@ public class Test {
     expectEqual(result.nextItem(), "two");
     expectEqual(result.nextRow(), ResultType.Inserted);
     expectEqual(result.nextItem(), "four");
-    expectEqual(result.nextRow(), ResultType.Deleted);
-    expectEqual(result.nextItem(), "six");
     expectEqual(result.nextRow(), ResultType.Inserted);
     expectEqual(result.nextItem(), "roku");
     expectEqual(result.nextRow(), ResultType.Inserted);
