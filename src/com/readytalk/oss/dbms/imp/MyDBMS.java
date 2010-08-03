@@ -2853,7 +2853,7 @@ public class MyDBMS implements DBMS {
         ("column not created by this implementation");
     }
 
-    if (! tableReference.table.columns.contains(myColumn)) {
+    if (! myTableReference.table.columns.contains(myColumn)) {
       throw new IllegalArgumentException
         ("table does not contain specified column");
     }
