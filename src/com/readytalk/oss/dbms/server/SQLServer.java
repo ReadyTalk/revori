@@ -49,12 +49,16 @@ import java.nio.channels.ServerSocketChannel;
 public class SQLServer {
   private static final Logger log = Logger.getLogger("SQLServer");
 
-  public enum Requests {
+  public enum Request {
     Execute, Complete;
   }
 
-  public enum Responses {
-    InsertedRow, DeletedRow, End, Item, Success, Error;
+  public enum Response {
+    RowSet, Success, Error;
+  }
+
+  public enum RowSetFlag {
+    InsertedRow, DeletedRow, End, Item;
   }
 
   private static final int ThreadPoolSize = 256;
@@ -123,13 +127,14 @@ public class SQLServer {
             HashRow result = new HashRow(3);
             result.put(tagsDatabase, leftRow.value(tagsDatabase));
             result.put(tagsName, leftRow.value(tagsName));
-            result.put(tagsTag, dbms.merge
-                       (baseRow == null
-                        ? dbms.revision()
-                        : ((Tag) baseRow.value(tagsTag)).revision,
-                        ((Tag) leftRow.value(tagsTag)).revision,
-                        ((Tag) rightRow.value(tagsTag)).revision,
-                        rightPreferenceConflictResolver));
+            result.put(tagsTag, new Tag
+                       ((String) leftRow.value(tagsName), dbms.merge
+                        (baseRow == null
+                         ? dbms.revision()
+                         : ((Tag) baseRow.value(tagsTag)).revision,
+                         ((Tag) leftRow.value(tagsTag)).revision,
+                         ((Tag) rightRow.value(tagsTag)).revision,
+                         rightPreferenceConflictResolver)));
             return result;
           } else {
             return leftPreferenceMerge(columns, baseRow, rightRow, leftRow);
@@ -1044,27 +1049,29 @@ public class SQLServer {
   {
     QueryResult result = dbms.diff(base, fork, template);
 
+    out.write(Response.RowSet.ordinal());
+
     while (true) {
       ResultType resultType = result.nextRow();
       switch (resultType) {
       case Inserted:
-        out.write(Responses.InsertedRow.ordinal());
+        out.write(RowSetFlag.InsertedRow.ordinal());
         for (int i = 0; i < expressionCount; ++i) {
-          out.write(Responses.Item.ordinal());
+          out.write(RowSetFlag.Item.ordinal());
           writeString(out, String.valueOf(result.nextItem()));
         }
         break;
 
       case Deleted:
-        out.write(Responses.DeletedRow.ordinal());
+        out.write(RowSetFlag.DeletedRow.ordinal());
         for (int i = 0; i < expressionCount; ++i) {
-          out.write(Responses.Item.ordinal());
+          out.write(RowSetFlag.Item.ordinal());
           writeString(out, String.valueOf(result.nextItem()));
         }
         break;
 
       case End:
-        out.write(Responses.End.ordinal());
+        out.write(RowSetFlag.End.ordinal());
         return;
 
       default:
@@ -1732,7 +1739,7 @@ public class SQLServer {
            {
              apply(client, makeInsertTemplate(client, tree));
 
-             out.write(Responses.Success.ordinal());
+             out.write(Response.Success.ordinal());
              writeString(out, "inserted 1 row");
            }
          });
@@ -1758,7 +1765,7 @@ public class SQLServer {
            {
              int count = apply(client, makeUpdateTemplate(client, tree));
 
-             out.write(Responses.Success.ordinal());
+             out.write(Response.Success.ordinal());
              writeString(out, "updated " + count + " row(s)");
            }
          });
@@ -1781,7 +1788,7 @@ public class SQLServer {
            {
              int count = apply(client, makeDeleteTemplate(client, tree));
 
-             out.write(Responses.Success.ordinal());
+             out.write(Response.Success.ordinal());
              writeString(out, "deleted " + count + " row(s)");
            }
          });
@@ -1809,7 +1816,7 @@ public class SQLServer {
                (client, makeCopyTemplate(client, tree, columnTypes),
                 columnTypes, in);
 
-             out.write(Responses.Success.ordinal());
+             out.write(Response.Success.ordinal());
              writeString(out, "inserted " + count + " row(s)");
            }
          });
@@ -1827,7 +1834,7 @@ public class SQLServer {
            {
              pushTransaction(client);
 
-             out.write(Responses.Success.ordinal());
+             out.write(Response.Success.ordinal());
              writeString(out, "pushed new transaction context");
            }
          });
@@ -1846,7 +1853,7 @@ public class SQLServer {
              commitTransaction(client);
              popTransaction(client);
 
-             out.write(Responses.Success.ordinal());
+             out.write(Response.Success.ordinal());
              writeString(out, "committed transaction");
            }
          });
@@ -1864,7 +1871,7 @@ public class SQLServer {
            {
              popTransaction(client);
 
-             out.write(Responses.Success.ordinal());
+             out.write(Response.Success.ordinal());
              writeString(out, "abandoned transaction");
            }
          });
@@ -1893,7 +1900,7 @@ public class SQLServer {
                popTransaction(client);
              }
 
-             out.write(Responses.Success.ordinal());
+             out.write(Response.Success.ordinal());
              writeString(out, "tag " + ((Name) tree.get(1)).value
                          + " set to " + ((Name) tree.get(2)).value);
            }
@@ -1930,7 +1937,7 @@ public class SQLServer {
                popTransaction(client);
              }
 
-             out.write(Responses.Success.ordinal());
+             out.write(Response.Success.ordinal());
              writeString(out, "head set to result of merge ("
                          + conflictResolver.conflictCount + " conflicts)");
            }
@@ -1954,7 +1961,7 @@ public class SQLServer {
                            OutputStream out)
              throws IOException
            {
-             out.write(Responses.Success.ordinal());
+             out.write(Response.Success.ordinal());
              writeString(out, "todo");
            }
          });
@@ -2008,7 +2015,7 @@ public class SQLServer {
                popTransaction(client);
              }
 
-             out.write(Responses.Success.ordinal());
+             out.write(Response.Success.ordinal());
              writeString(out, "dropped " + type + " " + name);
            }
          });
@@ -2030,7 +2037,7 @@ public class SQLServer {
              String name = ((Name) tree.get(2)).value;
              client.database = findDatabase(client, name);
 
-             out.write(Responses.Success.ordinal());
+             out.write(Response.Success.ordinal());
              writeString(out, "switched to database " + name);
            }
          });
@@ -2069,7 +2076,7 @@ public class SQLServer {
                popTransaction(client);
              }
 
-             out.write(Responses.Success.ordinal());
+             out.write(Response.Success.ordinal());
              writeString(out, "table " + ((Name) tree.get(2)).value
                          + " defined");
            }
@@ -2098,7 +2105,7 @@ public class SQLServer {
                popTransaction(client);
              }
 
-             out.write(Responses.Success.ordinal());
+             out.write(Response.Success.ordinal());
              writeString(out, "created database " + name);
            }
          });
@@ -2114,7 +2121,7 @@ public class SQLServer {
                            OutputStream out)
              throws IOException
            {
-             out.write(Responses.Success.ordinal());
+             out.write(Response.Success.ordinal());
              writeString(out, "todo");
            }
          });
@@ -2132,12 +2139,12 @@ public class SQLServer {
       try {
         result.task.run(client, result.tree, in, out);
       } catch (Exception e) {
-        out.write(Responses.Error.ordinal());
+        out.write(Response.Error.ordinal());
         writeString(out, e.getMessage()); 
         log.log(Level.WARNING, null, e);       
       }
     } else {
-      out.write(Responses.Error.ordinal());
+      out.write(Response.Error.ordinal());
       writeString(out, "Sorry, I don't understand.");
     }
   }
@@ -2149,7 +2156,7 @@ public class SQLServer {
   {
     ParseResult result = client.server.parser.parse
       (new ParseContext(client), readString(in));
-    out.write(Responses.Success.ordinal());
+    out.write(Response.Success.ordinal());
     writeInteger(out, result.completions.size());
     for (String completion: result.completions) {
       writeString(out, completion);
@@ -2162,7 +2169,7 @@ public class SQLServer {
     throws IOException
   {
     int requestType = in.read();
-    switch (Requests.values()[requestType]) {
+    switch (Request.values()[requestType]) {
     case Execute:
       executeRequest(client, in, out);
       out.flush();

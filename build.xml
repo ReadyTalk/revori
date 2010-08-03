@@ -1,4 +1,4 @@
-<project name="server" default="jar" basedir=".">
+<project name="server" default="jar-and-client" basedir=".">
 
   <target name="clean">
     <delete dir="${basedir}/build"/>
@@ -21,6 +21,28 @@
                includes="**/*.class"/>
     </jar>
   </target>
+
+  <uptodate property="compile.grammer.not.required"
+            srcfile="${basedir}/src/client.cpp"
+            targetfile="${basedir}/build/client" />
+
+  <target name="client" unless="client-not-required">
+    <mkdir dir="${basedir}/build"/>
+    
+    <exec dir="${basedir}" executable="bash" failonerror="true">
+      <arg line="-c &quot;
+                 g++
+                 -Werror -Wall -Wextra -Wunused-parameter -Winit-self
+                 -fno-rtti -fno-exceptions
+                 -O0 -g3
+                 src/client.cpp
+                 -lreadline
+                 -o build/client
+                 &quot;"/>
+    </exec>
+  </target>
+
+  <target name="jar-and-client" depends="jar, client" />
 
   <target name="javadoc">
     <javadoc destdir="${basedir}/build/api">
