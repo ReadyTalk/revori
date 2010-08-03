@@ -16,6 +16,7 @@ enum Request {
 
 enum Response {
   RowSet,
+  NewDatabase,
   Success,
   Error
 };
@@ -50,17 +51,25 @@ class Context {
  public:
   Context():
     buffer(8 * 1024),
-    trouble(false),
-    exit(false),
+    databaseName(0),
     socket(-1),
-    completionCount(-1)
+    completionCount(-1),
+    trouble(false),
+    exit(false)
   { }
 
+  ~Context() {
+    if (databaseName) {
+      free(databaseName);
+    }
+  }
+
   Buffer buffer;
-  bool trouble;
-  bool exit;
+  char* databaseName;
   int socket;
   int completionCount;
+  bool trouble;
+  bool exit;
 };
 
 Context* globalContext = 0;
@@ -374,6 +383,26 @@ execute(Context* context, const char* command)
   case -1:
     break;
 
+  case NewDatabase: {
+    if (context->databaseName) {
+      free(context->databaseName);
+    }
+
+    context->databaseName = readString(context);
+    if (context->databaseName == 0) {
+      return;
+    }
+
+    char* message = readString(context);
+    if (message == 0) {
+      return;
+    }
+
+    fprintf(stdout, "%s\n", message);
+   
+    free(message);
+  } break;
+
   case Success: {
     char* message = readString(context);
     if (message == 0) {
@@ -466,9 +495,24 @@ main(int, const char**)
   rl_completion_entry_function = completionGenerator;
 
   while (not (context.trouble || context.exit)) {
-    char* line = readline("> ");
+    char* line;
+    if (context.databaseName) {
+      int length = strlen(context.databaseName) + 4;
+      char* prompt = static_cast<char*>(malloc(length));
+      if (prompt == 0) {
+        fprintf(stderr, "\nunable to allocate memory\n");
+        return -1;
+      }
+
+      snprintf(prompt, length, "%s > ", context.databaseName);
+      line = readline(prompt);
+      free(prompt);
+    } else {
+      line = readline("> ");
+    }
 
     if (line == 0) {
+      fprintf(stdout, "\n");
       break;
     }
 
@@ -477,6 +521,7 @@ main(int, const char**)
       add_history(s);
 
       execute(&context, s);
+      fprintf(stdout, "\n");
     }
 
     free(line);

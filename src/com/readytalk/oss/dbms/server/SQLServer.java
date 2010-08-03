@@ -54,7 +54,7 @@ public class SQLServer {
   }
 
   public enum Response {
-    RowSet, Success, Error;
+    RowSet, NewDatabase, Success, Error;
   }
 
   public enum RowSetFlag {
@@ -508,11 +508,15 @@ public class SQLServer {
 
   private static class ParseContext {
     public final Client client;
+    public final String start;
     public Map<NameType, Set<String>> completions;
     public int depth;
 
-    public ParseContext(Client client) {
+    public ParseContext(Client client,
+                        String start)
+    {
       this.client = client;
+      this.start = start;
     }
   }
 
@@ -590,6 +594,14 @@ public class SQLServer {
 
     public NumberLiteral(String value) {
       this.value = Long.parseLong(value);
+    }
+  }
+
+  private static class BooleanLiteral extends Leaf {
+    public final boolean value;
+
+    public BooleanLiteral(boolean value) {
+      this.value = value;
     }
   }
 
@@ -755,6 +767,8 @@ public class SQLServer {
       return server.dbms.constant(((StringLiteral) tree).value);
     } else if (tree instanceof NumberLiteral) {
       return server.dbms.constant(((NumberLiteral) tree).value);
+    } else if (tree instanceof BooleanLiteral) {
+      return server.dbms.constant(((BooleanLiteral) tree).value);
     } if (tree.get(0) instanceof Name) {
       return makeColumnReference
         (server.dbms,
@@ -1290,7 +1304,8 @@ public class SQLServer {
   }
 
   private static Set<String> findCompletions(Client client,
-                                             NameType type)
+                                             NameType type,
+                                             String start)
   {
     DBMS dbms = client.server.dbms;
     QueryResult result = null;
@@ -1301,7 +1316,11 @@ public class SQLServer {
 
       Set<String> set = new HashSet();
       while (result.nextRow() == ResultType.Inserted) {
-        set.add(((Database) result.nextItem()).name);
+        String name = ((Database) result.nextItem()).name;
+        if (name.startsWith(start)) {
+          log.info("add completion " + name);
+          set.add(name);
+        }
       }
       return set;
     }
@@ -1314,7 +1333,10 @@ public class SQLServer {
 
         Set<String> set = new HashSet();
         while (result.nextRow() == ResultType.Inserted) {
-          set.add(((Table) result.nextItem()).name);
+          String name = ((Table) result.nextItem()).name;
+          if (name.startsWith(start)) {
+            set.add(name);
+          }
         }
         return set;
       }
@@ -1331,7 +1353,10 @@ public class SQLServer {
 
         Set<String> set = new HashSet();
         while (result.nextRow() == ResultType.Inserted) {
-          set.add(((Tag) result.nextItem()).name);
+          String name = ((Tag) result.nextItem()).name;
+          if (name.startsWith(start)) {
+            set.add(name);
+          }
         }
         return set;
       }
@@ -1344,7 +1369,8 @@ public class SQLServer {
   }
 
   private static Set<String> findCompletions(ParseContext context,
-                                              NameType type)
+                                             NameType type,
+                                             String start)
   {
     if (type == NameType.Column) {
       if (context.completions != null) {
@@ -1365,7 +1391,9 @@ public class SQLServer {
 
               if (result.nextRow() == ResultType.Inserted) {
                 for (Column c: ((Table) result.nextItem()).columns.values()) {
-                  columns.add(c.name);
+                  if (c.name.startsWith(start)) {
+                    columns.add(c.name);
+                  }
                 }
               }          
             }
@@ -1383,7 +1411,7 @@ public class SQLServer {
         return null;
       }
     } else {
-      return findCompletions(context.client, type);
+      return findCompletions(context.client, type, start);
     }
   }
 
@@ -1424,16 +1452,19 @@ public class SQLServer {
       };
     }
 
-    public static ParseResult success(Tree tree, String next) {
-      return new ParseResult(tree, next, null);
+    public static ParseResult success(Tree tree,
+                                      String next,
+                                      Set<String> completions)
+    {
+      return new ParseResult(tree, next, completions);
     }
 
     public static ParseResult fail(Set<String> completions) {
       return new ParseResult(null, null, completions);
     }
 
-    public static String next(String in, int offset) {
-      int i = offset;
+    public static String skipSpace(String in) {
+      int i = 0;
       while (i < in.length()) {
         if (Character.isSpace(in.charAt(i))) {
           ++ i;
@@ -1442,7 +1473,7 @@ public class SQLServer {
         }
       }
 
-      return in.substring(i);
+      return i == 0 ? in : in.substring(i);
     }
 
     public static String parseName(String in) {
@@ -1471,10 +1502,12 @@ public class SQLServer {
         private final Terminal terminal = new Terminal(value);
 
         public ParseResult parse(ParseContext context, String in) {
-          if (in.startsWith(value)) {
-            return success(terminal, next(in, value.length()));
-          } else if ((in.length() > 0 || completeIfEmpty)
-                     && value.startsWith(in))
+          String token = skipSpace(in);
+          if (token.startsWith(value)) {
+            return success(terminal, token.substring(value.length()), null);
+          } else if ((token.length() > 0 || completeIfEmpty)
+                     && (token == context.start || token != in)
+                     && value.startsWith(token))
           {
             return fail(set(value));
           } else {
@@ -1523,7 +1556,7 @@ public class SQLServer {
               if (commaResult.tree != null) {
                 in = commaResult.next;
               } else {
-                return success(list, result.next);
+                return success(list, result.next, result.completions);
               }
             } else {
               return fail(result.completions);
@@ -1537,8 +1570,9 @@ public class SQLServer {
       return new Parser() {
         public ParseResult parse(ParseContext context, String in) {
           TreeList list = new TreeList();
+          ParseResult result = null;
           for (Parser parser: parsers) {
-            ParseResult result = parser.parse(context, in);
+            result = parser.parse(context, in);
             if (result.tree != null) {
               list.add(result.tree);
               in = result.next;
@@ -1546,7 +1580,7 @@ public class SQLServer {
               return fail(result.completions);
             }
           }
-          return success(list, in);
+          return success(list, in, result.completions);
         }
       };
     }
@@ -1558,7 +1592,7 @@ public class SQLServer {
           if (result.tree != null) {
             return result;
           } else {
-            return success(Nothing, in);
+            return success(Nothing, in, result.completions);
           }
         }
       };
@@ -1570,15 +1604,21 @@ public class SQLServer {
     {
       return new Parser() {
         public ParseResult parse(ParseContext context, String in) {
-          String name = parseName(in);
+          String token = skipSpace(in);
+          String name = parseName(token);
           if (name != null) {
             if (addCompletion) {
               addCompletion(context, type, name);
             }
-            return success(new Name(name), next(in, name.length()));
+            return success
+              (new Name(name),
+               token.substring(name.length()),
+               (token == context.start || token != in) && findCompletions
+               ? findCompletions(context, type, name) : null);
           } else {
             return fail
-              (findCompletions ? findCompletions(context, type) : null);
+              ((token == context.start || token != in) && findCompletions
+               ? findCompletions(context, type, "") : null);
           }
         }
       };
@@ -1587,6 +1627,7 @@ public class SQLServer {
     public static Parser stringLiteral() {
       return new Parser() {
         public ParseResult parse(ParseContext context, String in) {
+          in = skipSpace(in);
           if (in.length() > 1) {
             StringBuilder sb = new StringBuilder();
             char c = in.charAt(0);
@@ -1610,7 +1651,7 @@ public class SQLServer {
                     sb.append(c);
                   } else {
                     return success(new StringLiteral(sb.toString()),
-                                   next(in, i + 1));
+                                   in.substring(i + 1), null);
                   }
                   break;
 
@@ -1633,6 +1674,7 @@ public class SQLServer {
     public static Parser numberLiteral() {
       return new Parser() {
         public ParseResult parse(ParseContext context, String in) {
+          in = skipSpace(in);
           if (in.length() > 0) {
             char first = in.charAt(0);
             boolean negative = first == '-';
@@ -1644,7 +1686,7 @@ public class SQLServer {
               } else {
                 if (i > 0) {
                   return success(new NumberLiteral(in.substring(0, i)),
-                                 next(in, i));
+                                 in.substring(i), null);
                 } else {
                   return fail(null);
                 }
@@ -1656,11 +1698,29 @@ public class SQLServer {
       };
     }
 
+    public static Parser booleanLiteral() {
+      return new Parser() {
+        public ParseResult parse(ParseContext context, String in) {
+          in = skipSpace(in);
+          if (in.startsWith("true")) {
+            return success(new BooleanLiteral(true),
+                           in.substring(4), null);
+          } else if (in.startsWith("false")) {
+            return success(new BooleanLiteral(false),
+                           in.substring(5), null);
+          } else {
+            return fail(null);
+          }
+        }
+      };
+    }
+
     public Parser simpleExpression() {
       return or
         (columnName(),
          stringLiteral(),
          numberLiteral(),
+         booleanLiteral(),
          sequence(terminal("(", false),
                   expression(),
                   terminal(")")),
@@ -1783,7 +1843,9 @@ public class SQLServer {
                             terminal(")"))),
           terminal("values"),
           terminal("("),
-          list(expression()),
+          list(or(stringLiteral(),
+                  numberLiteral(),
+                  booleanLiteral())),
           terminal(")")),
          new Task() {
            public void run(Client client,
@@ -2092,7 +2154,8 @@ public class SQLServer {
              String name = ((Name) tree.get(2)).value;
              client.database = findDatabase(client, name);
 
-             out.write(Response.Success.ordinal());
+             out.write(Response.NewDatabase.ordinal());
+             writeString(out, name);
              writeString(out, "switched to database " + name);
            }
          });
@@ -2188,8 +2251,9 @@ public class SQLServer {
                                      OutputStream out)
     throws IOException
   {
+    String s = readString(in);
     ParseResult result = client.server.parser.parse
-      (new ParseContext(client), readString(in));
+      (new ParseContext(client, s), s);
     if (result.task != null) {
       try {
         result.task.run(client, result.tree, in, out);
@@ -2213,7 +2277,7 @@ public class SQLServer {
     String s = readString(in);
     log.info("complete \"" + s + "\"");
     ParseResult result = client.server.parser.parse
-      (new ParseContext(client), s);
+      (new ParseContext(client, s), s);
     out.write(Response.Success.ordinal());
     if (result.completions == null) {
       log.info("no completions");
