@@ -1,12 +1,370 @@
 package com.readytalk.oss.dbms.server;
 
-public class SQLServer {
-  private static class ConnectionHandler implements Runnable {
-    private final SQLServer server;
-    private final SocketChannel channel;
+import static com.readytalk.oss.dbms.imp.Util.list;
+import static com.readytalk.oss.dbms.imp.Util.set;
 
-    public ConnectionHandler(SQLServer server,
-                             SocketChannel channel)
+import com.readytalk.oss.dbms.imp.Util;
+import com.readytalk.oss.dbms.imp.MyDBMS;
+import com.readytalk.oss.dbms.DBMS;
+import com.readytalk.oss.dbms.DBMS.Index;
+import com.readytalk.oss.dbms.DBMS.ColumnReference;
+import com.readytalk.oss.dbms.DBMS.Source;
+import com.readytalk.oss.dbms.DBMS.Expression;
+import com.readytalk.oss.dbms.DBMS.QueryTemplate;
+import com.readytalk.oss.dbms.DBMS.PatchTemplate;
+import com.readytalk.oss.dbms.DBMS.PatchContext;
+import com.readytalk.oss.dbms.DBMS.QueryResult;
+import com.readytalk.oss.dbms.DBMS.ResultType;
+import com.readytalk.oss.dbms.DBMS.ConflictResolver;
+import com.readytalk.oss.dbms.DBMS.Revision;
+import com.readytalk.oss.dbms.DBMS.JoinType;
+import com.readytalk.oss.dbms.DBMS.ColumnType;
+import com.readytalk.oss.dbms.DBMS.BinaryOperationType;
+import com.readytalk.oss.dbms.DBMS.UnaryOperationType;
+import com.readytalk.oss.dbms.DBMS.Row;
+
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Logger;
+import java.util.logging.Level;
+import java.io.IOException;
+import java.io.EOFException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.net.InetSocketAddress;
+import java.nio.channels.Channels;
+import java.nio.channels.SocketChannel;
+import java.nio.channels.ServerSocketChannel;
+
+public class SQLServer {
+  private static final Logger log = Logger.getLogger("SQLServer");
+
+  public enum Requests {
+    Execute, Complete;
+  }
+
+  public enum Responses {
+    InsertedRow, DeletedRow, End, Item, Success, Error;
+  }
+
+  private static final int ThreadPoolSize = 256;
+
+  private static final Tree Nothing = new Leaf();
+  private static final Set<Index> EmptyIndexSet = new HashSet();
+
+  private static class Server {
+    private final DBMS dbms;
+
+    private final Parser parser = new ParserFactory().parser();
+
+    private final PatchTemplate insertOrUpdateDatabase;
+    private final QueryTemplate listDatabases;
+    private final QueryTemplate findDatabase;
+    private final PatchTemplate deleteDatabase;
+
+    private final PatchTemplate insertOrUpdateTable;
+    private final QueryTemplate listTables;
+    private final QueryTemplate findTable;
+    private final PatchTemplate deleteDatabaseTables;
+    private final PatchTemplate deleteTable;
+
+    private final DBMS.Column tagsDatabase;
+    private final DBMS.Column tagsName;
+    private final DBMS.Column tagsTag;
+    private final DBMS.Table tags;
+
+    private final PatchTemplate insertOrUpdateTag;
+    private final QueryTemplate listTags;
+    private final QueryTemplate findTag;
+    private final PatchTemplate deleteDatabaseTags;
+    private final PatchTemplate deleteTag;
+
+    private final AtomicReference<Revision> dbHead;
+    private final Map<String, BinaryOperationType> binaryOperationTypes
+      = new HashMap();
+    private final Map<String, UnaryOperationType> unaryOperationTypes
+      = new HashMap();
+    private final Map<String, ColumnType> columnTypes = new HashMap();
+    private final ConflictResolver rightPreferenceConflictResolver
+      = new ConflictResolver() {
+          public Row resolveConflict(DBMS.Table table,
+                                     Revision base,
+                                     Row baseRow,
+                                     Revision left,
+                                     Row leftRow,
+                                     Revision right,
+                                     Row rightRow)
+          {
+            return leftPreferenceMerge(baseRow, rightRow, leftRow);
+          }
+        };
+    private final ConflictResolver conflictResolver = new ConflictResolver() {
+        public Row resolveConflict(DBMS.Table table,
+                                   Revision base,
+                                   Row baseRow,
+                                   Revision left,
+                                   Row leftRow,
+                                   Revision right,
+                                   Row rightRow)
+        {
+          if (table == tags) {
+            HashRow result = new HashRow(3);
+            result.put(tagsDatabase, leftRow.value(tagsDatabase));
+            result.put(tagsName, leftRow.value(tagsName));
+            result.put(tagsTag, dbms.merge
+                       (baseRow == null
+                        ? dbms.revision()
+                        : ((Tag) baseRow.value(tagsTag)).revision,
+                        ((Tag) leftRow.value(tagsTag)).revision,
+                        ((Tag) rightRow.value(tagsTag)).revision,
+                        rightPreferenceConflictResolver));
+            return result;
+          } else {
+            return leftPreferenceMerge(baseRow, rightRow, leftRow);
+          }
+        }
+      };
+
+    public Server(DBMS dbms) {
+      this.dbms = dbms;
+
+      DBMS.Column databasesName = dbms.column(ColumnType.String);
+      DBMS.Column databasesDatabase = dbms.column(ColumnType.Object);
+      DBMS.Table databases = dbms.table
+        (set(databasesName, databasesDatabase),
+         dbms.index(list(databasesName), true),
+         EmptyIndexSet);
+      DBMS.TableReference databasesReference = dbms.tableReference(databases);
+
+      this.insertOrUpdateDatabase = dbms.insertTemplate
+        (databases, list(databasesName, databasesDatabase),
+         list(dbms.parameter(), dbms.parameter()));
+
+      this.listDatabases = dbms.queryTemplate
+        (list((Expression) dbms.columnReference
+              (databasesReference, databasesDatabase)),
+         databasesReference,
+         dbms.constant(true));
+
+      this.findDatabase = dbms.queryTemplate
+        (list((Expression) dbms.columnReference
+              (databasesReference, databasesDatabase)),
+         databasesReference,
+         dbms.operation
+         (BinaryOperationType.Equal,
+          dbms.columnReference(databasesReference, databasesName),
+          dbms.parameter()));
+
+      this.deleteDatabase = dbms.deleteTemplate
+        (databasesReference,
+         dbms.operation
+         (BinaryOperationType.Equal,
+          dbms.columnReference(databasesReference, databasesName),
+          dbms.parameter()));
+
+      DBMS.Column tablesDatabase = dbms.column(ColumnType.String);
+      DBMS.Column tablesName = dbms.column(ColumnType.String);
+      DBMS.Column tablesTable = dbms.column(ColumnType.Object);
+      DBMS.Table tables = dbms.table
+        (set(tablesDatabase, tablesName, tablesTable),
+         dbms.index(list(tablesDatabase, tablesName), true),
+         EmptyIndexSet);
+      DBMS.TableReference tablesReference = dbms.tableReference(tables);
+
+      this.insertOrUpdateTable = dbms.insertTemplate
+        (tables, list(tablesDatabase, tablesName, tablesTable),
+         list(dbms.parameter(), dbms.parameter(), dbms.parameter()));
+
+      this.listTables = dbms.queryTemplate
+        (list((Expression) dbms.columnReference(tablesReference, tablesTable)),
+         tablesReference,
+         dbms.operation
+         (BinaryOperationType.Equal,
+          dbms.columnReference(tablesReference, tablesDatabase),
+          dbms.parameter()));
+
+      this.findTable = dbms.queryTemplate
+        (list((Expression) dbms.columnReference(tablesReference, tablesTable)),
+         tablesReference,
+         dbms.operation
+         (BinaryOperationType.And,
+          dbms.operation
+          (BinaryOperationType.Equal,
+           dbms.columnReference(tablesReference, tablesDatabase),
+           dbms.parameter()),
+          dbms.operation
+          (BinaryOperationType.Equal,
+           dbms.columnReference(tablesReference, tablesName),
+           dbms.parameter())));
+
+      this.deleteDatabaseTables = dbms.deleteTemplate
+        (tablesReference,
+         dbms.operation
+         (BinaryOperationType.Equal,
+          dbms.columnReference(tablesReference, tablesDatabase),
+          dbms.parameter()));
+
+      this.deleteTable = dbms.deleteTemplate
+        (tablesReference,
+         dbms.operation
+         (BinaryOperationType.And,
+          dbms.operation
+          (BinaryOperationType.Equal,
+           dbms.columnReference(tablesReference, tablesDatabase),
+           dbms.parameter()),
+          dbms.operation
+          (BinaryOperationType.Equal,
+           dbms.columnReference(tablesReference, tablesName),
+           dbms.parameter())));
+
+      this.tagsDatabase = dbms.column(ColumnType.String);
+      this.tagsName = dbms.column(ColumnType.String);
+      this.tagsTag = dbms.column(ColumnType.Object);
+      this.tags = dbms.table
+        (set(tagsDatabase, tagsName, tagsTag),
+         dbms.index(list(tagsDatabase, tagsName), true),
+         EmptyIndexSet);
+      DBMS.TableReference tagsReference = dbms.tableReference(tags);
+
+      this.insertOrUpdateTag = dbms.insertTemplate
+        (tags, list(tagsDatabase, tagsName, tagsTag),
+         list(dbms.parameter(), dbms.parameter(), dbms.parameter()));
+
+      this.listTags = dbms.queryTemplate
+        (list((Expression) dbms.columnReference(tagsReference, tagsTag)),
+         tagsReference,
+         dbms.operation
+         (BinaryOperationType.Equal,
+          dbms.columnReference(tagsReference, tagsDatabase),
+          dbms.parameter()));
+
+      this.findTag = dbms.queryTemplate
+        (list((Expression) dbms.columnReference(tagsReference, tagsTag)),
+         tagsReference,
+         dbms.operation
+         (BinaryOperationType.And,
+          dbms.operation
+          (BinaryOperationType.Equal,
+           dbms.columnReference(tagsReference, tagsDatabase),
+           dbms.parameter()),
+          dbms.operation
+          (BinaryOperationType.Equal,
+           dbms.columnReference(tagsReference, tagsName),
+           dbms.parameter())));
+
+      this.deleteDatabaseTags = dbms.deleteTemplate
+        (tagsReference,
+         dbms.operation
+         (BinaryOperationType.Equal,
+          dbms.columnReference(tagsReference, tagsDatabase),
+          dbms.parameter()));
+
+      this.deleteTag = dbms.deleteTemplate
+        (tagsReference,
+         dbms.operation
+         (BinaryOperationType.And,
+          dbms.operation
+          (BinaryOperationType.Equal,
+           dbms.columnReference(tagsReference, tagsDatabase),
+           dbms.parameter()),
+          dbms.operation
+          (BinaryOperationType.Equal,
+           dbms.columnReference(tagsReference, tagsName),
+           dbms.parameter())));
+
+      this.dbHead = new AtomicReference(dbms.revision());
+
+      binaryOperationTypes.put("and", BinaryOperationType.And);
+      binaryOperationTypes.put("or", BinaryOperationType.Or);
+      binaryOperationTypes.put("=", BinaryOperationType.Equal);
+      binaryOperationTypes.put("<>", BinaryOperationType.NotEqual);
+      binaryOperationTypes.put(">", BinaryOperationType.GreaterThan);
+      binaryOperationTypes.put(">=", BinaryOperationType.GreaterThanOrEqual);
+      binaryOperationTypes.put("<", BinaryOperationType.LessThan);
+      binaryOperationTypes.put("<=", BinaryOperationType.LessThanOrEqual);
+
+      unaryOperationTypes.put("not", UnaryOperationType.Not);
+
+      columnTypes.put("int32", ColumnType.Integer32);
+      columnTypes.put("int64", ColumnType.Integer64);
+      columnTypes.put("string", ColumnType.String);
+    }
+  }
+
+  private static Row leftPreferenceMerge(Row base,
+                                         Row left,
+                                         Row right)
+  {
+    // todo: iterate over items and merge each individually
+    return left;
+  }
+
+  private static class LeftPreferenceConflictResolver
+    implements ConflictResolver
+  {
+    private int conflictCount;
+
+    public Row resolveConflict(DBMS.Table table,
+                               Revision base,
+                               Row baseRow,
+                               Revision left,
+                               Row leftRow,
+                               Revision right,
+                               Row rightRow)
+    {
+      ++ conflictCount;
+      return leftPreferenceMerge(baseRow, leftRow, rightRow);
+    }
+  }
+
+  private static class HashRow implements Row {
+    private final Map<DBMS.Column, Object> values;
+
+    public HashRow(int size) {
+      this.values = new HashMap(size);
+    }
+
+    public void put(DBMS.Column column, Object value) {
+      values.put(column, value);
+    }
+
+    public Object value(DBMS.Column column) {
+      return values.get(column);
+    }
+  }
+
+  private static class Transaction {
+    private final Transaction next;
+    private final Revision dbTail;
+    private Revision dbHead;
+
+    public Transaction(Transaction next,
+                       Revision dbTail)
+    {
+      this.next = next;
+      this.dbTail = dbTail;
+      this.dbHead = dbTail;
+    }
+  }
+
+  private static class Client implements Runnable {
+    private final Server server;
+    private final SocketChannel channel;
+    private Transaction transaction;
+    private Database database;
+
+    public Client(Server server,
+                  SocketChannel channel)
     {
       this.server = server;
       this.channel = channel;
@@ -14,43 +372,117 @@ public class SQLServer {
 
     public void run() {
       try {
-        InputStream in = new BufferedInputStream
-          (Channels.newInputStream(channel));
+        try {
+          InputStream in = new BufferedInputStream
+            (Channels.newInputStream(channel));
 
-        OutputStream out = new BufferedOutputStream
-          (Channels.newOutputStream(channel));
+          OutputStream out = new BufferedOutputStream
+            (Channels.newOutputStream(channel));
 
-        while (channel.isOpen()) {
-          server.handleRequest(in, out);
+          while (channel.isOpen()) {
+            handleRequest(this, in, out);
+          }
+        } finally {
+          channel.close();
         }
       } catch (Exception e) {
         log.log(Level.WARNING, null, e);
-      } finally {
-        channel.close();
       }
     }
   }
 
-  private class ParseResult {
+  private enum NameType {
+    Database, Table, Column, Tag;
+  }
+
+  private static class Database {
+    private final String name;
+
+    public Database(String name) {
+      this.name = name;
+    }
+  }
+
+  private static class Column {
+    private final String name;
+    private final DBMS.Column column;
+    private final ColumnType type;
+    
+    public Column(String name,
+                  DBMS.Column column,
+                  ColumnType type)
+    {
+      this.name = name;
+      this.column = column;
+      this.type = type;
+    }
+  }
+
+  private static class Table {
+    private final String name;
+    private final Map<String, Column> columns;
+    private final List<Column> primaryKeyColumns;
+    private final DBMS.Table table;
+
+    public Table(String name,
+                 Map<String, Column> columns,
+                 List<Column> primaryKeyColumns,
+                 DBMS.Table table)
+    {
+      this.name = name;
+      this.columns = columns;
+      this.primaryKeyColumns = primaryKeyColumns;
+      this.table = table;
+    }
+  }
+
+  private static class Tag {
+    private final String name;
+    private final Revision revision;
+
+    public Tag(String name,
+               Revision revision)
+    {
+      this.name = name;
+      this.revision = revision;
+    }
+  }
+  
+  private static class TableReference {
+    private final Table table;
+    private final DBMS.TableReference reference;
+
+    public TableReference(Table table,
+                          DBMS.TableReference reference)
+    {
+      this.table = table;
+      this.reference = reference;
+    }
+  }
+
+  private static class ParseResult {
     public final Tree tree;
     public final String next;
     public final List<String> completions;
-    public final Task task;
+    public Task task;
 
     public ParseResult(Tree tree,
                        String next,
-                       List<String> completions,
-                       Task task)
+                       List<String> completions)
     {
       this.tree = tree;
       this.next = next;
       this.completions = completions;
-      this.task = task;
     }
   }
 
-  private class ParseContext {
-    public List<String> completions;
+  private static class ParseContext {
+    public final Client client;
+    public Map<NameType, List<String>> completions;
+
+    public ParseContext(Client client) {
+      this.client = client;
+    }
   }
 
   private interface Parser {
@@ -67,6 +499,7 @@ public class SQLServer {
 
   private interface Tree {
     public Tree get(int index);
+    public int length();
   }
 
   private static class TreeList implements Tree {
@@ -79,10 +512,18 @@ public class SQLServer {
     public Tree get(int index) {
       return list.get(index);
     }
+
+    public int length() {
+      return list.size();
+    }
   }
 
-  private static abstract class Leaf implements Tree {
+  private static class Leaf implements Tree {
     public Tree get(int index) {
+      throw new UnsupportedOperationException();
+    }
+
+    public int length() {
       throw new UnsupportedOperationException();
     }
   }
@@ -123,45 +564,161 @@ public class SQLServer {
     public void run(Client client,
                     Tree tree,
                     InputStream in,
-                    OutputStream out);
+                    OutputStream out)
+      throws IOException;
   }
 
-  private static Source makeSource(SQLServer server,
+  private static Revision dbHead(Client client) {
+    if (client.transaction != null) {
+      return client.transaction.dbHead;
+    } else {
+      return client.server.dbHead.get();
+    }
+  }
+
+  private static Database findDatabase(Client client,
+                                       String name)
+  {
+    Server server = client.server;
+    DBMS dbms = server.dbms;
+    QueryResult result = dbms.diff
+      (dbms.revision(), dbHead(client), server.findDatabase, name);
+
+    if (result.nextRow() == ResultType.Inserted) {
+      return (Database) result.nextItem();
+    } else {
+      throw new RuntimeException("no such database: " + name);
+    }
+  }
+
+  private static Tag findTag(Client client,
+                             String name)
+  {
+    Server server = client.server;
+    DBMS dbms = server.dbms;
+    QueryResult result = dbms.diff
+      (dbms.revision(), dbHead(client), server.findTag, database(client).name,
+       name);
+
+    if (result.nextRow() == ResultType.Inserted) {
+      return (Tag) result.nextItem();
+    } else {
+      throw new RuntimeException("no such tag: " + name);
+    }
+  }
+
+  private static Revision head(Client client) {
+    return findTag(client, "head").revision;
+  }
+
+  private static Database database(Client client) {
+    if (client.database == null) {
+      throw new RuntimeException("no database specified");
+    } else {
+      return client.database;
+    }
+  }
+
+  private static Table findTable(Client client,
+                                 String name)
+  {
+    DBMS dbms = client.server.dbms;
+    QueryResult result = dbms.diff
+      (dbms.revision(), dbHead(client), client.server.findTable,
+       database(client).name, name);
+
+    if (result.nextRow() == ResultType.Inserted) {
+      return (Table) result.nextItem();
+    } else {
+      throw new RuntimeException("no such table: " + name);
+    }
+  }
+
+  private static Source makeSource(Client client,
                                    Tree tree,
                                    List<TableReference> tableReferences,
                                    List<Expression> tests)
   {
     if (tree instanceof Name) {
-      Table table = findTable(server, ((Name) tree).value);
-      tableReferences.add
-        (new TableReference(table, server.dbms.tableReference(table.table)));
-    } else if (isTerminal(tree.get(0), "(")) {
-      return makeSource(server, tree.get(1), tableRefernences, tests);
+      Table table = findTable(client, ((Name) tree).value);
+      DBMS.TableReference reference = client.server.dbms.tableReference
+        (table.table);
+      tableReferences.add(new TableReference(table, reference));
+      return reference;
+    } else if (tree.get(0) instanceof Terminal) {
+      return makeSource(client, tree.get(1), tableReferences, tests);
     } else {
-      tests.add(makeExpression(tree.get(4)));
+      tests.add(makeExpression(client.server, tree.get(4), tableReferences));
 
-      return server.dbms.join
+      return client.server.dbms.join
         ("left".equals(((Terminal) tree.get(1).get(0)).value)
-         ? JoinType.LeftOuter : JoinType.LeftInner,
-         makeSource(server, tree.get(0), tableRefernences, tests),
-         makeSource(server, tree.get(2), tableRefernences, tests));
+         ? JoinType.LeftOuter : JoinType.Inner,
+         makeSource(client, tree.get(0), tableReferences, tests),
+         makeSource(client, tree.get(2), tableReferences, tests));
     }
   }
 
+  private static ColumnReference makeColumnReference
+    (DBMS dbms,
+     List<TableReference> tableReferences,
+     String tableName,
+     String columnName)
+  {
+    DBMS.TableReference reference = null;
+    DBMS.Column column = null;
+    for (TableReference r: tableReferences) {
+      if (tableName == null || tableName.equals(r.table.name)) {
+        Column c = r.table.columns.get(columnName);
+        if (c != null) {
+          if (column != null) {
+            throw new RuntimeException("ambiguous column name: " + columnName);
+          } else {
+            reference = r.reference;
+            column = c.column;
+
+            if (tableName != null) {
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (column == null) {
+      throw new RuntimeException("no such column: " + columnName);
+    }
+
+    return dbms.columnReference(reference, column);
+  }
+
+  private static UnaryOperationType findUnaryOperationType(Server server,
+                                                           String name)
+  {
+    return server.unaryOperationTypes.get(name);
+  }
+
+  private static BinaryOperationType findBinaryOperationType(Server server,
+                                                             String name)
+  {
+    return server.binaryOperationTypes.get(name);
+  }
+
   private static Expression makeExpression
-    (SQLServer server,
+    (Server server,
      Tree tree,
      List<TableReference> tableReferences)
   {
     if (tree instanceof Name) {
-      return findColumn(tableReferences, null, ((Name) tree).value);
+      return makeColumnReference
+        (server.dbms, tableReferences, null, ((Name) tree).value);
     } else if (tree instanceof StringLiteral) {
       return server.dbms.constant(((StringLiteral) tree).value);
     } else if (tree instanceof NumberLiteral) {
       return server.dbms.constant(((NumberLiteral) tree).value);
     } if (tree.get(0) instanceof Name) {
-      return findColumn
-        (tableReferences,
+      return makeColumnReference
+        (server.dbms,
+         tableReferences,
          ((Name) tree.get(0)).value,
          ((Name) tree.get(2)).value);
     } else if (tree.get(0) instanceof Terminal) {
@@ -170,7 +727,7 @@ public class SQLServer {
         return makeExpression(server, tree.get(1), tableReferences);
       } else {
         return server.dbms.operation
-          (findUnaryOperation(server, value), makeExpression
+          (findUnaryOperationType(server, value), makeExpression
            (server, tree.get(1), tableReferences));
       }
     } else {
@@ -182,7 +739,7 @@ public class SQLServer {
   }
 
   private static List<Expression> makeExpressionList
-    (SQLServer server,
+    (Server server,
      Tree tree,
      List<TableReference> tableReferences)
   {
@@ -190,21 +747,22 @@ public class SQLServer {
     if (tree instanceof Terminal) {
       DBMS dbms = server.dbms;
       for (TableReference tableReference: tableReferences) {
-        for (Column column: tableReference.table.columns) {
+        for (Column column: tableReference.table.columns.values()) {
           expressions.add
             (dbms.columnReference(tableReference.reference, column.column));
         }
       }
     } else {
-      for (Tree expressionTree: (TreeList) tree) {
-        expression.add
-          (makeExpression(server, expressionTree, tableReferences));
+      for (int i = 0; i < tree.length(); ++i) {
+        expressions.add
+          (makeExpression(server, tree.get(i), tableReferences));
       }
     }
+    return expressions;
   }
 
   private static Expression makeExpressionFromWhere
-    (SQLServer server,
+    (Server server,
      Tree tree,
      List<TableReference> tableReferences)
   {
@@ -215,7 +773,7 @@ public class SQLServer {
     }
   }
 
-  private static Expression andExpressions(SQLServer server,
+  private static Expression andExpressions(DBMS dbms,
                                            Expression expression,
                                            List<Expression> expressions)
   {
@@ -225,24 +783,45 @@ public class SQLServer {
     return expression;
   }
 
-  private static QueryTemplate makeQueryTemplate(SQLServer server,
+  private static QueryTemplate makeQueryTemplate(Client client,
                                                  Tree tree,
                                                  int[] expressionCount)
   {
     List<TableReference> tableReferences = new ArrayList();
     List<Expression> tests = new ArrayList();
     Source source = makeSource
-      (server, tree.get(3), tableReferences, tests);
+      (client, tree.get(3), tableReferences, tests);
 
     List<Expression> expressions = makeExpressionList
-      (server, tree.get(1), tableReferences);
+      (client.server, tree.get(1), tableReferences);
 
     expressionCount[0] = expressions.size();
 
-    return dbms.queryTemplate
+    return client.server.dbms.queryTemplate
       (expressions, source, andExpressions
-       (server, makeExpressionFromWhere
-        (server, tree.get(4), tableReferences), tests));
+       (client.server.dbms, makeExpressionFromWhere
+        (client.server, tree.get(4), tableReferences), tests));
+  }
+
+  private static Column findColumn(Table table,
+                                   String name)
+  {
+    Column c = table.columns.get(name);
+    if (c == null) {
+      throw new RuntimeException("no such column: " + name);
+    } else {
+      return c;
+    }
+  }
+
+  private static List<DBMS.Column> makeColumnList(Table table,
+                                                  Tree tree)
+  {
+    List<DBMS.Column> columns = new ArrayList(tree.length());
+    for (int i = 0; i < tree.length(); ++i) {
+      columns.add(findColumn(table, ((Name) tree.get(i)).value).column);
+    }
+    return columns;
   }
 
   private static List<DBMS.Column> makeOptionalColumnList(Table table,
@@ -250,30 +829,31 @@ public class SQLServer {
   {
     if (tree == Nothing) {
       List<DBMS.Column> columns = new ArrayList(table.columns.size());
-      for (Column c: table.columns) {
+      for (Column c: table.columns.values()) {
         columns.add(c.column);
       }
       return columns;
     } else {
-      return makeColumnList(table, columns.get(1));
+      return makeColumnList(table, tree.get(1));
     }
   }
 
-  private static PatchTemplate makeInsertTemplate(SQLServer server,
+  private static PatchTemplate makeInsertTemplate(Client client,
                                                   Tree tree)
   {
-    Table table = findTable(server, ((Name) tree.get(2)).value);
+    Table table = findTable(client, ((Name) tree.get(2)).value);
 
-    return server.dbms.insertTemplate
+    return client.server.dbms.insertTemplate
       (table.table, makeOptionalColumnList(table, tree.get(3)),
-       makeExpressionList(tree.get(6)));
+       makeExpressionList(client.server, tree.get(6), null));
   }
 
-  private static PatchTemplate makeUpdateTemplate(SQLServer server,
+  private static PatchTemplate makeUpdateTemplate(Client client,
                                                   Tree tree)
   {
-    Table table = findTable(server, ((Name) tree.get(2)).value);
-    TableReference tableReference = new TableReference(table);
+    Table table = findTable(client, ((Name) tree.get(2)).value);
+    TableReference tableReference = new TableReference
+      (table, client.server.dbms.tableReference(table.table));
     List<TableReference> tableReferences = list(tableReference);
 
     Tree operations = tree.get(3);
@@ -281,44 +861,67 @@ public class SQLServer {
     List<Expression> values = new ArrayList();
     for (int i = 0; i < tree.length(); ++i) {
       Tree operation = tree.get(i);
-      columns.add(makeColumn(table, operation.get(0)));
-      values.add(makeExpression(server, operation.get(2), tableReferences));
+      columns.add(findColumn(table, ((Name) operation.get(0)).value).column);
+      values.add
+        (makeExpression(client.server, operation.get(2), tableReferences));
     }
 
-    return server.dbms.insertTemplate
+    return client.server.dbms.updateTemplate
       (tableReference.reference, makeExpressionFromWhere
-       (server, tree.get(4), tableReferences), columns, values);
+       (client.server, tree.get(4), tableReferences), columns, values);
   }
 
-  private static PatchTemplate makeDeleteTemplate(SQLServer server,
+  private static PatchTemplate makeDeleteTemplate(Client client,
                                                   Tree tree)
   {
-    Table table = findTable(server, ((Name) tree.get(2)).value);
-    TableReference tableReference = new TableReference(table);
+    Table table = findTable(client, ((Name) tree.get(2)).value);
+    TableReference tableReference = new TableReference
+      (table, client.server.dbms.tableReference(table.table));
     List<TableReference> tableReferences = list(tableReference);
 
-    return server.dbms.deleteTemplate
+    return client.server.dbms.deleteTemplate
       (tableReference.reference, makeExpressionFromWhere
-       (server, tree.get(4), tableReferences));
+       (client.server, tree.get(4), tableReferences));
   }
 
-  private static PatchTemplate makeCopyTemplate(SQLServer server,
+  private static Column findColumn(Table table, DBMS.Column column) {
+    for (Column c: table.columns.values()) {
+      if (c.column == column) {
+        return c;
+      }
+    }
+    throw new RuntimeException();
+  }
+
+  private static PatchTemplate makeCopyTemplate(Client client,
                                                 Tree tree,
-                                                int[] expressionCount)
+                                                List<ColumnType> columnTypes)
   {
-    Table table = findTable(server, ((Name) tree.get(1)).value);
+    Table table = findTable(client, ((Name) tree.get(1)).value);
 
     List<DBMS.Column> columns = makeOptionalColumnList(table, tree.get(2));
     List<Expression> values = new ArrayList(columns.size());
-    DBMS dbms = server.dbms;
-    for (int i = 0; i < columns.size(); ++i) {
+    DBMS dbms = client.server.dbms;
+    for (DBMS.Column c: columns) {
       values.add(dbms.parameter());
+      columnTypes.add(findColumn(table, c).type);
     }
 
-    return server.dbms.insertTemplate(table.table, columns, values);
+    return dbms.insertTemplate(table.table, columns, values);
   }
 
-  private static Table makeTable(SQLServer server,
+  private static ColumnType findColumnType(Server server,
+                                           String name)
+  {
+    ColumnType type = server.columnTypes.get(name);
+    if (type == null) {
+      throw new RuntimeException("no such column type: " + name);
+    } else {
+      return type;
+    }
+  }
+
+  private static Table makeTable(Server server,
                                  Tree tree)
   {
     Tree body = tree.get(4);
@@ -341,14 +944,16 @@ public class SQLServer {
       throw new RuntimeException("no primary key specified");
     }
 
+    DBMS dbms = server.dbms;
     Map<String, Column> columnMap = new HashMap(columns.size());
     Set<DBMS.Column> columnSet = new HashSet(columns.size());
     for (Tree column: columns) {
-      DBMS.Column dbmsColumn = dbms.column
-        (findColumnType(server, column.get(1)));
+      ColumnType type = findColumnType(server, ((Name) column.get(1)).value);
+      DBMS.Column dbmsColumn = dbms.column(type);
       columnSet.add(dbmsColumn);
   
-      Column myColumn = new Column(((Name) column.get(0)).value, dbmsColumn);
+      Column myColumn = new Column
+        (((Name) column.get(0)).value, dbmsColumn, type);
       columnMap.put(myColumn.name, myColumn);
     }
 
@@ -367,10 +972,41 @@ public class SQLServer {
       }
     }
 
-    Table table = new Table
+    return new Table
       (((Name) tree.get(2)).value, columnMap, myPrimaryKeyColumns,
        dbms.table
-       (columnSet, dbms.index(dbmsPrimaryKeyColumns), EmptyIndexSet));
+       (columnSet, dbms.index(dbmsPrimaryKeyColumns, true), EmptyIndexSet));
+  }
+
+  private static void writeInteger(OutputStream out, int v)
+    throws IOException
+  {
+    out.write((v >>> 24) & 0xFF);
+    out.write((v >>> 16) & 0xFF);
+    out.write((v >>>  8) & 0xFF);
+    out.write((v       ) & 0xFF);
+  }
+
+  private static void writeString(OutputStream out,
+                                  String string)
+    throws IOException
+  {
+    byte[] bytes = string.getBytes("UTF-8");
+    writeInteger(out, bytes.length);
+    out.write(bytes);
+  }
+
+  public static int readInteger(InputStream in) throws IOException {
+    int b1 = in.read();
+    int b2 = in.read();
+    int b3 = in.read();
+    int b4 = in.read();
+    if (b4 == -1) throw new EOFException();
+    return (int) ((b1 << 24) | (b2 << 16) | (b3 << 8) | (b4));
+  }
+
+  public static String readString(InputStream in) throws IOException {
+    return new String(new byte[readInteger(in)]);
   }
 
   private static void diff(DBMS dbms,
@@ -379,6 +1015,7 @@ public class SQLServer {
                            QueryTemplate template,
                            int expressionCount,
                            OutputStream out)
+    throws IOException
   {
     QueryResult result = dbms.diff(base, fork, template);
 
@@ -386,23 +1023,23 @@ public class SQLServer {
       ResultType resultType = result.nextRow();
       switch (resultType) {
       case Inserted:
-        out.write(InsertedRow);
+        out.write(Responses.InsertedRow.ordinal());
         for (int i = 0; i < expressionCount; ++i) {
-          out.write(Item);
+          out.write(Responses.Item.ordinal());
           writeString(out, String.valueOf(result.nextItem()));
         }
         break;
 
       case Deleted:
-        out.write(DeletedRow);
+        out.write(Responses.DeletedRow.ordinal());
         for (int i = 0; i < expressionCount; ++i) {
-          out.write(Item);
+          out.write(Responses.Item.ordinal());
           writeString(out, String.valueOf(result.nextItem()));
         }
         break;
 
       case End:
-        out.write(End);
+        out.write(Responses.End.ordinal());
         return;
 
       default:
@@ -411,11 +1048,238 @@ public class SQLServer {
     }
   }
 
-  private class ParserFactory {
+  private static void apply(Client client,
+                            PatchTemplate template,
+                            Object ... parameters)
+  {
+    DBMS dbms = client.server.dbms;
+    PatchContext context = dbms.patchContext(client.transaction.dbHead);
+    dbms.apply(context, template, parameters);
+    client.transaction.dbHead = dbms.commit(context);
+  }
+
+  private static void setDatabase(Client client, Database database) {
+    apply(client, client.server.insertOrUpdateDatabase, database.name,
+          database);
+  }
+
+  private static void setTable(Client client, Table table) {
+    apply(client, client.server.insertOrUpdateTable, database(client).name,
+          table.name, table);
+  }
+
+  private static void setTag(Client client, Tag tag) {
+    apply(client, client.server.insertOrUpdateTag, database(client).name,
+          tag.name, tag);
+  }
+
+  private static void pushTransaction(Client client) {
+    Transaction next = client.transaction;
+    client.transaction = new Transaction
+      (next, next == null ? client.server.dbHead.get() : next.dbHead);
+  }
+
+  private static void commitTransaction(Client client) {
+    if (client.transaction.next == null) {
+      Revision myTail = client.transaction.dbTail;
+      Revision myHead = client.transaction.dbHead;
+      DBMS dbms = client.server.dbms;
+      DBMS.ConflictResolver conflictResolver = client.server.conflictResolver;
+      if (myTail != myHead) {
+        AtomicReference<Revision> dbHead = client.server.dbHead;
+        while (! dbHead.compareAndSet(myTail, myHead)) {
+          Revision fork = dbHead.get();
+          myHead = dbms.merge(myTail, fork, myHead, conflictResolver);
+          myTail = fork;
+        }
+      }
+    } else {
+      client.transaction.next.dbHead = client.transaction.dbHead;
+    }
+  }
+
+  private static void popTransaction(Client client) {
+    client.transaction = client.transaction.next;
+  }
+
+  private static void apply(Client client,
+                            PatchTemplate template)
+  {
+    pushTransaction(client);
+    try {
+      DBMS dbms = client.server.dbms;
+      PatchContext context = dbms.patchContext(head(client));
+      dbms.apply(context, template);
+      setTag(client, new Tag("head", dbms.commit(context)));
+      commitTransaction(client);
+    } finally {
+      popTransaction(client);
+    }
+  }
+
+  private static Object convert(ColumnType type,
+                                String value)
+  {
+    switch (type) {
+    case Integer32:
+      return Integer.parseInt(value);
+
+    case Integer64:
+      return Long.parseLong(value);
+
+    case String:
+      return value;
+
+    default:
+      throw new RuntimeException("unexpected type: " + type);
+    }
+  }
+
+  private static void copy(InputStream in,
+                           DBMS dbms,
+                           PatchContext context,
+                           PatchTemplate template,
+                           List<ColumnType> columnTypes)
+    throws IOException
+  {
+    StringBuilder sb = new StringBuilder();
+    Object[] parameters = new Object[columnTypes.size()];
+    boolean sawEscape = false;
+    int i = 0;
+    while (true) {
+      int c = in.read();
+      switch (c) {
+      case -1:
+        throw new EOFException();
+
+      case '\\':
+        if (sawEscape) {
+          sb.append((char) c);
+        } else {
+          sawEscape = true;
+        }
+        break;
+
+      case '\t':
+        if (sawEscape) {
+          sb.append((char) c);
+        } else {
+          parameters[i] = convert(columnTypes.get(i), sb.toString());
+          sb.setLength(0);
+          ++ i;
+        }
+        break;
+
+      case '\n':
+        if (sawEscape) {
+          sb.append((char) c);
+        } else {
+          parameters[i] = convert(columnTypes.get(i), sb.toString());
+          sb.setLength(0);
+          if (i < parameters.length - 1) {
+            throw new RuntimeException("not enough values specified");
+          }
+          dbms.apply(context, template, parameters);
+          i = 0;
+        }
+        break;
+
+      case '.':
+        if (sawEscape) {
+          if (i != 0 || sb.length() > 0) {
+            throw new RuntimeException("unexpected end of values");
+          }
+          return;
+        } else {
+          sb.append((char) c);
+        }
+        break;
+
+      default:
+        sb.append((char) c);
+        break;
+      }
+    }
+  }
+
+  private static void applyCopy(Client client,
+                                PatchTemplate template,
+                                List<ColumnType> columnTypes,
+                                InputStream in)
+    throws IOException
+  {
+    pushTransaction(client);
+    try {
+      DBMS dbms = client.server.dbms;
+      PatchContext context = dbms.patchContext(head(client));
+      copy(in, dbms, context, template, columnTypes);
+      setTag(client, new Tag("head", dbms.commit(context)));
+      commitTransaction(client);
+    } finally {
+      popTransaction(client);
+    }
+  }
+
+  private static void addCompletion(ParseContext context,
+                                    NameType type,
+                                    String name)
+  {
+    List<String> list = context.completions.get(type);
+    if (list == null) {
+      context.completions.put(type, list = new ArrayList());
+    }
+    list.add(name);
+  }
+
+  private static List<String> findCompletions(Client client,
+                                              NameType type)
+  {
+    DBMS dbms = client.server.dbms;
+    QueryResult result = null;
+    switch (type) {
+    case Database:
+      result = dbms.diff
+        (dbms.revision(), dbHead(client), client.server.listDatabases);
+      break;
+
+    case Table:
+      if (client.database != null) {
+        result = dbms.diff
+          (dbms.revision(), dbHead(client), client.server.listTables,
+           client.database);
+      }
+      break;
+      
+    default: throw new RuntimeException("unexpected name type: " + type);
+    }
+      
+    if (result != null) {
+      List<String> list = new ArrayList();
+      while (result.nextRow() == ResultType.Inserted) {
+        list.add((String) result.nextItem());
+      }
+      return list;
+    } else {
+      return new ArrayList();
+    }
+  }
+
+  private static List<String> findCompletions(ParseContext context,
+                                              NameType type)
+  {
+    List<String> result = findCompletions(context.client, type);
+    List<String> list = context.completions.get(type);
+    if (list != null) {
+      result.addAll(list);
+    }
+    return result;
+  }
+
+  private static class ParserFactory {
     public LazyParser expressionParser;
     public LazyParser sourceParser;
 
-    public static Parser parser() {
+    public Parser parser() {
       return or
         (select(),
          diff(),
@@ -439,7 +1303,7 @@ public class SQLServer {
     public static Parser task(final Parser parser, final Task task) {
       return new Parser() {
         public ParseResult parse(ParseContext context, String in) {
-          ParseResult result = parser.parser(context, in);
+          ParseResult result = parser.parse(context, in);
           if (result.tree != null) {
             result.task = task;
           }
@@ -449,11 +1313,11 @@ public class SQLServer {
     }
 
     public static ParseResult success(Tree tree, String next) {
-      return new ParseResult(tree, next, null, null);
+      return new ParseResult(tree, next, null);
     }
 
     public static ParseResult fail(List<String> completions) {
-      return new ParseResult(null, next, completions, null);
+      return new ParseResult(null, null, completions);
     }
 
     public static String next(String in, int offset) {
@@ -475,7 +1339,7 @@ public class SQLServer {
         if (c == '_' || Character.isLetter(c)) {
           int i = 1;
           while (i < in.length()) {
-            c = charAt(i);
+            c = in.charAt(i);
             if (c == '_' || Character.isLetterOrDigit(c)) {
               ++ i;
             } else {
@@ -496,7 +1360,7 @@ public class SQLServer {
           if (in.startsWith(value)) {
             return success(terminal, next(in, value.length()));
           } else if (value.startsWith(in)) {
-            return fail(list(value));
+            return fail(Util.list(value));
           } else {
             return fail(null);
           }
@@ -582,14 +1446,14 @@ public class SQLServer {
 
     public static Parser name(final NameType type,
                               final boolean findCompletions,
-                              final boolean addCompletions)
+                              final boolean addCompletion)
     {
       return new Parser() {
         public ParseResult parse(ParseContext context, String in) {
           String name = parseName(in);
           if (name != null) {
-            if (addCompletions) {
-              addCompletions(context, type, name);
+            if (addCompletion) {
+              addCompletion(context, type, name);
             }
             return success(new Name(name), next(in, name.length()));
           } else {
@@ -608,8 +1472,9 @@ public class SQLServer {
             char c = in.charAt(0);
             if (c == '\'') {
               int i = 1;
+              boolean sawEscape = false;
               while (i < in.length()) {
-                c = charAt(i);
+                c = in.charAt(i);
                 switch (c) {
                 case '\\':
                   if (sawEscape) {
@@ -652,18 +1517,14 @@ public class SQLServer {
           if (in.length() > 0) {
             char first = in.charAt(0);
             boolean negative = first == '-';
-            if (negative) {
-              in = next(in, 1);
-            }
-
-            int i = 0;
+            int i = negative ? 1 : 0;
             while (i < in.length()) {
-              char c = charAt(i);
+              char c = in.charAt(i);
               if (Character.isDigit(c)) {
                 break;
               } else {
                 if (i > 0) {
-                  success(new NumberLiteral(negative, in.substring(0, i)),
+                  success(new NumberLiteral(in.substring(0, i)),
                           next(in, i));
                 } else {
                   fail(null);
@@ -713,7 +1574,7 @@ public class SQLServer {
                     terminal(")")),
            sequence(source(),
                     sequence(or(terminal("left"),
-                                terminal("inner"))
+                                terminal("inner")),
                              terminal("join")),
                     source(),
                     terminal("on"),
@@ -745,12 +1606,13 @@ public class SQLServer {
                            Tree tree,
                            InputStream in,
                            OutputStream out)
+             throws IOException
            {
              DBMS dbms = client.server.dbms;
              int[] expressionCount = new int[1];
-             diff(dbms, dbms.revision(), head(client), makeQueryTemplate
-                  (client.server, tree, expressionCount), expressionCount[0],
-                  out);
+             SQLServer.diff
+               (dbms, dbms.revision(), head(client), makeQueryTemplate
+                (client, tree, expressionCount), expressionCount[0], out);
            }           
          });
     }
@@ -767,14 +1629,16 @@ public class SQLServer {
                            Tree tree,
                            InputStream in,
                            OutputStream out)
+             throws IOException
            {
              DBMS dbms = client.server.dbms;
              int[] expressionCount = new int[1];
-             diff(dbms, findTag(client, ((Name) tree.get(1)).value).revision,
-                  findTag(client, ((Name) tree.get(2)).value).revision,
-                  makeQueryTemplate
-                  (client.server, tree.get(3), expressionCount),
-                  expressionCount[0], out);
+             SQLServer.diff
+               (dbms, findTag(client, ((Name) tree.get(1)).value).revision,
+                findTag(client, ((Name) tree.get(2)).value).revision,
+                makeQueryTemplate
+                (client, tree.get(3), expressionCount), expressionCount[0],
+                out);
            }           
          });
     }
@@ -797,8 +1661,12 @@ public class SQLServer {
                            Tree tree,
                            InputStream in,
                            OutputStream out)
+             throws IOException
            {
-             apply(client, makeInsertTemplate(client.server, tree), out);
+             apply(client, makeInsertTemplate(client, tree));
+
+             out.write(Responses.Success.ordinal());
+             writeString(out, "applied insert");
            }
          });
     }
@@ -819,8 +1687,12 @@ public class SQLServer {
                            Tree tree,
                            InputStream in,
                            OutputStream out)
+             throws IOException
            {
-             apply(client, makeUpdateTemplate(client.server, tree), out);
+             apply(client, makeUpdateTemplate(client, tree));
+
+             out.write(Responses.Success.ordinal());
+             writeString(out, "applied update");
            }
          });
     }
@@ -838,8 +1710,12 @@ public class SQLServer {
                            Tree tree,
                            InputStream in,
                            OutputStream out)
+             throws IOException
            {
-             apply(client, makeDeleteTemplate(client.server, tree), out);
+             apply(client, makeDeleteTemplate(client, tree));
+
+             out.write(Responses.Success.ordinal());
+             writeString(out, "applied delete");
            }
          });
     }
@@ -859,11 +1735,14 @@ public class SQLServer {
                            Tree tree,
                            InputStream in,
                            OutputStream out)
+             throws IOException
            {
-             int[] expressionCount = new int[1];
-             apply(client, makeCopyTemplate
-                   (client.server, tree, expressionCount), expressionCount[0],
-                   in, out);
+             List<ColumnType> columnTypes = new ArrayList();
+             applyCopy(client, makeCopyTemplate(client, tree, columnTypes),
+                       columnTypes, in);
+
+             out.write(Responses.Success.ordinal());
+             writeString(out, "applied copy");
            }
          });
     }
@@ -876,10 +1755,11 @@ public class SQLServer {
                            Tree tree,
                            InputStream in,
                            OutputStream out)
+             throws IOException
            {
              pushTransaction(client);
 
-             out.write(Success);
+             out.write(Responses.Success.ordinal());
              writeString(out, "pushed new transaction context");
            }
          });
@@ -893,10 +1773,12 @@ public class SQLServer {
                            Tree tree,
                            InputStream in,
                            OutputStream out)
+             throws IOException
            {
              commitTransaction(client);
+             popTransaction(client);
 
-             out.write(Success);
+             out.write(Responses.Success.ordinal());
              writeString(out, "committed transaction");
            }
          });
@@ -910,10 +1792,11 @@ public class SQLServer {
                            Tree tree,
                            InputStream in,
                            OutputStream out)
+             throws IOException
            {
              popTransaction(client);
 
-             out.write(Success);
+             out.write(Responses.Success.ordinal());
              writeString(out, "abandoned transaction");
            }
          });
@@ -930,11 +1813,19 @@ public class SQLServer {
                            Tree tree,
                            InputStream in,
                            OutputStream out)
+             throws IOException
            {
-             setTag(client, ((Name) tree.get(1)).value,
-                    findTag(client, ((Name) tree.get(2)).value).revision);
+             pushTransaction(client);
+             try {
+               setTag(client, new Tag
+                      (((Name) tree.get(1)).value,
+                       findTag(client, ((Name) tree.get(2)).value).revision));
+               commitTransaction(client);
+             } finally {
+               popTransaction(client);
+             }
 
-             out.write(Success);
+             out.write(Responses.Success.ordinal());
              writeString(out, "tag " + ((Name) tree.get(1)).value
                          + " set to " + ((Name) tree.get(2)).value);
            }
@@ -953,16 +1844,25 @@ public class SQLServer {
                            Tree tree,
                            InputStream in,
                            OutputStream out)
+             throws IOException
            {
-             ConflictResolver conflictResolver = new ConflictResolver();
-             setTag(client, "head",
-                    client.server.dbms.merge
-                    (findTag(client, ((Name) tree.get(1)).value).revision,
-                     findTag(client, ((Name) tree.get(2)).value).revision,
-                     findTag(client, ((Name) tree.get(3)).value).revision,
-                     conflictResolver));
+             LeftPreferenceConflictResolver conflictResolver
+               = new LeftPreferenceConflictResolver();
+             pushTransaction(client);
+             try {
+               setTag(client, new Tag
+                      ("head",
+                       client.server.dbms.merge
+                       (findTag(client, ((Name) tree.get(1)).value).revision,
+                        findTag(client, ((Name) tree.get(2)).value).revision,
+                        findTag(client, ((Name) tree.get(3)).value).revision,
+                        conflictResolver)));
+               commitTransaction(client);
+             } finally {
+               popTransaction(client);
+             }
 
-             out.write(Success);
+             out.write(Responses.Success.ordinal());
              writeString(out, "head set to result of merge ("
                          + conflictResolver.conflictCount + " conflicts)");
            }
@@ -984,8 +1884,9 @@ public class SQLServer {
                            Tree tree,
                            InputStream in,
                            OutputStream out)
+             throws IOException
            {
-             out.write(Success);
+             out.write(Responses.Success.ordinal());
              writeString(out, "todo");
            }
          });
@@ -1006,22 +1907,40 @@ public class SQLServer {
                            Tree tree,
                            InputStream in,
                            OutputStream out)
+             throws IOException
            {
              tree = tree.get(1);
              String type = ((Terminal) tree.get(0)).value;
              String name = ((Name) tree.get(1)).value;
 
-             if ("database".equals(type)) {
-               removeDatabase(client, name);
-             } else if ("table".equals(type)) {
-               removeTable(client, name);
-             } else if ("tag".equals(type)) {
-               removeTag(client, name);
-             } else {
-               throw new RuntimeException();
+             pushTransaction(client);
+             try {
+               DBMS dbms = client.server.dbms;
+               PatchContext context = dbms.patchContext
+                 (client.transaction.dbHead);
+
+               if ("database".equals(type)) {
+                 dbms.apply(context, client.server.deleteDatabase, name);
+                 dbms.apply(context, client.server.deleteDatabaseTables, name);
+                 dbms.apply(context, client.server.deleteDatabaseTags, name);
+               } else if ("table".equals(type)) {
+                 dbms.apply(context, client.server.deleteTable,
+                            database(client), name);
+               } else if ("tag".equals(type)) {
+                 dbms.apply(context, client.server.deleteTag,
+                            database(client), name);
+               } else {
+                 throw new RuntimeException();
+               }
+
+               client.transaction.dbHead = dbms.commit(context);
+
+               commitTransaction(client);
+             } finally {
+               popTransaction(client);
              }
 
-             out.write(Success);
+             out.write(Responses.Success.ordinal());
              writeString(out, "dropped " + type + " " + name);
            }
          });
@@ -1038,11 +1957,12 @@ public class SQLServer {
                            Tree tree,
                            InputStream in,
                            OutputStream out)
+             throws IOException
            {
              String name = ((Name) tree.get(2)).value;
-             client.database = getDatabase(client, name);
+             client.database = findDatabase(client, name);
 
-             out.write(Success);
+             out.write(Responses.Success.ordinal());
              writeString(out, "switched to database " + name);
            }
          });
@@ -1071,10 +1991,17 @@ public class SQLServer {
                            Tree tree,
                            InputStream in,
                            OutputStream out)
+             throws IOException
            {
-             setTable(client.server, makeTable(client.server, tree));
+             pushTransaction(client);
+             try {
+               setTable(client, makeTable(client.server, tree));
+               commitTransaction(client);
+             } finally {
+               popTransaction(client);
+             }
 
-             out.write(Success);
+             out.write(Responses.Success.ordinal());
              writeString(out, "table " + ((Name) tree.get(2)).value
                          + " defined");
            }
@@ -1092,11 +2019,18 @@ public class SQLServer {
                            Tree tree,
                            InputStream in,
                            OutputStream out)
+             throws IOException
            {
              String name = ((Name) tree.get(2)).value;
-             addDatabase(client, new Database(name));
+             pushTransaction(client);
+             try {
+               setDatabase(client, new Database(name));
+               commitTransaction(client);
+             } finally {
+               popTransaction(client);
+             }
 
-             out.write(Success);
+             out.write(Responses.Success.ordinal());
              writeString(out, "created database " + name);
            }
          });
@@ -1110,59 +2044,64 @@ public class SQLServer {
                            Tree tree,
                            InputStream in,
                            OutputStream out)
+             throws IOException
            {
-             out.write(Success);
+             out.write(Responses.Success.ordinal());
              writeString(out, "todo");
            }
          });
     }
   }
 
-  private static final int ThreadPoolSize = 256;
-
-  private final Parser parser = new ParserFactory().parser();
-
-  private void executeRequest(InputStream in,
-                              OutputStream out)
+  private static void executeRequest(Client client,
+                                     InputStream in,
+                                     OutputStream out)
+    throws IOException
   {
-    ParseResult result = parser.parse(readString(in));
+    ParseResult result = client.server.parser.parse
+      (new ParseContext(client), readString(in));
     if (result.task != null) {
       try {
-        result.task.run(result.tree, in, out);
+        result.task.run(client, result.tree, in, out);
       } catch (Exception e) {
-        out.write(Error);
+        out.write(Responses.Error.ordinal());
         writeString(out, e.getMessage()); 
         log.log(Level.WARNING, null, e);       
       }
     } else {
-      out.write(Error);
+      out.write(Responses.Error.ordinal());
       writeString(out, "Sorry, I don't understand.");
     }
   }
 
-  private void completeRequest(InputStream in,
-                               OutputStream out)
+  private static void completeRequest(Client client,
+                                      InputStream in,
+                                      OutputStream out)
+    throws IOException
   {
-    ParseResult result = parser.parse(readString(in));
-    out.write(Completions);
-    writeInt(out, result.completions.size());
+    ParseResult result = client.server.parser.parse
+      (new ParseContext(client), readString(in));
+    out.write(Responses.Success.ordinal());
+    writeInteger(out, result.completions.size());
     for (String completion: result.completions) {
       writeString(out, completion);
     }
   }
 
-  private void handleRequest(InputStream in,
-                             OutputStream out)
+  private static void handleRequest(Client client,
+                                    InputStream in,
+                                    OutputStream out)
+    throws IOException
   {
     int requestType = in.read();
-    switch (requestType) {
+    switch (Requests.values()[requestType]) {
     case Execute:
-      executeRequest(in, out);
+      executeRequest(client, in, out);
       out.flush();
       break;
 
     case Complete:
-      completeRequest(in, out);
+      completeRequest(client, in, out);
       out.flush();
       break;
 
@@ -1173,9 +2112,10 @@ public class SQLServer {
 
   private static void listen(String address,
                              int port)
+    throws IOException
   {
-    ServerSocketChannel server = ServerSocketChannel.open();
-    server.socket().bind(new InetSocketAddress(address, port));
+    ServerSocketChannel serverChannel = ServerSocketChannel.open();
+    serverChannel.socket().bind(new InetSocketAddress(address, port));
 
     ThreadPoolExecutor executor = new ThreadPoolExecutor
       (ThreadPoolSize,       // core thread count
@@ -1185,15 +2125,14 @@ public class SQLServer {
 
     executor.allowCoreThreadTimeOut(true);
 
-    SQLServer server = new SQLServer();
+    Server server = new Server(new MyDBMS());
 
     while (true) {
-      SocketChannel channel = server.accept();
-      executor.execute(new ConnectionHandler(server, channel));
+      executor.execute(new Client(server, serverChannel.accept()));
     }
   }
 
-  public static void main(String[] args) {
+  public static void main(String[] args) throws IOException {
     if (args.length == 2) {
       listen(args[0], Integer.parseInt(args[1]));
     } else {
