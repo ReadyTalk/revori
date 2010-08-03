@@ -2,7 +2,6 @@ import static com.readytalk.oss.dbms.imp.Util.list;
 import static com.readytalk.oss.dbms.imp.Util.set;
 
 import com.readytalk.oss.dbms.DBMS;
-import com.readytalk.oss.dbms.DBMS.ColumnType;
 import com.readytalk.oss.dbms.DBMS.Column;
 import com.readytalk.oss.dbms.DBMS.Index;
 import com.readytalk.oss.dbms.DBMS.Table;
@@ -23,6 +22,7 @@ import com.readytalk.oss.dbms.imp.MyDBMS;
 
 import java.util.Set;
 import java.util.Collections;
+import java.util.Collection;
 
 public class Test {
   private static final Set<Index> EmptyIndexSet = Collections.emptySet();
@@ -41,8 +41,8 @@ public class Test {
   private static void testSimpleInsertDiffs() {
     DBMS dbms = new MyDBMS();
 
-    Column number = dbms.column(ColumnType.Integer32);
-    Column name = dbms.column(ColumnType.String);
+    Column number = dbms.column(Integer.class);
+    Column name = dbms.column(String.class);
     Table numbers = dbms.table
       (set(number, name),
        dbms.index(list(number), true),
@@ -58,7 +58,7 @@ public class Test {
        (numbers,
         list(number, name),
         list(dbms.constant(42),
-             dbms.constant("forty two"))));
+             dbms.constant("forty two")), false));
 
     Revision first = dbms.commit(context);
 
@@ -100,8 +100,8 @@ public class Test {
   private static void testLargerInsertDiffs() {
     DBMS dbms = new MyDBMS();
 
-    Column number = dbms.column(ColumnType.Integer32);
-    Column name = dbms.column(ColumnType.String);
+    Column number = dbms.column(Integer.class);
+    Column name = dbms.column(String.class);
     Table numbers = dbms.table
       (set(number, name),
        dbms.index(list(number), true),
@@ -113,7 +113,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()));
+            dbms.parameter()), false);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -200,8 +200,8 @@ public class Test {
   private static void testDeleteDiffs() {
     DBMS dbms = new MyDBMS();
 
-    Column number = dbms.column(ColumnType.Integer32);
-    Column name = dbms.column(ColumnType.String);
+    Column number = dbms.column(Integer.class);
+    Column name = dbms.column(String.class);
     Table numbers = dbms.table
       (set(number, name),
        dbms.index(list(number), true),
@@ -213,7 +213,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()));
+            dbms.parameter()), false);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -364,8 +364,8 @@ public class Test {
   private static void testUpdateDiffs() {
     DBMS dbms = new MyDBMS();
 
-    Column number = dbms.column(ColumnType.Integer32);
-    Column name = dbms.column(ColumnType.String);
+    Column number = dbms.column(Integer.class);
+    Column name = dbms.column(String.class);
     Table numbers = dbms.table
       (set(number, name),
        dbms.index(list(number), true),
@@ -377,7 +377,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()));
+            dbms.parameter()), false);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -487,11 +487,11 @@ public class Test {
   private static void testMultilevelIndexes() {
     DBMS dbms = new MyDBMS();
 
-    Column country = dbms.column(ColumnType.String);
-    Column state = dbms.column(ColumnType.String);
-    Column city = dbms.column(ColumnType.String);
-    Column zip = dbms.column(ColumnType.Integer32);
-    Column color = dbms.column(ColumnType.String);
+    Column country = dbms.column(String.class);
+    Column state = dbms.column(String.class);
+    Column city = dbms.column(String.class);
+    Column zip = dbms.column(Integer.class);
+    Column color = dbms.column(String.class);
     Table places = dbms.table
       (set(country, state, city, zip, color),
        dbms.index(list(country, state, city), true),
@@ -506,7 +506,7 @@ public class Test {
             dbms.parameter(),
             dbms.parameter(),
             dbms.parameter(),
-            dbms.parameter()));
+            dbms.parameter()), false);
     
     PatchContext context = dbms.patchContext(tail);
 
@@ -639,8 +639,8 @@ public class Test {
   private static void testComparisons() {
     DBMS dbms = new MyDBMS();
 
-    Column number = dbms.column(ColumnType.Integer32);
-    Column name = dbms.column(ColumnType.String);
+    Column number = dbms.column(Integer.class);
+    Column name = dbms.column(String.class);
     Table numbers = dbms.table
       (set(number, name),
        dbms.index(list(number), true),
@@ -652,7 +652,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()));
+            dbms.parameter()), false);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -854,8 +854,8 @@ public class Test {
   private static void testBooleanOperations() {
     DBMS dbms = new MyDBMS();
 
-    Column number = dbms.column(ColumnType.Integer32);
-    Column name = dbms.column(ColumnType.String);
+    Column number = dbms.column(Integer.class);
+    Column name = dbms.column(String.class);
     Table numbers = dbms.table
       (set(number, name),
        dbms.index(list(number), true),
@@ -867,7 +867,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()));
+            dbms.parameter()), false);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -1095,8 +1095,8 @@ public class Test {
   private static void testNonIndexedQueries() {
     DBMS dbms = new MyDBMS();
 
-    Column number = dbms.column(ColumnType.Integer32);
-    Column name = dbms.column(ColumnType.String);
+    Column number = dbms.column(Integer.class);
+    Column name = dbms.column(String.class);
     Table numbers = dbms.table
       (set(number, name),
        dbms.index(list(number), true),
@@ -1108,7 +1108,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()));
+            dbms.parameter()), false);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -1182,14 +1182,14 @@ public class Test {
   private static void testSimpleJoins() {
     DBMS dbms = new MyDBMS();
 
-    Column id = dbms.column(ColumnType.Integer32);
-    Column name = dbms.column(ColumnType.String);
+    Column id = dbms.column(Integer.class);
+    Column name = dbms.column(String.class);
     Table names = dbms.table
       (set(id, name),
        dbms.index(list(id), true),
        EmptyIndexSet);
 
-    Column nickname = dbms.column(ColumnType.String);
+    Column nickname = dbms.column(String.class);
     Table nicknames = dbms.table
       (set(id, nickname),
        dbms.index(list(id, nickname), true),
@@ -1201,13 +1201,13 @@ public class Test {
       (names,
        list(id, name),
        list(dbms.parameter(),
-            dbms.parameter()));
+            dbms.parameter()), false);
 
     PatchTemplate nicknameInsert = dbms.insertTemplate
       (nicknames,
        list(id, nickname),
        list(dbms.parameter(),
-            dbms.parameter()));
+            dbms.parameter()), false);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -1349,27 +1349,27 @@ public class Test {
   private static void testCompoundJoins() {
     DBMS dbms = new MyDBMS();
 
-    Column id = dbms.column(ColumnType.Integer32);
-    Column name = dbms.column(ColumnType.String);
+    Column id = dbms.column(Integer.class);
+    Column name = dbms.column(String.class);
     Table names = dbms.table
       (set(id, name),
        dbms.index(list(id), true),
        EmptyIndexSet);
 
-    Column nickname = dbms.column(ColumnType.String);
+    Column nickname = dbms.column(String.class);
     Table nicknames = dbms.table
       (set(id, nickname),
        dbms.index(list(id, nickname), true),
        EmptyIndexSet);
 
-    Column lastname = dbms.column(ColumnType.String);
+    Column lastname = dbms.column(String.class);
     Table lastnames = dbms.table
       (set(name, lastname),
        dbms.index(list(name), true),
        EmptyIndexSet);
 
-    Column string = dbms.column(ColumnType.String);
-    Column color = dbms.column(ColumnType.String);
+    Column string = dbms.column(String.class);
+    Column color = dbms.column(String.class);
     Table colors = dbms.table
       (set(string, color),
        dbms.index(list(string), true),
@@ -1381,25 +1381,25 @@ public class Test {
       (names,
        list(id, name),
        list(dbms.parameter(),
-            dbms.parameter()));
+            dbms.parameter()), false);
 
     PatchTemplate nicknameInsert = dbms.insertTemplate
       (nicknames,
        list(id, nickname),
        list(dbms.parameter(),
-            dbms.parameter()));
+            dbms.parameter()), false);
 
     PatchTemplate lastnameInsert = dbms.insertTemplate
       (lastnames,
        list(name, lastname),
        list(dbms.parameter(),
-            dbms.parameter()));
+            dbms.parameter()), false);
 
     PatchTemplate colorInsert = dbms.insertTemplate
       (colors,
        list(string, color),
        list(dbms.parameter(),
-            dbms.parameter()));
+            dbms.parameter()), false);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -1617,8 +1617,8 @@ public class Test {
   public static void testMerges() {
     DBMS dbms = new MyDBMS();
 
-    final Column number = dbms.column(ColumnType.Integer32);
-    final Column name = dbms.column(ColumnType.String);
+    final Column number = dbms.column(Integer.class);
+    final Column name = dbms.column(String.class);
     Table numbers = dbms.table
       (set(number, name),
        dbms.index(list(number), true),
@@ -1630,7 +1630,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()));
+            dbms.parameter()), false);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -1758,6 +1758,7 @@ public class Test {
 
     merge = dbms.merge(base, left, right, new ConflictResolver() {
         public Row resolveConflict(Table table,
+                                   Collection<DBMS.Column> columns,
                                    Revision base,
                                    Row baseRow,
                                    Revision left,
@@ -1805,6 +1806,7 @@ public class Test {
 
     merge = dbms.merge(base, left, right, new ConflictResolver() {
         public Row resolveConflict(Table table,
+                                   Collection<DBMS.Column> columns,
                                    Revision base,
                                    Row baseRow,
                                    Revision left,

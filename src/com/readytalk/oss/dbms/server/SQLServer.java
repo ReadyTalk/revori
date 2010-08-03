@@ -18,11 +18,11 @@ import com.readytalk.oss.dbms.DBMS.ResultType;
 import com.readytalk.oss.dbms.DBMS.ConflictResolver;
 import com.readytalk.oss.dbms.DBMS.Revision;
 import com.readytalk.oss.dbms.DBMS.JoinType;
-import com.readytalk.oss.dbms.DBMS.ColumnType;
 import com.readytalk.oss.dbms.DBMS.BinaryOperationType;
 import com.readytalk.oss.dbms.DBMS.UnaryOperationType;
 import com.readytalk.oss.dbms.DBMS.Row;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
@@ -94,10 +94,11 @@ public class SQLServer {
       = new HashMap();
     private final Map<String, UnaryOperationType> unaryOperationTypes
       = new HashMap();
-    private final Map<String, ColumnType> columnTypes = new HashMap();
+    private final Map<String, Class> columnTypes = new HashMap();
     private final ConflictResolver rightPreferenceConflictResolver
       = new ConflictResolver() {
           public Row resolveConflict(DBMS.Table table,
+                                     Collection<DBMS.Column> columns,
                                      Revision base,
                                      Row baseRow,
                                      Revision left,
@@ -105,11 +106,12 @@ public class SQLServer {
                                      Revision right,
                                      Row rightRow)
           {
-            return leftPreferenceMerge(baseRow, rightRow, leftRow);
+            return leftPreferenceMerge(columns, baseRow, rightRow, leftRow);
           }
         };
     private final ConflictResolver conflictResolver = new ConflictResolver() {
         public Row resolveConflict(DBMS.Table table,
+                                   Collection<DBMS.Column> columns,
                                    Revision base,
                                    Row baseRow,
                                    Revision left,
@@ -130,7 +132,7 @@ public class SQLServer {
                         rightPreferenceConflictResolver));
             return result;
           } else {
-            return leftPreferenceMerge(baseRow, rightRow, leftRow);
+            return leftPreferenceMerge(columns, baseRow, rightRow, leftRow);
           }
         }
       };
@@ -138,8 +140,8 @@ public class SQLServer {
     public Server(DBMS dbms) {
       this.dbms = dbms;
 
-      DBMS.Column databasesName = dbms.column(ColumnType.String);
-      DBMS.Column databasesDatabase = dbms.column(ColumnType.Object);
+      DBMS.Column databasesName = dbms.column(String.class);
+      DBMS.Column databasesDatabase = dbms.column(Object.class);
       DBMS.Table databases = dbms.table
         (set(databasesName, databasesDatabase),
          dbms.index(list(databasesName), true),
@@ -148,7 +150,7 @@ public class SQLServer {
 
       this.insertOrUpdateDatabase = dbms.insertTemplate
         (databases, list(databasesName, databasesDatabase),
-         list(dbms.parameter(), dbms.parameter()));
+         list(dbms.parameter(), dbms.parameter()), true);
 
       this.listDatabases = dbms.queryTemplate
         (list((Expression) dbms.columnReference
@@ -172,9 +174,9 @@ public class SQLServer {
           dbms.columnReference(databasesReference, databasesName),
           dbms.parameter()));
 
-      DBMS.Column tablesDatabase = dbms.column(ColumnType.String);
-      DBMS.Column tablesName = dbms.column(ColumnType.String);
-      DBMS.Column tablesTable = dbms.column(ColumnType.Object);
+      DBMS.Column tablesDatabase = dbms.column(String.class);
+      DBMS.Column tablesName = dbms.column(String.class);
+      DBMS.Column tablesTable = dbms.column(Object.class);
       DBMS.Table tables = dbms.table
         (set(tablesDatabase, tablesName, tablesTable),
          dbms.index(list(tablesDatabase, tablesName), true),
@@ -183,7 +185,7 @@ public class SQLServer {
 
       this.insertOrUpdateTable = dbms.insertTemplate
         (tables, list(tablesDatabase, tablesName, tablesTable),
-         list(dbms.parameter(), dbms.parameter(), dbms.parameter()));
+         list(dbms.parameter(), dbms.parameter(), dbms.parameter()), true);
 
       this.listTables = dbms.queryTemplate
         (list((Expression) dbms.columnReference(tablesReference, tablesTable)),
@@ -227,9 +229,9 @@ public class SQLServer {
            dbms.columnReference(tablesReference, tablesName),
            dbms.parameter())));
 
-      this.tagsDatabase = dbms.column(ColumnType.String);
-      this.tagsName = dbms.column(ColumnType.String);
-      this.tagsTag = dbms.column(ColumnType.Object);
+      this.tagsDatabase = dbms.column(String.class);
+      this.tagsName = dbms.column(String.class);
+      this.tagsTag = dbms.column(Object.class);
       this.tags = dbms.table
         (set(tagsDatabase, tagsName, tagsTag),
          dbms.index(list(tagsDatabase, tagsName), true),
@@ -238,7 +240,7 @@ public class SQLServer {
 
       this.insertOrUpdateTag = dbms.insertTemplate
         (tags, list(tagsDatabase, tagsName, tagsTag),
-         list(dbms.parameter(), dbms.parameter(), dbms.parameter()));
+         list(dbms.parameter(), dbms.parameter(), dbms.parameter()), true);
 
       this.listTags = dbms.queryTemplate
         (list((Expression) dbms.columnReference(tagsReference, tagsTag)),
@@ -295,18 +297,40 @@ public class SQLServer {
 
       unaryOperationTypes.put("not", UnaryOperationType.Not);
 
-      columnTypes.put("int32", ColumnType.Integer32);
-      columnTypes.put("int64", ColumnType.Integer64);
-      columnTypes.put("string", ColumnType.String);
+      columnTypes.put("int32", Integer.class);
+      columnTypes.put("int64", Long.class);
+      columnTypes.put("string", String.class);
     }
   }
 
-  private static Row leftPreferenceMerge(Row base,
+  private static boolean equal(Object left,
+                               Object right)
+  {
+    return left == right || (left != null && left.equals(right));
+  }
+
+  private static Row leftPreferenceMerge(Collection<DBMS.Column> columns,
+                                         Row base,
                                          Row left,
                                          Row right)
   {
-    // todo: iterate over items and merge each individually
-    return left;
+    if (base == null) {
+      return left;
+    } else {
+      HashRow result = new HashRow(columns.size());
+      for (DBMS.Column c: columns) {
+        Object baseItem = base.value(c);
+        Object leftItem = left.value(c);
+        Object rightItem = right.value(c);
+
+        if (equal(baseItem, leftItem)) {
+          result.put(c, rightItem);
+        } else {
+          result.put(c, leftItem);
+        }
+      }
+      return result;
+    }
   }
 
   private static class LeftPreferenceConflictResolver
@@ -315,6 +339,7 @@ public class SQLServer {
     private int conflictCount;
 
     public Row resolveConflict(DBMS.Table table,
+                               Collection<DBMS.Column> columns,
                                Revision base,
                                Row baseRow,
                                Revision left,
@@ -323,7 +348,7 @@ public class SQLServer {
                                Row rightRow)
     {
       ++ conflictCount;
-      return leftPreferenceMerge(baseRow, leftRow, rightRow);
+      return leftPreferenceMerge(columns, baseRow, leftRow, rightRow);
     }
   }
 
@@ -406,11 +431,11 @@ public class SQLServer {
   private static class Column {
     private final String name;
     private final DBMS.Column column;
-    private final ColumnType type;
+    private final Class type;
     
     public Column(String name,
                   DBMS.Column column,
-                  ColumnType type)
+                  Class type)
     {
       this.name = name;
       this.column = column;
@@ -845,7 +870,7 @@ public class SQLServer {
 
     return client.server.dbms.insertTemplate
       (table.table, makeOptionalColumnList(table, tree.get(3)),
-       makeExpressionList(client.server, tree.get(6), null));
+       makeExpressionList(client.server, tree.get(6), null), false);
   }
 
   private static PatchTemplate makeUpdateTemplate(Client client,
@@ -895,7 +920,7 @@ public class SQLServer {
 
   private static PatchTemplate makeCopyTemplate(Client client,
                                                 Tree tree,
-                                                List<ColumnType> columnTypes)
+                                                List<Class> columnTypes)
   {
     Table table = findTable(client, ((Name) tree.get(1)).value);
 
@@ -907,13 +932,13 @@ public class SQLServer {
       columnTypes.add(findColumn(table, c).type);
     }
 
-    return dbms.insertTemplate(table.table, columns, values);
+    return dbms.insertTemplate(table.table, columns, values, false);
   }
 
-  private static ColumnType findColumnType(Server server,
-                                           String name)
+  private static Class findColumnType(Server server,
+                                      String name)
   {
-    ColumnType type = server.columnTypes.get(name);
+    Class type = server.columnTypes.get(name);
     if (type == null) {
       throw new RuntimeException("no such column type: " + name);
     } else {
@@ -948,7 +973,7 @@ public class SQLServer {
     Map<String, Column> columnMap = new HashMap(columns.size());
     Set<DBMS.Column> columnSet = new HashSet(columns.size());
     for (Tree column: columns) {
-      ColumnType type = findColumnType(server, ((Name) column.get(1)).value);
+      Class type = findColumnType(server, ((Name) column.get(1)).value);
       DBMS.Column dbmsColumn = dbms.column(type);
       columnSet.add(dbmsColumn);
   
@@ -1048,14 +1073,15 @@ public class SQLServer {
     }
   }
 
-  private static void apply(Client client,
-                            PatchTemplate template,
-                            Object ... parameters)
+  private static int apply(Client client,
+                           PatchTemplate template,
+                           Object ... parameters)
   {
     DBMS dbms = client.server.dbms;
     PatchContext context = dbms.patchContext(client.transaction.dbHead);
-    dbms.apply(context, template, parameters);
+    int count = dbms.apply(context, template, parameters);
     client.transaction.dbHead = dbms.commit(context);
+    return count;
   }
 
   private static void setDatabase(Client client, Database database) {
@@ -1102,50 +1128,48 @@ public class SQLServer {
     client.transaction = client.transaction.next;
   }
 
-  private static void apply(Client client,
-                            PatchTemplate template)
+  private static int apply(Client client,
+                           PatchTemplate template)
   {
     pushTransaction(client);
     try {
       DBMS dbms = client.server.dbms;
       PatchContext context = dbms.patchContext(head(client));
-      dbms.apply(context, template);
+      int count = dbms.apply(context, template);
       setTag(client, new Tag("head", dbms.commit(context)));
       commitTransaction(client);
+      return count;
     } finally {
       popTransaction(client);
     }
   }
 
-  private static Object convert(ColumnType type,
+  private static Object convert(Class type,
                                 String value)
   {
-    switch (type) {
-    case Integer32:
+    if (type == Integer.class) {
       return Integer.parseInt(value);
-
-    case Integer64:
+    } else if (type == Long.class) {
       return Long.parseLong(value);
-
-    case String:
+    } else if (type == String.class) {
       return value;
-
-    default:
+    } else {
       throw new RuntimeException("unexpected type: " + type);
     }
   }
 
-  private static void copy(InputStream in,
-                           DBMS dbms,
-                           PatchContext context,
-                           PatchTemplate template,
-                           List<ColumnType> columnTypes)
+  private static int copy(InputStream in,
+                          DBMS dbms,
+                          PatchContext context,
+                          PatchTemplate template,
+                          List<Class> columnTypes)
     throws IOException
   {
     StringBuilder sb = new StringBuilder();
     Object[] parameters = new Object[columnTypes.size()];
     boolean sawEscape = false;
     int i = 0;
+    int count = 0;
     while (true) {
       int c = in.read();
       switch (c) {
@@ -1180,6 +1204,7 @@ public class SQLServer {
             throw new RuntimeException("not enough values specified");
           }
           dbms.apply(context, template, parameters);
+          ++ count;
           i = 0;
         }
         break;
@@ -1189,7 +1214,7 @@ public class SQLServer {
           if (i != 0 || sb.length() > 0) {
             throw new RuntimeException("unexpected end of values");
           }
-          return;
+          return count;
         } else {
           sb.append((char) c);
         }
@@ -1202,19 +1227,20 @@ public class SQLServer {
     }
   }
 
-  private static void applyCopy(Client client,
-                                PatchTemplate template,
-                                List<ColumnType> columnTypes,
-                                InputStream in)
+  private static int applyCopy(Client client,
+                               PatchTemplate template,
+                               List<Class> columnTypes,
+                               InputStream in)
     throws IOException
   {
     pushTransaction(client);
     try {
       DBMS dbms = client.server.dbms;
       PatchContext context = dbms.patchContext(head(client));
-      copy(in, dbms, context, template, columnTypes);
+      int count = copy(in, dbms, context, template, columnTypes);
       setTag(client, new Tag("head", dbms.commit(context)));
       commitTransaction(client);
+      return count;
     } finally {
       popTransaction(client);
     }
@@ -1249,30 +1275,71 @@ public class SQLServer {
            client.database);
       }
       break;
+
+    case Column:
+      break;
+
+    case Tag:
+      if (client.database != null) {
+        result = dbms.diff
+          (dbms.revision(), dbHead(client), client.server.listTags,
+           client.database);
+      }
+      break;
       
     default: throw new RuntimeException("unexpected name type: " + type);
     }
       
+    List<String> list = null;
     if (result != null) {
-      List<String> list = new ArrayList();
       while (result.nextRow() == ResultType.Inserted) {
+        if (list == null) {
+          list = new ArrayList();
+        }
         list.add((String) result.nextItem());
       }
-      return list;
-    } else {
-      return new ArrayList();
     }
+    return list;
   }
 
   private static List<String> findCompletions(ParseContext context,
                                               NameType type)
   {
-    List<String> result = findCompletions(context.client, type);
-    List<String> list = context.completions.get(type);
-    if (list != null) {
-      result.addAll(list);
+    if (type == NameType.Column) {
+      List<String> columnList = context.completions.get(type);
+      if (columnList != null) {
+        return columnList;
+      } else {
+        List<String> tableList = context.completions.get(type);
+        if (tableList != null && context.client.database != null) {
+          DBMS dbms = context.client.server.dbms;
+          Revision tail = dbms.revision();
+          Revision head = dbHead(context.client);
+          Set<String> columns = new HashSet();
+          for (String tableName: tableList) {
+            QueryResult result = dbms.diff
+              (tail, head, context.client.server.findTable,
+               context.client.database.name, tableName);
+
+            if (result.nextRow() == ResultType.Inserted) {
+              for (Column c: ((Table) result.nextItem()).columns.values()) {
+                columns.add(c.name);
+              }
+            }          
+          }
+
+          if (columns.size() == 0) {
+            return null;
+          } else {
+            return new ArrayList(columns);
+          }
+        } else {
+          return null;
+        }
+      }
+    } else {
+      return findCompletions(context.client, type);
     }
-    return result;
   }
 
   private static class ParserFactory {
@@ -1666,7 +1733,7 @@ public class SQLServer {
              apply(client, makeInsertTemplate(client, tree));
 
              out.write(Responses.Success.ordinal());
-             writeString(out, "applied insert");
+             writeString(out, "inserted 1 row");
            }
          });
     }
@@ -1689,10 +1756,10 @@ public class SQLServer {
                            OutputStream out)
              throws IOException
            {
-             apply(client, makeUpdateTemplate(client, tree));
+             int count = apply(client, makeUpdateTemplate(client, tree));
 
              out.write(Responses.Success.ordinal());
-             writeString(out, "applied update");
+             writeString(out, "updated " + count + " row(s)");
            }
          });
     }
@@ -1712,10 +1779,10 @@ public class SQLServer {
                            OutputStream out)
              throws IOException
            {
-             apply(client, makeDeleteTemplate(client, tree));
+             int count = apply(client, makeDeleteTemplate(client, tree));
 
              out.write(Responses.Success.ordinal());
-             writeString(out, "applied delete");
+             writeString(out, "deleted " + count + " row(s)");
            }
          });
     }
@@ -1737,12 +1804,13 @@ public class SQLServer {
                            OutputStream out)
              throws IOException
            {
-             List<ColumnType> columnTypes = new ArrayList();
-             applyCopy(client, makeCopyTemplate(client, tree, columnTypes),
-                       columnTypes, in);
+             List<Class> columnTypes = new ArrayList();
+             int count = applyCopy
+               (client, makeCopyTemplate(client, tree, columnTypes),
+                columnTypes, in);
 
              out.write(Responses.Success.ordinal());
-             writeString(out, "applied copy");
+             writeString(out, "inserted " + count + " row(s)");
            }
          });
     }

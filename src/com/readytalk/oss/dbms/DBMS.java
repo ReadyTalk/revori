@@ -1,5 +1,6 @@
 package com.readytalk.oss.dbms;
 
+import java.util.Collection;
 import java.util.Set;
 import java.util.Map;
 import java.util.List;
@@ -45,42 +46,6 @@ import java.util.List;
  *   revision to be queried as the second</li></ul></li></ul>
  */
 public interface DBMS {
-  /**
-   * These are the possible types which may be specified when defining
-   * a column.
-   */
-  public enum ColumnType {
-    /**
-     * Indicates a column capable of storing instances of
-     * java.lang.Integer.
-     */
-    Integer32,
-
-      /**
-       * Indicates a column capable of storing instances of
-       * java.lang.Long.
-       */
-      Integer64,
-
-      /**
-       * Indicates a column capable of storing instances of
-       * java.lang.String.
-       */
-      String,
-
-      /**
-       * Indicates a column capable of storing instances of
-       * com.readytalk.oss.dbms.DBMS.ByteArray.
-       */
-      ByteArray,
-
-      /**
-       * Indicates a column capable of storing instances of
-       * java.lang.Object.
-       */
-      Object;
-  }
-
   /**
    * These are the possible types which may be specified when defining
    * a join.
@@ -241,14 +206,11 @@ public interface DBMS {
   }
 
   /**
-   * Represents a windowed view, or slice, of a byte array bounded by
-   * the specified offset and length.
+   * Exception thrown when an insert or update introduces a row which
+   * conflicts with an existing row by matching the same key of a
+   * unique index.
    */
-  public interface ByteArray {
-    public byte[] array();
-    public int offset();
-    public int length();
-  }
+  public static class DuplicateKeyException extends RuntimeException { }
 
   /**
    * Opaque type representing a column for use in table definition and
@@ -357,6 +319,7 @@ public interface DBMS {
    */
   public interface ConflictResolver {
     public Row resolveConflict(Table table,
+                               Collection<Column> columns,
                                Revision base,
                                Row baseRow,
                                Revision left,
@@ -369,9 +332,10 @@ public interface DBMS {
    * Defines a column which is associated with the specified type.
    * The type specified here will be used for dynamic type checking
    * whenever a value is inserted or updated in this column of a
-   * table.
+   * table; only values which are instances of the specified class
+   * will be accepted.
    */
-  public Column column(ColumnType type);
+  public Column column(Class type);
 
   /**
    * Defines an index which is associated with the specified list of
@@ -503,10 +467,16 @@ public interface DBMS {
    * values to be inserted are specified as two ordered lists of equal
    * length: a list of columns and a list of expressions representing
    * the values to be placed into those columns.
+   *
+   * If, when this template is applied, there is already row with a
+   * matching key on a unique index in the table, a duplicate key
+   * exception is thrown unless updateOnDuplicateKey is true, in which
+   * case the existing row is replaced.
    */
   public PatchTemplate insertTemplate(Table table,
                                       List<Column> columns,
-                                      List<Expression> values);
+                                      List<Expression> values,
+                                      boolean updateOnDuplicateKey);
 
   /**
    * Defines a patch template (AKA prepared statement) which
@@ -545,12 +515,18 @@ public interface DBMS {
    * left-to-right in the order they where specified when the patch
    * template was defined.
    *
+   * @returns the number of rows affected by the patch
+   *
    * @throws IllegalStateException if the specified patch context has
    * already been committed
+   *
+   * @throws DuplicateKeyException if the specified patch introduces a
+   * duplicate key on a unique index
    */
-  public void apply(PatchContext context,
-                    PatchTemplate template,
-                    Object ... parameters);
+  public int apply(PatchContext context,
+                   PatchTemplate template,
+                   Object ... parameters)
+    throws DuplicateKeyException;
 
   /**
    * Commits the specified patch context, producing a revision which

@@ -4,6 +4,7 @@ import static com.readytalk.oss.dbms.imp.Util.list;
 
 import com.readytalk.oss.dbms.DBMS;
 
+import java.util.Collections;
 import java.util.Collection;
 import java.util.Set;
 import java.util.HashSet;
@@ -201,10 +202,10 @@ public class MyDBMS implements DBMS {
   }
 
   private static class MyColumn implements Column {
-    public final ColumnType type;
+    public final Class type;
     public final int id;
 
-    public MyColumn(ColumnType type) {
+    public MyColumn(Class type) {
       this.type = type;
       this.id = nextId();
     }
@@ -2370,8 +2371,8 @@ public class MyDBMS implements DBMS {
       this.parameterCount = parameterCount;
     }
 
-    public abstract void apply(MyPatchContext context,
-                               Object[] parameters);
+    public abstract int apply(MyPatchContext context,
+                              Object[] parameters);
   }
 
   // todo: teach this about updating multiple indexes:
@@ -2525,20 +2526,23 @@ public class MyDBMS implements DBMS {
     public final MyTable table;
     public final List<MyColumn> columns;
     public final List<MyExpression> values;
+    public final boolean updateOnDuplicateKey;
 
     public InsertTemplate(int parameterCount,
                           MyTable table,
                           List<MyColumn> columns,
-                          List<MyExpression> values)
+                          List<MyExpression> values,
+                          boolean updateOnDuplicateKey)
     {
       super(parameterCount);
       this.table = table;
       this.columns = columns;
       this.values = values;
+      this.updateOnDuplicateKey = updateOnDuplicateKey;
     }
 
-    public void apply(MyPatchContext context,
-                      Object[] parameters)
+    public int apply(MyPatchContext context,
+                     Object[] parameters)
     {
       ExpressionContext expressionContext = new ExpressionContext(parameters);
 
@@ -2568,10 +2572,13 @@ public class MyDBMS implements DBMS {
            (Comparable) map.get(columns.get(i)).evaluate(false));
       }
 
-      // todo: throw duplicate key exception if applicable
+      // todo: throw duplicate key exception if applicable and
+      // updateOnDuplicateKey is false
       context.insertOrUpdate
         (i + IndexBodyDepth,
          (Comparable) map.get(columns.get(i)).evaluate(false), tuple);
+
+      return 1;
     }
   }
 
@@ -2606,8 +2613,8 @@ public class MyDBMS implements DBMS {
       this.values = values;
     }
 
-    public void apply(MyPatchContext context,
-                      Object[] parameters)
+    public int apply(MyPatchContext context,
+                     Object[] parameters)
     {
       ExpressionContext expressionContext = new ExpressionContext(parameters);
 
@@ -2642,14 +2649,17 @@ public class MyDBMS implements DBMS {
       context.setKey(1, tableReference.table.primaryKey);
 
       Object[] tuple = new Object[template.length];
+      int count = 0;
 
       while (true) {
         ResultType type = iterator.nextRow();
         switch (type) {
         case End:
-          return;
+          return count;
       
         case Inserted: {
+          ++ count;
+
           Object[] original = (Object[]) iterator.pair.fork.value;
           for (int i = 0; i < tuple.length; ++i) {
             LiveExpression v = template[i];
@@ -2691,8 +2701,8 @@ public class MyDBMS implements DBMS {
       this.test = test;
     }
 
-    public void apply(MyPatchContext context,
-                      Object[] parameters)
+    public int apply(MyPatchContext context,
+                     Object[] parameters)
     {
       ExpressionContext expressionContext = new ExpressionContext(parameters);
 
@@ -2710,13 +2720,17 @@ public class MyDBMS implements DBMS {
       context.setKey(0, tableReference.table);
       context.setKey(1, tableReference.table.primaryKey);
 
+      int count = 0;
+
       while (true) {
         ResultType type = iterator.nextRow();
         switch (type) {
         case End:
-          return;
+          return count;
       
         case Inserted: {
+          ++ count;
+
           int i;
           for (i = 0; i < key.length - 1; ++i) {
             context.setKey
@@ -2756,7 +2770,7 @@ public class MyDBMS implements DBMS {
     }
   }
 
-  public Column column(ColumnType type) {
+  public Column column(Class type) {
     return new MyColumn(type);
   }
 
@@ -2815,7 +2829,8 @@ public class MyDBMS implements DBMS {
 
     copyOfIndexes.add(primaryKey);
 
-    return new MyTable(copyOfColumns, copyOfIndexes, myPrimaryKey);
+    return new MyTable(Collections.unmodifiableCollection(copyOfColumns),
+                       copyOfIndexes, myPrimaryKey);
   }
 
   public Revision revision() {
@@ -3007,7 +3022,8 @@ public class MyDBMS implements DBMS {
 
   public PatchTemplate insertTemplate(Table table,
                                       List<Column> columns,
-                                      List<Expression> values)
+                                      List<Expression> values,
+                                      boolean updateOnDuplicateKey)
   {
     MyTable myTable;
     try {
@@ -3059,7 +3075,8 @@ public class MyDBMS implements DBMS {
     }
 
     return new InsertTemplate
-      (counter.count, myTable, copyOfColumns, copyOfValues);
+      (counter.count, myTable, copyOfColumns, copyOfValues,
+       updateOnDuplicateKey);
   }
 
   public PatchTemplate updateTemplate(TableReference tableReference,
@@ -3164,9 +3181,9 @@ public class MyDBMS implements DBMS {
     return new MyPatchContext(new Object(), myBase, new NodeStack());
   }
 
-  public void apply(PatchContext context,
-                    PatchTemplate template,
-                    Object ... parameters)
+  public int apply(PatchContext context,
+                   PatchTemplate template,
+                   Object ... parameters)
   {
     MyPatchContext myContext;
     try {
@@ -3195,7 +3212,7 @@ public class MyDBMS implements DBMS {
          + parameters.length + ")");
     }
 
-    myTemplate.apply(myContext, copy(parameters));
+    return myTemplate.apply(myContext, copy(parameters));
   }
 
   public Revision commit(PatchContext context) {
@@ -3338,7 +3355,8 @@ public class MyDBMS implements DBMS {
           Row leftRow = new MyRow(table, (Object[]) triple.left.value);
           Row rightRow = new MyRow(table, (Object[]) triple.right.value);
           Row row = conflictResolver.resolveConflict
-            (table, base, baseRow, left, leftRow, right, rightRow);
+            (table, (Collection) table.columns, base, baseRow, left, leftRow,
+             right, rightRow);
               
           if (row == leftRow) {
             // do nothing -- left already has insert
