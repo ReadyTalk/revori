@@ -770,6 +770,7 @@ public class MyDBMS implements DBMS {
   }
 
   private static interface LiveExpression extends Expression {
+    public void visit(ExpressionVisitor visitor);
     public Object evaluate(boolean convertDummyToNull);
     public Scan makeScan(LiveColumnReference reference);
   }
@@ -1415,7 +1416,7 @@ public class MyDBMS implements DBMS {
             MyColumn column = index.columns.get(i);
 
             LiveColumnReference reference = findColumnReference
-              (expressionContext, MyTableReference.this, column);
+              (test, MyTableReference.this, column);
 
             if (reference != null) {
               Scan scan = test.makeScan(reference);
@@ -1647,6 +1648,17 @@ public class MyDBMS implements DBMS {
     return null;
   }
 
+  private static LiveColumnReference findColumnReference
+    (LiveExpression expression,
+     MyTableReference tableReference,
+     MyColumn column)
+  {
+    ColumnReferenceFinder finder = new ColumnReferenceFinder
+      (tableReference, column);
+    expression.visit(finder);
+    return finder.reference;
+  }
+
   private static class MyColumnReference
     implements ColumnReference, MyExpression
   {
@@ -1705,6 +1717,10 @@ public class MyDBMS implements DBMS {
     {
       this.tableReference = tableReference;
       this.column = column;
+    }
+
+    public void visit(ExpressionVisitor visitor) {
+      visitor.visit(this);
     }
 
     public Object evaluate(boolean convertDummyToNull) {
@@ -1800,6 +1816,11 @@ public class MyDBMS implements DBMS {
       this.type = type;
       this.left = left;
       this.right = right;
+    }
+
+    public void visit(ExpressionVisitor visitor) {
+      left.visit(visitor);
+      right.visit(visitor);
     }
 
     public Object evaluate(boolean convertDummyToNull) {
@@ -1942,6 +1963,11 @@ public class MyDBMS implements DBMS {
       this.right = right;
     }
 
+    public void visit(ExpressionVisitor visitor) {
+      left.visit(visitor);
+      right.visit(visitor);
+    }
+
     public Object evaluate(boolean convertDummyToNull) {
       Object leftValue = left.evaluate(convertDummyToNull);
       Object rightValue = right.evaluate(convertDummyToNull);
@@ -2011,6 +2037,10 @@ public class MyDBMS implements DBMS {
     {
       this.type = type;
       this.operand = operand;
+    }
+
+    public void visit(ExpressionVisitor visitor) {
+      operand.visit(visitor);
     }
 
     public Object evaluate(boolean convertDummyToNull) {
@@ -2765,6 +2795,30 @@ public class MyDBMS implements DBMS {
         } else {
           parameters.add(pe);
           ++ count;
+        }
+      }
+    }
+  }
+
+  private static class ColumnReferenceFinder implements ExpressionVisitor {
+    public final MyTableReference tableReference;
+    public final MyColumn column;
+    public LiveColumnReference reference;
+
+    public ColumnReferenceFinder(MyTableReference tableReference,
+                                 MyColumn column)
+    {
+      this.tableReference = tableReference;
+      this.column = column;
+    }
+
+    public void visit(Expression e) {
+      if (e instanceof LiveColumnReference) {
+        LiveColumnReference r = (LiveColumnReference) e;
+        if (r.tableReference == tableReference
+            && r.column == column)
+        {
+          reference = r;
         }
       }
     }

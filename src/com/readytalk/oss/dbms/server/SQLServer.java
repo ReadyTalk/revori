@@ -493,12 +493,12 @@ public class SQLServer {
   private static class ParseResult {
     public final Tree tree;
     public final String next;
-    public final List<String> completions;
+    public final Set<String> completions;
     public Task task;
 
     public ParseResult(Tree tree,
                        String next,
-                       List<String> completions)
+                       Set<String> completions)
     {
       this.tree = tree;
       this.next = next;
@@ -508,7 +508,8 @@ public class SQLServer {
 
   private static class ParseContext {
     public final Client client;
-    public Map<NameType, List<String>> completions;
+    public Map<NameType, Set<String>> completions;
+    public int depth;
 
     public ParseContext(Client client) {
       this.client = client;
@@ -523,6 +524,8 @@ public class SQLServer {
     public Parser parser;
 
     public ParseResult parse(ParseContext context, String in) {
+      if (context.depth++ > 10) throw new RuntimeException("debug");
+
       return parser.parse(context, in);
     }
   }
@@ -626,12 +629,19 @@ public class SQLServer {
   {
     Server server = client.server;
     DBMS dbms = server.dbms;
+
+    if ("tail".equals(name)) {
+      return new Tag(name, dbms.revision());
+    }
+
     QueryResult result = dbms.diff
       (dbms.revision(), dbHead(client), server.findTag, database(client).name,
        name);
 
     if (result.nextRow() == ResultType.Inserted) {
       return (Tag) result.nextItem();
+    } else if ("head".equals(name)) {
+      return new Tag(name, dbms.revision());
     } else {
       throw new RuntimeException("no such tag: " + name);
     }
@@ -978,7 +988,7 @@ public class SQLServer {
     Map<String, Column> columnMap = new HashMap(columns.size());
     Set<DBMS.Column> columnSet = new HashSet(columns.size());
     for (Tree column: columns) {
-      Class type = findColumnType(server, ((Name) column.get(1)).value);
+      Class type = findColumnType(server, ((Terminal) column.get(1)).value);
       DBMS.Column dbmsColumn = dbms.column(type);
       columnSet.add(dbmsColumn);
   
@@ -1036,7 +1046,15 @@ public class SQLServer {
   }
 
   public static String readString(InputStream in) throws IOException {
-    return new String(new byte[readInteger(in)]);
+    byte[] array = new byte[readInteger(in)];
+    int c;
+    int offset = 0;
+    while (offset < array.length 
+           && (c = in.read(array, offset, array.length - offset)) != -1)
+    {
+      offset += c;
+    }
+    return new String(array);
   }
 
   private static void diff(DBMS dbms,
@@ -1102,6 +1120,10 @@ public class SQLServer {
   }
 
   private static void setTag(Client client, Tag tag) {
+    if ("tail".equals(tag.name)) {
+      throw new RuntimeException("cannot redefine tag \"tail\"");
+    }
+
     apply(client, client.server.insertOrUpdateTag, database(client).name,
           tag.name, tag);
   }
@@ -1257,29 +1279,44 @@ public class SQLServer {
                                     NameType type,
                                     String name)
   {
-    List<String> list = context.completions.get(type);
-    if (list == null) {
-      context.completions.put(type, list = new ArrayList());
+    if (context.completions == null) {
+      context.completions = new HashMap();
     }
-    list.add(name);
+    Set<String> set = context.completions.get(type);
+    if (set == null) {
+      context.completions.put(type, set = new HashSet());
+    }
+    set.add(name);
   }
 
-  private static List<String> findCompletions(Client client,
-                                              NameType type)
+  private static Set<String> findCompletions(Client client,
+                                             NameType type)
   {
     DBMS dbms = client.server.dbms;
     QueryResult result = null;
     switch (type) {
-    case Database:
+    case Database: {
       result = dbms.diff
         (dbms.revision(), dbHead(client), client.server.listDatabases);
-      break;
+
+      Set<String> set = new HashSet();
+      while (result.nextRow() == ResultType.Inserted) {
+        set.add(((Database) result.nextItem()).name);
+      }
+      return set;
+    }
 
     case Table:
       if (client.database != null) {
         result = dbms.diff
           (dbms.revision(), dbHead(client), client.server.listTables,
-           client.database);
+           client.database.name);
+
+        Set<String> set = new HashSet();
+        while (result.nextRow() == ResultType.Inserted) {
+          set.add(((Table) result.nextItem()).name);
+        }
+        return set;
       }
       break;
 
@@ -1290,59 +1327,60 @@ public class SQLServer {
       if (client.database != null) {
         result = dbms.diff
           (dbms.revision(), dbHead(client), client.server.listTags,
-           client.database);
+           client.database.name);
+
+        Set<String> set = new HashSet();
+        while (result.nextRow() == ResultType.Inserted) {
+          set.add(((Tag) result.nextItem()).name);
+        }
+        return set;
       }
       break;
       
     default: throw new RuntimeException("unexpected name type: " + type);
     }
-      
-    List<String> list = null;
-    if (result != null) {
-      while (result.nextRow() == ResultType.Inserted) {
-        if (list == null) {
-          list = new ArrayList();
-        }
-        list.add((String) result.nextItem());
-      }
-    }
-    return list;
+    
+    return null;
   }
 
-  private static List<String> findCompletions(ParseContext context,
+  private static Set<String> findCompletions(ParseContext context,
                                               NameType type)
   {
     if (type == NameType.Column) {
-      List<String> columnList = context.completions.get(type);
-      if (columnList != null) {
-        return columnList;
-      } else {
-        List<String> tableList = context.completions.get(type);
-        if (tableList != null && context.client.database != null) {
-          DBMS dbms = context.client.server.dbms;
-          Revision tail = dbms.revision();
-          Revision head = dbHead(context.client);
-          Set<String> columns = new HashSet();
-          for (String tableName: tableList) {
-            QueryResult result = dbms.diff
-              (tail, head, context.client.server.findTable,
-               context.client.database.name, tableName);
-
-            if (result.nextRow() == ResultType.Inserted) {
-              for (Column c: ((Table) result.nextItem()).columns.values()) {
-                columns.add(c.name);
-              }
-            }          
-          }
-
-          if (columns.size() == 0) {
-            return null;
-          } else {
-            return new ArrayList(columns);
-          }
+      if (context.completions != null) {
+        Set<String> columnSet = context.completions.get(type);
+        if (columnSet != null) {
+          return columnSet;
         } else {
-          return null;
+          Set<String> tableSet = context.completions.get(type);
+          if (tableSet != null && context.client.database != null) {
+            DBMS dbms = context.client.server.dbms;
+            Revision tail = dbms.revision();
+            Revision head = dbHead(context.client);
+            Set<String> columns = new HashSet();
+            for (String tableName: tableSet) {
+              QueryResult result = dbms.diff
+                (tail, head, context.client.server.findTable,
+                 context.client.database.name, tableName);
+
+              if (result.nextRow() == ResultType.Inserted) {
+                for (Column c: ((Table) result.nextItem()).columns.values()) {
+                  columns.add(c.name);
+                }
+              }          
+            }
+
+            if (columns.size() == 0) {
+              return null;
+            } else {
+              return new HashSet(columns);
+            }
+          } else {
+            return null;
+          }
         }
+      } else {
+        return null;
       }
     } else {
       return findCompletions(context.client, type);
@@ -1390,7 +1428,7 @@ public class SQLServer {
       return new ParseResult(tree, next, null);
     }
 
-    public static ParseResult fail(List<String> completions) {
+    public static ParseResult fail(Set<String> completions) {
       return new ParseResult(null, null, completions);
     }
 
@@ -1426,15 +1464,19 @@ public class SQLServer {
       return null;
     }
 
-    public static Parser terminal(final String value) {
+    public static Parser terminal(final String value,
+                                  final boolean completeIfEmpty)
+    {
       return new Parser() {
         private final Terminal terminal = new Terminal(value);
 
         public ParseResult parse(ParseContext context, String in) {
           if (in.startsWith(value)) {
             return success(terminal, next(in, value.length()));
-          } else if (value.startsWith(in)) {
-            return fail(Util.list(value));
+          } else if ((in.length() > 0 || completeIfEmpty)
+                     && value.startsWith(in))
+          {
+            return fail(set(value));
           } else {
             return fail(null);
           }
@@ -1442,17 +1484,21 @@ public class SQLServer {
       };
     }
 
+    public static Parser terminal(final String value) {
+      return terminal(value, true);
+    }
+
     public static Parser or(final Parser ... parsers) {
       return new Parser() {
         public ParseResult parse(ParseContext context, String in) {
-          List<String> completions = null;
+          Set<String> completions = null;
           for (Parser parser: parsers) {
             ParseResult result = parser.parse(context, in);
             if (result.tree != null) {
               return result;
             } else if (result.completions != null) {
               if (completions == null) {
-                completions = new ArrayList();
+                completions = new HashSet();
               }
               completions.addAll(result.completions);
             }
@@ -1545,9 +1591,8 @@ public class SQLServer {
             StringBuilder sb = new StringBuilder();
             char c = in.charAt(0);
             if (c == '\'') {
-              int i = 1;
               boolean sawEscape = false;
-              while (i < in.length()) {
+              for (int i = 1; i < in.length(); ++i) {
                 c = in.charAt(i);
                 switch (c) {
                 case '\\':
@@ -1595,13 +1640,13 @@ public class SQLServer {
             while (i < in.length()) {
               char c = in.charAt(i);
               if (Character.isDigit(c)) {
-                break;
+                ++ i;
               } else {
                 if (i > 0) {
-                  success(new NumberLiteral(in.substring(0, i)),
-                          next(in, i));
+                  return success(new NumberLiteral(in.substring(0, i)),
+                                 next(in, i));
                 } else {
-                  fail(null);
+                  return fail(null);
                 }
               }
             }
@@ -1611,19 +1656,24 @@ public class SQLServer {
       };
     }
 
+    public Parser simpleExpression() {
+      return or
+        (columnName(),
+         stringLiteral(),
+         numberLiteral(),
+         sequence(terminal("(", false),
+                  expression(),
+                  terminal(")")),
+         sequence(terminal("not", false),
+                  expression()));
+    }
+
     public Parser expression() {
       if (expressionParser == null) {
         expressionParser = new LazyParser();
         expressionParser.parser = or
-          (columnName(),
-           stringLiteral(),
-           numberLiteral(),
-           sequence(terminal("("),
-                    expression(),
-                    terminal(")")),
-           sequence(terminal("not"),
-                    expression()),
-           sequence(expression(),
+          (simpleExpression(),
+           sequence(simpleExpression(),
                     or(terminal("and"),
                        terminal("or"),
                        terminal("="),
@@ -1638,15 +1688,20 @@ public class SQLServer {
       return expressionParser;
     }
 
+    public Parser simpleSource() {
+      return or
+        (name(NameType.Table, true, true),
+         sequence(terminal("(", false),
+                  source(),
+                  terminal(")")));
+    }
+
     public Parser source() {
       if (sourceParser == null) {
         sourceParser = new LazyParser();
         sourceParser.parser = or
-          (name(NameType.Table, true, true),
-           sequence(terminal("("),
-                    source(),
-                    terminal(")")),
-           sequence(source(),
+          (simpleSource(),
+           sequence(simpleSource(),
                     sequence(or(terminal("left"),
                                 terminal("inner")),
                              terminal("join")),
@@ -1670,7 +1725,7 @@ public class SQLServer {
       return task
         (sequence
          (terminal("select"),
-          or(terminal("*"), list(expression())),
+          or(terminal("*", false), list(expression())),
           terminal("from"),
           source(),
           optional(sequence(terminal("where"),
@@ -1881,8 +1936,8 @@ public class SQLServer {
       return task
         (sequence
          (terminal("tag"),
-          name(NameType.Tag, true, false),
-          name(NameType.Tag, false, false)),
+          name(NameType.Tag, false, false),
+          name(NameType.Tag, true, false)),
          new Task() {
            public void run(Client client,
                            Tree tree,
@@ -2140,7 +2195,8 @@ public class SQLServer {
         result.task.run(client, result.tree, in, out);
       } catch (Exception e) {
         out.write(Response.Error.ordinal());
-        writeString(out, e.getMessage()); 
+        String message = e.getMessage();
+        writeString(out, message == null ? "see server logs" : message); 
         log.log(Level.WARNING, null, e);       
       }
     } else {
@@ -2154,12 +2210,20 @@ public class SQLServer {
                                       OutputStream out)
     throws IOException
   {
+    String s = readString(in);
+    log.info("complete \"" + s + "\"");
     ParseResult result = client.server.parser.parse
-      (new ParseContext(client), readString(in));
+      (new ParseContext(client), s);
     out.write(Response.Success.ordinal());
-    writeInteger(out, result.completions.size());
-    for (String completion: result.completions) {
-      writeString(out, completion);
+    if (result.completions == null) {
+      log.info("no completions");
+      writeInteger(out, 0);
+    } else {
+      log.info("completions: " + result.completions);
+      writeInteger(out, result.completions.size());
+      for (String completion: result.completions) {
+        writeString(out, completion);
+      }
     }
   }
 
@@ -2169,6 +2233,8 @@ public class SQLServer {
     throws IOException
   {
     int requestType = in.read();
+    if (requestType == -1) return;
+
     switch (Request.values()[requestType]) {
     case Execute:
       executeRequest(client, in, out);

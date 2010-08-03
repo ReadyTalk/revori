@@ -27,8 +27,43 @@ enum RowSetFlag {
   Item
 };
 
-bool trouble = false;
-int globalSocket = -1;
+class Buffer {
+ public:
+  Buffer(int capacity):
+    array(static_cast<char*>(malloc(capacity))),
+    capacity(capacity),
+    position(0),
+    limit(0)
+  { }
+
+  ~Buffer() {
+    if (array) free(array);
+  }
+
+  char* array;
+  int capacity;
+  int position;
+  int limit;
+};
+
+class Context {
+ public:
+  Context():
+    buffer(8 * 1024),
+    trouble(false),
+    exit(false),
+    socket(-1),
+    completionCount(-1)
+  { }
+
+  Buffer buffer;
+  bool trouble;
+  bool exit;
+  int socket;
+  int completionCount;
+};
+
+Context* globalContext = 0;
 
 int
 min(int a, int b)
@@ -75,127 +110,112 @@ connect(const char* host, int port)
   return socket;
 }
 
-class Buffer {
- public:
-  Buffer(int capacity):
-    array(static_cast<char*>(malloc(capacity))),
-    capacity(capacity),
-    position(0),
-    limit(0)
-  { }
-
-  ~Buffer() {
-    if (array) free(array);
-  }
-
-  char* array;
-  int capacity;
-  int position;
-  int limit;
-};
-
 bool
-flush(int socket, Buffer* buffer)
+flush(Context* context)
 {
-  int r = write(socket, buffer->array, buffer->position);
-  if (r != buffer->position) {
-    perror("unable to write");
-    trouble = true;
+  int r = write
+    (context->socket, context->buffer.array, context->buffer.position);
+  if (r != context->buffer.position) {
+    perror("\nunable to write");
+    context->trouble = true;
     return false;
   }
-  buffer->position = 0;
+  context->buffer.position = 0;
   return true;
 }
 
 int
-writeBytes(int socket, Buffer* buffer, const char* src, int count)
+writeBytes(Context* context, const char* src, int count)
 {
   int total = 0;
   while (total < count) {
-    if (buffer->limit == buffer->position) {
-      if (not flush(socket, buffer)) {
+    if (context->buffer.limit == context->buffer.position) {
+      if (not flush(context)) {
         return -1;
       }
     }
 
-    int c = min(count - total, buffer->limit - buffer->position);
-    memcpy(buffer->array + buffer->position, src + total, c);
-    buffer->position += c;
+    int c = min
+      (count - total, context->buffer.limit - context->buffer.position);
+    memcpy(context->buffer.array + context->buffer.position, src + total, c);
+    context->buffer.position += c;
     total += c;
   }
   return total;
 }
 
 bool
-writeByte(int socket, Buffer* buffer, int v)
+writeByte(Context* context, int v)
 {
   char src[] = { v };
-  return writeBytes(socket, buffer, src, 1) == 1;
+  return writeBytes(context, src, 1) == 1;
 }
 
 bool
-writeInteger(int socket, Buffer* buffer, int v)
+writeInteger(Context* context, int v)
 {
   char src[] = { (v >> 24) & 0xFF,
                  (v >> 16) & 0xFF,
                  (v >>  8) & 0xFF,
                  (v      ) & 0xFF };
-  return writeBytes(socket, buffer, src, 4) == 4;
+  return writeBytes(context, src, 4) == 4;
 }
 
 bool
-writeString(int socket, Buffer* buffer, const char* s, int length)
+writeString(Context* context, const char* s, int length)
 {
-  if (writeInteger(socket, buffer, length)) {
-    return writeBytes(socket, buffer, s, length) == length;
+  if (writeInteger(context, length)) {
+    return writeBytes(context, s, length) == length;
   } else {
     return false;
   }
 }
 
 int
-readBytes(int socket, Buffer* buffer, char* dst, int count)
+readBytes(Context* context, char* dst, int count)
 {
   int total = 0;
   while (total < count) {
-    if (buffer->limit == buffer->position) {
-      buffer->position = 0;
-      int r = read(socket, buffer->array, buffer->capacity);
+    if (context->buffer.limit == context->buffer.position) {
+      context->buffer.position = 0;
+      int r = read
+        (context->socket, context->buffer.array, context->buffer.capacity);
       if (r == 0) {
-        fprintf(stderr, "unexpected end of stream from server\n");
-        trouble = true;
-        buffer->limit = 0;
+        fprintf(stderr, "\nunexpected end of stream from server\n");
+        context->trouble = true;
+        context->buffer.limit = 0;
         return -1;
       } else if (r < 0) {
-        perror("unable to read");
-        trouble = true;
-        buffer->limit = 0;
+        perror("\nunable to read");
+        context->trouble = true;
+        context->buffer.limit = 0;
         return -1;
       }
-      buffer->limit = r;
+      context->buffer.limit = r;
     }
 
-    int c = min(count - total, buffer->limit - buffer->position);
-    memcpy(dst + total, buffer->array + buffer->position, c);
-    buffer->position += c;
+    int c = min
+      (count - total, context->buffer.limit - context->buffer.position);
+    memcpy(dst + total, context->buffer.array + context->buffer.position, c);
+    context->buffer.position += c;
     total += c;
   }
   return total;
 }
 
 int
-readByte(int socket, Buffer* buffer)
+readByte(Context* context)
 {
   char dst[1];
-  int r = readBytes(socket, buffer, dst, 1);
+  int r = readBytes(context, dst, 1);
   return r < 1 ? -1 : dst[0];
 }
 
 int
-readInteger(int socket, Buffer* buffer)
+readInteger(Context* context)
 {
   char dst[4];
-  int r = readBytes(socket, buffer, dst, 4);
+  int r = readBytes(context, dst, 4);
   return r < 4 ? -1 : (  (((int) dst[0]) << 24)
                        | (((int) dst[1]) << 16)
                        | (((int) dst[2]) <<  8)
@@ -203,104 +223,98 @@ readInteger(int socket, Buffer* buffer)
 }
 
 char*
-readString(int socket, Buffer* buffer)
+readString(Context* context)
 {
-  int length = readInteger(socket, buffer);
+  int length = readInteger(context);
   if (length < 0) {
     return 0;
   }
 
   char* string = static_cast<char*>(malloc(length + 1));
   if (string == 0) {
-    fprintf(stderr, "unable to allocate memory\n");
-    trouble = true;
+    fprintf(stderr, "\nunable to allocate memory\n");
+    context->trouble = true;
     return 0;
   }
 
-  int count = readBytes(socket, buffer, string, length);
+  int count = readBytes(context, string, length);
   if (count != length) {
     free(string);
     return 0;
   }
 
+  string[length] = 0;
+
   return string;
 }
 
-char**
-complete(const char*, int, int end)
+int
+startCompletion(Context* context, const char* text)
 {
-  if (trouble) {
-    return 0;
+  context->buffer.position = 0;
+  context->buffer.limit = context->buffer.capacity;
+
+  if (not writeByte(context, Complete)) {
+    return -1;
   }
 
-  Buffer buffer(8 * 1024);
-  if (buffer.array == 0) {
-    fprintf(stderr, "unable to allocate memory\n");
-    return 0;
+  if (not writeString(context, text, strlen(text))) {
+    return -1;
   }
 
-  buffer.limit = buffer.capacity;
-
-  int socket = globalSocket;
-
-  if (not writeByte(socket, &buffer, Complete)) {
-    return 0;
+  if (not flush(context)) {
+    return -1;
   }
 
-  if (not writeString(socket, &buffer, rl_line_buffer, end)) {
-    return 0;
-  }
+  context->buffer.limit = 0;
 
-  if (not flush(socket, &buffer)) {
-    return 0;
-  }
-
-  buffer.limit = 0;
-
-  int result = readByte(socket, &buffer);
+  int result = readByte(context);
   switch (result) {
   case -1:
     break;
 
   case Success: {
-    int count = readInteger(socket, &buffer);
-    if (count < 0) {
-      return 0;
-    }
-    
-    char** result = static_cast<char**>(malloc(sizeof(char*) * count));
-    if (result == 0) {
-      fprintf(stderr, "unable to allocate memory\n");
-      return 0;
-    }
-
-    for (int i = 0; i < count; ++i) {
-      result[i] = readString(socket, &buffer);
-      if (result[i] == 0) {
-        free(result);
-        return 0;
-      }
-    }
-
-    return result;
+    return readInteger(context);
   } break;
 
   case Error: {
-    char* message = readString(socket, &buffer);
+    char* message = readString(context);
     if (message == 0) {
-      return 0;
+      return -1;
     }
    
     free(message);
   } break;
 
   default:
-    fprintf(stderr, "unexpected result from server: %d\n", result);
-    trouble = true;
+    fprintf(stderr, "\nunexpected result from server: %d\n", result);
+    context->trouble = true;
     break;
   }
 
-  return 0;
+  return -1;
+}
+
+char*
+completionGenerator(const char*, int state)
+{
+  Context* context = globalContext;
+
+  if (context->trouble) {
+    return 0;
+  }
+
+  if (state == 0) {
+    context->completionCount = startCompletion(context, rl_line_buffer);
+  }
+  
+  if (context->completionCount <= 0) {
+    return 0;
+  } else {
+    -- context->completionCount;
+
+    return readString(context);
+  }
 }
 
 char*
@@ -325,41 +339,43 @@ removeEdgeWhitespace(char* s)
 }
 
 void
-execute(int socket, const char* command)
+execute(Context* context, const char* command)
 {
-  if (trouble) {
+  if (strcmp(command, "exit") == 0
+      || strcmp(command, "quit") == 0)
+  {
+    context->exit = true;
     return;
   }
 
-  Buffer buffer(8 * 1024);
-  if (buffer.array == 0) {
-    fprintf(stderr, "unable to allocate memory\n");
+  if (context->trouble) {
     return;
   }
 
-  buffer.limit = buffer.capacity;
+  context->buffer.position = 0;
+  context->buffer.limit = context->buffer.capacity;
 
-  if (not writeByte(socket, &buffer, Execute)) {
+  if (not writeByte(context, Execute)) {
     return;
   }
 
-  if (not writeString(socket, &buffer, command, strlen(command))) {
+  if (not writeString(context, command, strlen(command))) {
     return;
   }
 
-  if (not flush(socket, &buffer)) {
+  if (not flush(context)) {
     return;
   }
 
-  buffer.limit = 0;
+  context->buffer.limit = 0;
 
-  int result = readByte(socket, &buffer);
+  int result = readByte(context);
   switch (result) {
   case -1:
     break;
 
   case Success: {
-    char* message = readString(socket, &buffer);
+    char* message = readString(context);
     if (message == 0) {
       return;
     }
@@ -372,7 +388,7 @@ execute(int socket, const char* command)
   case RowSet: {
     bool done = false;
     while (not done) {
-      int flag = readByte(socket, &buffer);
+      int flag = readByte(context);
       switch (flag) {
       case -1:
         return;
@@ -386,7 +402,7 @@ execute(int socket, const char* command)
         break;
 
       case Item: {
-        char* item = readString(socket, &buffer);
+        char* item = readString(context);
         if (item == 0) {
           return;
         }
@@ -402,15 +418,15 @@ execute(int socket, const char* command)
         break;
 
       default:
-        fprintf(stderr, "unexpected flag from server: %d\n", flag);
-        trouble = true;
+        fprintf(stderr, "\nunexpected flag from server: %d\n", flag);
+        context->trouble = true;
         return;
       }
     }
   } break;
 
   case Error: {
-    char* message = readString(socket, &buffer);
+    char* message = readString(context);
     if (message == 0) {
       return;
     }
@@ -421,8 +437,8 @@ execute(int socket, const char* command)
   } break;
 
   default:
-    fprintf(stderr, "unexpected result from server: %d\n", result);
-    trouble = true;
+    fprintf(stderr, "\nunexpected result from server: %d\n", result);
+    context->trouble = true;
     break;
   }
 }
@@ -432,18 +448,24 @@ execute(int socket, const char* command)
 int
 main(int, const char**)
 {
-  int socket = connect("localhost", 8017);
-  if (socket < 0) {
+  Context context;
+  globalContext = &context;
+
+  if (context.buffer.array == 0) {
+    fprintf(stderr, "\nunable to allocate memory\n");
     return -1;
   }
 
-  globalSocket = socket;
+  context.socket = connect("localhost", 8017);
+  if (context.socket < 0) {
+    return -1;
+  }
 
   rl_readline_name = "DBMSClient";
 
-  rl_attempted_completion_function = complete;
+  rl_completion_entry_function = completionGenerator;
 
-  while (not trouble) {
+  while (not (context.trouble || context.exit)) {
     char* line = readline("> ");
 
     if (line == 0) {
@@ -454,13 +476,13 @@ main(int, const char**)
     if (*s) {
       add_history(s);
 
-      execute(socket, s);
+      execute(&context, s);
     }
 
     free(line);
   }
 
-  close(socket);
+  close(context.socket);
 
-  return 0;
+  return context.trouble ? -1 : 0;
 }

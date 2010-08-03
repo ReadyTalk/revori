@@ -31,7 +31,7 @@
     
     <exec dir="${basedir}" executable="bash" failonerror="true">
       <arg line="-c &quot;
-                 g++
+                 gcc
                  -Werror -Wall -Wextra -Wunused-parameter -Winit-self
                  -fno-rtti -fno-exceptions
                  -O0 -g3
