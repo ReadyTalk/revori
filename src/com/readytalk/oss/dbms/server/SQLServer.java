@@ -770,12 +770,19 @@ public class SQLServer {
     } else if (tree instanceof BooleanLiteral) {
       return server.dbms.constant(((BooleanLiteral) tree).value);
     } if (tree.get(0) instanceof Name) {
-      return makeColumnReference
-        (server.dbms,
-         tableReferences,
-         ((Name) tree.get(0)).value,
-         ((Name) tree.get(2)).value);
-    } else if (tree.get(0) instanceof Terminal) {
+      if (".".equals(((Terminal) tree.get(1)).value)) {
+        return makeColumnReference
+          (server.dbms,
+           tableReferences,
+           ((Name) tree.get(0)).value,
+           ((Name) tree.get(2)).value);
+      } else {
+        return server.dbms.operation
+          (findBinaryOperationType(server, ((Terminal) tree.get(1)).value),
+           makeExpression(server, tree.get(0), tableReferences),
+           makeExpression(server, tree.get(2), tableReferences));
+      }
+    } else {
       String value = ((Terminal) tree.get(0)).value;
       if ("(".equals(value)) {
         return makeExpression(server, tree.get(1), tableReferences);
@@ -784,11 +791,6 @@ public class SQLServer {
           (findUnaryOperationType(server, value), makeExpression
            (server, tree.get(1), tableReferences));
       }
-    } else {
-      return server.dbms.operation
-        (findBinaryOperationType(server, ((Terminal) tree.get(1)).value),
-         makeExpression(server, tree.get(0), tableReferences),
-         makeExpression(server, tree.get(2), tableReferences));
     }
   }
 
@@ -905,7 +907,7 @@ public class SQLServer {
   private static PatchTemplate makeUpdateTemplate(Client client,
                                                   Tree tree)
   {
-    Table table = findTable(client, ((Name) tree.get(2)).value);
+    Table table = findTable(client, ((Name) tree.get(1)).value);
     TableReference tableReference = new TableReference
       (table, client.server.dbms.tableReference(table.table));
     List<TableReference> tableReferences = list(tableReference);
@@ -913,8 +915,8 @@ public class SQLServer {
     Tree operations = tree.get(3);
     List<DBMS.Column> columns = new ArrayList();
     List<Expression> values = new ArrayList();
-    for (int i = 0; i < tree.length(); ++i) {
-      Tree operation = tree.get(i);
+    for (int i = 0; i < operations.length(); ++i) {
+      Tree operation = operations.get(i);
       columns.add(findColumn(table, ((Name) operation.get(0)).value).column);
       values.add
         (makeExpression(client.server, operation.get(2), tableReferences));
@@ -1318,7 +1320,6 @@ public class SQLServer {
       while (result.nextRow() == ResultType.Inserted) {
         String name = ((Database) result.nextItem()).name;
         if (name.startsWith(start)) {
-          log.info("add completion " + name);
           set.add(name);
         }
       }
@@ -1378,7 +1379,7 @@ public class SQLServer {
         if (columnSet != null) {
           return columnSet;
         } else {
-          Set<String> tableSet = context.completions.get(type);
+          Set<String> tableSet = context.completions.get(NameType.Table);
           if (tableSet != null && context.client.database != null) {
             DBMS dbms = context.client.server.dbms;
             Revision tail = dbms.revision();
@@ -1395,7 +1396,7 @@ public class SQLServer {
                     columns.add(c.name);
                   }
                 }
-              }          
+              }
             }
 
             if (columns.size() == 0) {
@@ -1572,6 +1573,10 @@ public class SQLServer {
           TreeList list = new TreeList();
           ParseResult result = null;
           for (Parser parser: parsers) {
+            if (in.length() == 0) {
+              return fail(result == null ? null : result.completions);
+            }
+
             result = parser.parse(context, in);
             if (result.tree != null) {
               list.add(result.tree);
@@ -1678,19 +1683,22 @@ public class SQLServer {
           if (in.length() > 0) {
             char first = in.charAt(0);
             boolean negative = first == '-';
-            int i = negative ? 1 : 0;
+            int start = negative ? 1 : 0;
+            int i = start;
             while (i < in.length()) {
               char c = in.charAt(i);
               if (Character.isDigit(c)) {
                 ++ i;
               } else {
-                if (i > 0) {
-                  return success(new NumberLiteral(in.substring(0, i)),
-                                 in.substring(i), null);
-                } else {
-                  return fail(null);
-                }
+                break;
               }
+            }
+
+            if (i > start) {
+              return success(new NumberLiteral(in.substring(0, i)),
+                             in.substring(i), null);
+            } else {
+              return fail(null);
             }
           }
           return fail(null);
@@ -1732,8 +1740,7 @@ public class SQLServer {
       if (expressionParser == null) {
         expressionParser = new LazyParser();
         expressionParser.parser = or
-          (simpleExpression(),
-           sequence(simpleExpression(),
+          (sequence(simpleExpression(),
                     or(terminal("and"),
                        terminal("or"),
                        terminal("="),
@@ -1742,7 +1749,8 @@ public class SQLServer {
                        terminal("<="),
                        terminal(">"),
                        terminal(">=")),
-                    expression()));
+                    expression()),
+           simpleExpression());
       }
 
       return expressionParser;
@@ -1760,14 +1768,14 @@ public class SQLServer {
       if (sourceParser == null) {
         sourceParser = new LazyParser();
         sourceParser.parser = or
-          (simpleSource(),
-           sequence(simpleSource(),
+          (sequence(simpleSource(),
                     sequence(or(terminal("left"),
                                 terminal("inner")),
                              terminal("join")),
                     source(),
                     terminal("on"),
-                    expression()));
+                    expression()),
+           simpleSource());
       }
 
       return sourceParser;
@@ -1776,7 +1784,7 @@ public class SQLServer {
     public static Parser columnName() {
       return or
         (name(NameType.Column, true, false),
-         sequence(name(NameType.Table, true, false),
+         sequence(name(NameType.Table, false, false),
                   terminal("."),
                   name(NameType.Column, true, false)));
     }
