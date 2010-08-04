@@ -416,6 +416,7 @@ execute(Context* context, const char* command)
 
   case RowSet: {
     bool done = false;
+    bool sawRow = false;
     while (not done) {
       int flag = readByte(context);
       switch (flag) {
@@ -423,10 +424,12 @@ execute(Context* context, const char* command)
         return;
 
       case InsertedRow:
+        sawRow = true;
         fprintf(stdout, "\n inserted:");
         break;
 
       case DeletedRow:
+        sawRow = true;
         fprintf(stdout, "\n  deleted:");
         break;
 
@@ -442,6 +445,9 @@ execute(Context* context, const char* command)
       } break;
 
       case End:
+        if (not sawRow) {
+          fprintf(stdout, "\n no matching rows found");
+        }
         done = true;
         fprintf(stdout, "\n");
         break;
