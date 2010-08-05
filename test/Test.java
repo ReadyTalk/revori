@@ -1844,6 +1844,214 @@ public class Test {
     expectEqual(result.nextRow(), ResultType.End);
   }
 
+  public static void testUpdateOnPartialIndex() {
+    DBMS dbms = new MyDBMS();
+
+    Column number = dbms.column(Integer.class);
+    Column color = dbms.column(String.class);
+    Column shape = dbms.column(String.class);
+    Table numbers = dbms.table
+      (set(number, color, shape),
+       dbms.index(list(number, color), true),
+       EmptyIndexSet);
+
+    Revision tail = dbms.revision();
+
+    PatchTemplate insert = dbms.insertTemplate
+      (numbers,
+       list(number, color, shape),
+       list(dbms.parameter(),
+            dbms.parameter(),
+            dbms.parameter()), false);
+
+    PatchContext context = dbms.patchContext(tail);
+
+    dbms.apply(context, insert, 1, "red", "triangle");
+    dbms.apply(context, insert, 1, "green", "circle");
+    dbms.apply(context, insert, 2, "yellow", "circle");
+    dbms.apply(context, insert, 3, "blue", "square");
+    dbms.apply(context, insert, 3, "orange", "square");
+
+    Revision first = dbms.commit(context);
+
+    TableReference numbersReference = dbms.tableReference(numbers);
+
+    QueryTemplate numberEqual = dbms.queryTemplate
+      (list((Expression) dbms.columnReference(numbersReference, color),
+            (Expression) dbms.columnReference(numbersReference, shape)),
+       numbersReference,
+       dbms.operation
+       (BinaryOperationType.Equal,
+        dbms.columnReference(numbersReference, number),
+        dbms.parameter()));
+
+    QueryResult result = dbms.diff(tail, first, numberEqual, 1);
+
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "green");
+    expectEqual(result.nextItem(), "circle");
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "red");
+    expectEqual(result.nextItem(), "triangle");
+    expectEqual(result.nextRow(), ResultType.End);
+
+    PatchTemplate updateShapeWhereNumberEqual = dbms.updateTemplate
+      (numbersReference,
+        dbms.operation
+       (BinaryOperationType.Equal,
+        dbms.columnReference(numbersReference, number),
+        dbms.parameter()),
+       list(shape),
+       list(dbms.parameter()));
+
+    context = dbms.patchContext(first);
+
+    dbms.apply(context, updateShapeWhereNumberEqual, 1, "pentagon");
+
+    Revision second = dbms.commit(context);
+
+    result = dbms.diff(tail, second, numberEqual, 1);
+
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "green");
+    expectEqual(result.nextItem(), "pentagon");
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "red");
+    expectEqual(result.nextItem(), "pentagon");
+    expectEqual(result.nextRow(), ResultType.End);
+  }
+
+  public static void testDeleteOnPartialIndex() {
+    DBMS dbms = new MyDBMS();
+
+    Column number = dbms.column(Integer.class);
+    Column color = dbms.column(String.class);
+    Column shape = dbms.column(String.class);
+    Table numbers = dbms.table
+      (set(number, color, shape),
+       dbms.index(list(number, color), true),
+       EmptyIndexSet);
+
+    Revision tail = dbms.revision();
+
+    PatchTemplate insert = dbms.insertTemplate
+      (numbers,
+       list(number, color, shape),
+       list(dbms.parameter(),
+            dbms.parameter(),
+            dbms.parameter()), false);
+
+    PatchContext context = dbms.patchContext(tail);
+
+    dbms.apply(context, insert, 1, "red", "triangle");
+    dbms.apply(context, insert, 1, "green", "circle");
+    dbms.apply(context, insert, 2, "yellow", "circle");
+    dbms.apply(context, insert, 3, "blue", "square");
+    dbms.apply(context, insert, 3, "orange", "square");
+
+    Revision first = dbms.commit(context);
+
+    TableReference numbersReference = dbms.tableReference(numbers);
+
+    QueryTemplate numberEqual = dbms.queryTemplate
+      (list((Expression) dbms.columnReference(numbersReference, color),
+            (Expression) dbms.columnReference(numbersReference, shape)),
+       numbersReference,
+       dbms.operation
+       (BinaryOperationType.Equal,
+        dbms.columnReference(numbersReference, number),
+        dbms.parameter()));
+
+    QueryResult result = dbms.diff(tail, first, numberEqual, 1);
+
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "green");
+    expectEqual(result.nextItem(), "circle");
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "red");
+    expectEqual(result.nextItem(), "triangle");
+    expectEqual(result.nextRow(), ResultType.End);
+
+    PatchTemplate deleteWhereNumberEqual = dbms.deleteTemplate
+      (numbersReference,
+        dbms.operation
+       (BinaryOperationType.Equal,
+        dbms.columnReference(numbersReference, number),
+        dbms.parameter()));
+
+    context = dbms.patchContext(first);
+
+    dbms.apply(context, deleteWhereNumberEqual, 1);
+
+    Revision second = dbms.commit(context);
+
+    result = dbms.diff(tail, second, numberEqual, 1);
+
+    expectEqual(result.nextRow(), ResultType.End);
+  }
+
+  public static void testIndexedColumnUpdates() {
+    DBMS dbms = new MyDBMS();
+
+    Column number = dbms.column(Integer.class);
+    Column name = dbms.column(String.class);
+    Table numbers = dbms.table
+      (set(number, name),
+       dbms.index(list(number), true),
+       EmptyIndexSet);
+
+    Revision tail = dbms.revision();
+
+    PatchTemplate insert = dbms.insertTemplate
+      (numbers,
+       list(number, name),
+       list(dbms.parameter(),
+            dbms.parameter()), false);
+
+    PatchContext context = dbms.patchContext(tail);
+
+    dbms.apply(context, insert, 1, "one");
+    dbms.apply(context, insert, 2, "two");
+    dbms.apply(context, insert, 3, "three");
+
+    Revision first = dbms.commit(context);
+
+    TableReference numbersReference = dbms.tableReference(numbers);
+
+    PatchTemplate updateNumberWhereNumberEqual = dbms.updateTemplate
+      (numbersReference,
+        dbms.operation
+       (BinaryOperationType.Equal,
+        dbms.columnReference(numbersReference, number),
+        dbms.parameter()),
+       list(number),
+       list(dbms.parameter()));
+
+    context = dbms.patchContext(first);
+
+    dbms.apply(context, updateNumberWhereNumberEqual, 3, 4);
+
+    Revision second = dbms.commit(context);
+
+    QueryTemplate numberEqual = dbms.queryTemplate
+      (list((Expression) dbms.columnReference(numbersReference, name)),
+       numbersReference,
+       dbms.operation
+       (BinaryOperationType.Equal,
+        dbms.columnReference(numbersReference, number),
+        dbms.parameter()));
+
+    QueryResult result = dbms.diff(tail, second, numberEqual, 4);
+
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "three");
+    expectEqual(result.nextRow(), ResultType.End);
+
+    result = dbms.diff(tail, second, numberEqual, 3);
+
+    expectEqual(result.nextRow(), ResultType.End);
+  }
+
   public static void main(String[] args) {
     testSimpleInsertDiffs();
 
@@ -1866,5 +2074,11 @@ public class Test {
     testCompoundJoins();
 
     testMerges();
+
+    testUpdateOnPartialIndex();
+
+    testDeleteOnPartialIndex();
+
+    testIndexedColumnUpdates();
   }
 }

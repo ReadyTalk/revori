@@ -2430,6 +2430,17 @@ public class MyDBMS implements DBMS {
       found = new Node[MaxDepth + 1];
     }
 
+    public void setToken(Object token) {
+      if (token != this.token) {
+        this.token = token;
+        for (int i = 0; i < max; ++i) {
+          found[i] = null;
+          blazedLeaves[i] = null;
+          blazedRoots[i + 1] = null;
+        }
+      }
+    }
+
     public void setKey(int index, Comparable key) {
       if (max < index || ! equal(key, keys[index])) {
         max = index;
@@ -2669,17 +2680,21 @@ public class MyDBMS implements DBMS {
          liveTest, expressionContext, false);
 
       List<MyColumn> keyColumns = tableReference.table.primaryKey.columns;
-      LiveExpression[] key = new LiveExpression[keyColumns.size()];
+      int[] key = new int[keyColumns.size()];
       for (int i = 0; i < key.length; ++i) {
-        key[i] = findColumnReference
-          (expressionContext, tableReference, keyColumns.get(i));
+        key[i] = columnIndex(tableReference.table, keyColumns.get(i));
+      }
+
+      boolean[] partOfKey = new boolean[template.length];
+      for (int i = 0; i < key.length; ++i) {
+        partOfKey[key[i]] = true;
       }
 
       context.setKey(0, tableReference.table);
       context.setKey(1, tableReference.table.primaryKey);
 
-      Object[] tuple = new Object[template.length];
       int count = 0;
+      Object deleteToken = null;
 
       while (true) {
         ResultType type = iterator.nextRow();
@@ -2690,25 +2705,48 @@ public class MyDBMS implements DBMS {
         case Inserted: {
           ++ count;
 
+          Object[] tuple = new Object[template.length];
           Object[] original = (Object[]) iterator.pair.fork.value;
+          boolean deleteAndInsert = false;
           for (int i = 0; i < tuple.length; ++i) {
             LiveExpression v = template[i];
             if (v == UndefinedExpression) {
               tuple[i] = original[i];
             } else {
               tuple[i] = v.evaluate(false);
+
+              if (partOfKey[i]) {
+                deleteAndInsert = true;
+              }
             }
+          }
+
+          if (deleteAndInsert) {
+            if (deleteToken == null) {
+              // we're iterating over context.result, so if we're
+              // going to make structural changes, we need to fork a
+              // new tree to avoid concurrent modification
+              context.setToken(deleteToken = new Object());
+            }
+
+            int i;
+            for (i = 0; i < key.length - 1; ++i) {
+              context.setKey
+                (i + IndexBodyDepth, (Comparable) original[key[i]]);
+            }
+
+            context.delete(i + IndexBodyDepth, (Comparable) original[key[i]]);
           }
 
           int i;
           for (i = 0; i < key.length - 1; ++i) {
             context.setKey
-              (i + IndexBodyDepth, (Comparable) key[i].evaluate(false));
+              (i + IndexBodyDepth, (Comparable) tuple[key[i]]);
           }
 
           // todo: throw duplicate key exception if applicable
           context.insertOrUpdate
-            (i + IndexBodyDepth, (Comparable) key[i].evaluate(false), tuple);
+            (i + IndexBodyDepth, (Comparable) tuple[key[i]], tuple);
         } break;
 
         default:
@@ -2741,16 +2779,16 @@ public class MyDBMS implements DBMS {
          test.makeLiveExpression(expressionContext), expressionContext, false);
 
       List<MyColumn> keyColumns = tableReference.table.primaryKey.columns;
-      LiveExpression[] key = new LiveExpression[keyColumns.size()];
+      int[] key = new int[keyColumns.size()];
       for (int i = 0; i < key.length; ++i) {
-        key[i] = findColumnReference
-          (expressionContext, tableReference, keyColumns.get(i));
+        key[i] = columnIndex(tableReference.table, keyColumns.get(i));
       }
 
       context.setKey(0, tableReference.table);
       context.setKey(1, tableReference.table.primaryKey);
 
       int count = 0;
+      Object deleteToken = null;
 
       while (true) {
         ResultType type = iterator.nextRow();
@@ -2761,14 +2799,21 @@ public class MyDBMS implements DBMS {
         case Inserted: {
           ++ count;
 
-          int i;
-          for (i = 0; i < key.length - 1; ++i) {
-            context.setKey
-              (i + IndexBodyDepth, (Comparable) key[i].evaluate(false));
+          if (deleteToken == null) {
+            // we're iterating over context.result, so if we're going
+            // to make structural changes, we need to fork a new tree
+            // to avoid concurrent modification
+            context.setToken(deleteToken = new Object());
           }
 
-          context.delete
-            (i + IndexBodyDepth, (Comparable) key[i].evaluate(false));
+          Object[] original = (Object[]) iterator.pair.fork.value;
+
+          int i;
+          for (i = 0; i < key.length - 1; ++i) {
+            context.setKey(i + IndexBodyDepth, (Comparable) original[key[i]]);
+          }
+
+          context.delete(i + IndexBodyDepth, (Comparable) original[key[i]]);
         } break;
 
         default:
@@ -3843,6 +3888,16 @@ public class MyDBMS implements DBMS {
       if (node.value instanceof Node) {
         out.println(node.key + ": subtree");
         dump((Node) node.value, out, depth + 2);
+      } else if (node.value instanceof Object[]) {
+        Object[] array = (Object[]) node.value;
+        out.print(node.key + ": [");
+        for (int i = 0; i < array.length; ++i) {
+          out.print(String.valueOf(array[i]));
+          if (i < array.length - 1) {
+            out.print(", ");
+          }
+        }
+        out.println("]");
       } else {
         out.println(node.key + ": " + node.value);
       }
