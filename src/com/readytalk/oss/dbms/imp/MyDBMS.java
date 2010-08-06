@@ -1350,6 +1350,32 @@ public class MyDBMS implements DBMS {
             triple.right = right.top;
             triple.base = null;
             MyDBMS.next(right);
+          } else if (base.top == null) {
+            int leftRight = compareForMerge(left.top, right.top);
+            if (leftRight > 0) {
+              // right < left
+              triple.left = null;
+              triple.right = right.top;
+              triple.base = null;
+              MyDBMS.next(right);
+            } else if (leftRight < 0) {
+              // left < right
+              triple.left = left.top;
+              triple.right = null;
+              triple.base = null;
+              MyDBMS.next(left);
+            } else {
+              // left = right
+              if (left.top == null && right.top == null) {
+                return false;
+              } else {
+                triple.left = left.top;
+                triple.right = right.top;
+                triple.base = null;
+                MyDBMS.next(left);
+                MyDBMS.next(right);
+              }
+            }
           } else {
             // left = right = base
             if (left.top == right.top && left.top == base.top) {
