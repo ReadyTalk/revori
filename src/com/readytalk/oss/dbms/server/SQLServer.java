@@ -56,7 +56,7 @@ public class SQLServer {
   }
 
   public enum Response {
-    RowSet, NewDatabase, Success, Error;
+    RowSet, NewDatabase, CopySuccess, Success, Error;
   }
 
   public enum RowSetFlag {
@@ -389,11 +389,31 @@ public class SQLServer {
     }
   }
 
+  private static class CopyContext {
+    public final PatchContext context;
+    public final PatchTemplate template;
+    public final List<Class> columnTypes;
+    public final StringBuilder stringBuilder = new StringBuilder();
+    public final Object[] parameters;
+    public int count;
+
+    public CopyContext(PatchContext context,
+                       PatchTemplate template,
+                       List<Class> columnTypes)
+    {
+      this.context = context;
+      this.template = template;
+      this.columnTypes = columnTypes;
+      this.parameters = new Object[columnTypes.size()];
+    }
+  }
+
   private static class Client implements Runnable {
     public final Server server;
     public final SocketChannel channel;
     public Transaction transaction;
     public Database database;
+    public CopyContext copyContext;
 
     public Client(Server server,
                   SocketChannel channel)
@@ -799,20 +819,16 @@ public class SQLServer {
       return server.dbms.constant(((NumberLiteral) tree).value);
     } else if (tree instanceof BooleanLiteral) {
       return server.dbms.constant(((BooleanLiteral) tree).value);
-    } if (tree.get(0) instanceof Name) {
-      if (".".equals(((Terminal) tree.get(1)).value)) {
+    } if (tree.length() == 3) {
+      if (tree.get(0) instanceof Name
+          && ".".equals(((Terminal) tree.get(1)).value))
+      {
         return makeColumnReference
           (server.dbms,
            tableReferences,
            ((Name) tree.get(0)).value,
            ((Name) tree.get(2)).value);
-      } else {
-        return server.dbms.operation
-          (findBinaryOperationType(server, ((Terminal) tree.get(1)).value),
-           makeExpression(server, tree.get(0), tableReferences),
-           makeExpression(server, tree.get(2), tableReferences));
       }
-    } if (tree.get(0) instanceof TreeList) {
       return server.dbms.operation
         (findBinaryOperationType(server, ((Terminal) tree.get(1)).value),
          makeExpression(server, tree.get(0), tableReferences),
@@ -1298,9 +1314,9 @@ public class SQLServer {
   private static Object convert(Class type,
                                 String value)
   {
-    if (type == Integer.class) {
-      return Integer.parseInt(value);
-    } else if (type == Long.class) {
+    if (type == Integer.class
+        || type == Long.class)
+    {
       return Long.parseLong(value);
     } else if (type == String.class) {
       return value;
@@ -1309,91 +1325,77 @@ public class SQLServer {
     }
   }
 
-  private static int copy(InputStream in,
-                          DBMS dbms,
-                          PatchContext context,
-                          PatchTemplate template,
-                          List<Class> columnTypes)
+  private static void copy(DBMS dbms,
+                           PatchContext context,
+                           PatchTemplate template,
+                           List<Class> columnTypes,
+                           StringBuilder sb,
+                           Object[] parameters,
+                           String line)
     throws IOException
   {
-    StringBuilder sb = new StringBuilder();
-    Object[] parameters = new Object[columnTypes.size()];
     boolean sawEscape = false;
-    int i = 0;
-    int count = 0;
-    while (true) {
-      int c = in.read();
+    int index = 0;
+    for (int i = 0; i < line.length(); ++i) {
+      int c = line.charAt(i);
       switch (c) {
-      case -1:
-        throw new EOFException();
-
       case '\\':
         if (sawEscape) {
+          sawEscape = false;
           sb.append((char) c);
         } else {
           sawEscape = true;
         }
         break;
 
-      case '\t':
+      case ',':
         if (sawEscape) {
+          sawEscape = false;
           sb.append((char) c);
         } else {
-          parameters[i] = convert(columnTypes.get(i), sb.toString());
+          parameters[index] = convert(columnTypes.get(index), sb.toString());
           sb.setLength(0);
-          ++ i;
-        }
-        break;
-
-      case '\n':
-        if (sawEscape) {
-          sb.append((char) c);
-        } else {
-          parameters[i] = convert(columnTypes.get(i), sb.toString());
-          sb.setLength(0);
-          if (i < parameters.length - 1) {
-            throw new RuntimeException("not enough values specified");
-          }
-          dbms.apply(context, template, parameters);
-          ++ count;
-          i = 0;
-        }
-        break;
-
-      case '.':
-        if (sawEscape) {
-          if (i != 0 || sb.length() > 0) {
-            throw new RuntimeException("unexpected end of values");
-          }
-          return count;
-        } else {
-          sb.append((char) c);
+          ++ index;
         }
         break;
 
       default:
+        if (sawEscape) {
+          sawEscape = false;
+          sb.append('\\');
+        }
         sb.append((char) c);
         break;
       }
     }
+
+    if (sb.length() == 0 || index < parameters.length - 1) {
+      throw new RuntimeException("not enough values specified");
+    }
+
+    parameters[index] = convert(columnTypes.get(index), sb.toString());
+    sb.setLength(0);
+    dbms.apply(context, template, parameters);
   }
 
-  private static int applyCopy(Client client,
-                               PatchTemplate template,
-                               List<Class> columnTypes,
-                               InputStream in)
+  private static void applyCopy(Client client,
+                                String line,
+                                OutputStream out)
     throws IOException
   {
-    pushTransaction(client);
-    try {
-      DBMS dbms = client.server.dbms;
-      PatchContext context = dbms.patchContext(head(client));
-      int count = copy(in, dbms, context, template, columnTypes);
-      setTag(client, new Tag("head", dbms.commit(context)));
+    CopyContext c = client.copyContext;
+    if ("\\.".equals(line)) {
+      setTag(client, new Tag("head", client.server.dbms.commit(c.context)));
       commitTransaction(client);
-      return count;
-    } finally {
       popTransaction(client);
+      out.write(Response.Success.ordinal());
+      writeString(out, "inserted " + c.count + " row(s)");
+      client.copyContext = null;
+    } else {
+      copy(client.server.dbms, c.context, c.template, c.columnTypes,
+           c.stringBuilder, c.parameters, line);
+      ++ c.count;
+      out.write(Response.CopySuccess.ordinal());
     }
   }
 
@@ -1844,20 +1846,27 @@ public class SQLServer {
                   expression()));
     }
 
+    public Parser comparison() {
+      return sequence(simpleExpression(),
+                      or(terminal("="),
+                         terminal("<>"),
+                         terminal("<"),
+                         terminal("<="),
+                         terminal(">"),
+                         terminal(">=")),
+                      simpleExpression());
+    }
+
     public Parser expression() {
       if (expressionParser == null) {
         expressionParser = new LazyParser();
         expressionParser.parser = or
-          (sequence(simpleExpression(),
+          (sequence(or(comparison(),
+                       simpleExpression()),
                     or(terminal("and"),
-                       terminal("or"),
-                       terminal("="),
-                       terminal("<>"),
-                       terminal("<"),
-                       terminal("<="),
-                       terminal(">"),
-                       terminal(">=")),
+                       terminal("or")),
                     expression()),
+           comparison(),
            simpleExpression());
       }
 
@@ -2045,12 +2054,14 @@ public class SQLServer {
              throws IOException
            {
              List<Class> columnTypes = new ArrayList();
-             int count = applyCopy
-               (client, makeCopyTemplate(client, tree, columnTypes),
-                columnTypes, in);
+             client.copyContext = new CopyContext
+               (client.server.dbms.patchContext(head(client)), makeCopyTemplate
+                (client, tree, columnTypes), columnTypes);
+
+             pushTransaction(client);
 
              out.write(Response.Success.ordinal());
-             writeString(out, "inserted " + count + " row(s)");
+             writeString(out, "reading row data until \"\\.\"");
            }
          });
     }
@@ -2368,20 +2379,24 @@ public class SQLServer {
     throws IOException
   {
     String s = readString(in);
-    ParseResult result = client.server.parser.parse
-      (new ParseContext(client, s), s);
-    if (result.task != null) {
-      try {
-        result.task.run(client, result.tree, in, out);
-      } catch (Exception e) {
-        out.write(Response.Error.ordinal());
-        String message = e.getMessage();
-        writeString(out, message == null ? "see server logs" : message); 
-        log.log(Level.WARNING, null, e);       
+    try {
+      if (client.copyContext == null) {
+        ParseResult result = client.server.parser.parse
+          (new ParseContext(client, s), s);
+        if (result.task != null) {
+          result.task.run(client, result.tree, in, out);
+        } else {
+          out.write(Response.Error.ordinal());
+          writeString(out, "Sorry, I don't understand.");
+        }
+      } else {
+        applyCopy(client, s, out);
       }
-    } else {
+    } catch (Exception e) {
       out.write(Response.Error.ordinal());
-      writeString(out, "Sorry, I don't understand.");
+      String message = e.getMessage();
+      writeString(out, message == null ? "see server logs" : message); 
+      log.log(Level.WARNING, null, e);       
     }
   }
 
@@ -2392,18 +2407,24 @@ public class SQLServer {
   {
     String s = readString(in);
     log.info("complete \"" + s + "\"");
-    ParseResult result = client.server.parser.parse
-      (new ParseContext(client, s), s);
-    out.write(Response.Success.ordinal());
-    if (result.completions == null) {
-      log.info("no completions");
-      writeInteger(out, 0);
-    } else {
-      log.info("completions: " + result.completions);
-      writeInteger(out, result.completions.size());
-      for (String completion: result.completions) {
-        writeString(out, completion);
+    if (client.copyContext == null) {
+      ParseResult result = client.server.parser.parse
+        (new ParseContext(client, s), s);
+      out.write(Response.Success.ordinal());
+      if (result.completions == null) {
+        log.info("no completions");
+        writeInteger(out, 0);
+      } else {
+        log.info("completions: " + result.completions);
+        writeInteger(out, result.completions.size());
+        for (String completion: result.completions) {
+          writeString(out, completion);
+        }
       }
+    } else {
+      log.info("no completions in copy mode");
+      out.write(Response.Success.ordinal());
+      writeInteger(out, 0);
     }
   }
 

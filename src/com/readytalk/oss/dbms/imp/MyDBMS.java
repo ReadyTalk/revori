@@ -1107,7 +1107,7 @@ public class MyDBMS implements DBMS {
   }
 
   private static void descendLeft(NodeStack s) {
-    if (s.top != null) {
+    if (s.top != null && s.top.left != NullNode) {
       push(s, s.top.left);
     }
   }
@@ -1141,10 +1141,24 @@ public class MyDBMS implements DBMS {
       this.base = base;
       this.left = left;
       this.right = right;
+      
+      if (leftRoot == NullNode) {
+        throw new NullPointerException();
+      }
 
-      if (baseRoot != NullNode) push(base, baseRoot);
-      if (leftRoot != NullNode) push(left, leftRoot);
-      if (rightRoot != NullNode) push(right, rightRoot);
+      if (rightRoot == NullNode) {
+        throw new NullPointerException();
+      }
+
+      if (baseRoot != NullNode) {
+        push(base, baseRoot);
+      }
+      push(left, leftRoot);
+      push(right, rightRoot);
+
+      expect(base.top != NullNode
+             && left.top != NullNode
+             && right.top != NullNode);
 
       // find leftmost nodes to start iteration
       while (true) {
@@ -1234,6 +1248,10 @@ public class MyDBMS implements DBMS {
           }
         }
       }
+
+      expect(base.top != NullNode
+             && left.top != NullNode
+             && right.top != NullNode);
     }
 
     public boolean next(MergeTriple triple) {
@@ -3386,6 +3404,10 @@ public class MyDBMS implements DBMS {
     MergeTriple triple = new MergeTriple();
     while (true) {
       if (iterators[depth].next(triple)) {
+        expect(triple.base != NullNode
+               && triple.left != NullNode
+               && triple.right != NullNode);
+
         boolean descend = false;
         boolean conflict = false;
         if (triple.base == null) {

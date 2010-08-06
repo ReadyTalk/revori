@@ -17,6 +17,7 @@ enum Request {
 enum Response {
   RowSet,
   NewDatabase,
+  ColumnSuccess,
   Success,
   Error
 };
@@ -402,6 +403,9 @@ execute(Context* context, const char* command)
    
     free(message);
   } break;
+
+  case ColumnSuccess:
+    break;
 
   case Success: {
     char* message = readString(context);
