@@ -496,6 +496,9 @@ main(int, const char**)
     return -1;
   }
 
+  fprintf(stdout, "Welcome to the DBMS SQL client interface.  "
+          "Type \"help\" to get started.\n");
+
   rl_readline_name = "DBMSClient";
 
   rl_completion_entry_function = completionGenerator;
