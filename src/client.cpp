@@ -510,10 +510,16 @@ execute(Context* context, const char* command)
   }
 }
 
+void
+usage(const char* name)
+{
+  fprintf(stderr, "usage: %s [batch]\n", name);  
+}
+
 } // namespace
 
 int
-main(int, const char**)
+main(int argumentCount, const char** arguments)
 {
   Context context;
   globalContext = &context;
@@ -527,45 +533,98 @@ main(int, const char**)
   if (context.socket < 0) {
     return -1;
   }
+  
+  bool interactive;
+  switch (argumentCount) {
+  case 1:
+    interactive = true;
+    break;
 
-  fprintf(stdout, "Welcome to the DBMS SQL client interface.  "
-          "Type \"help\" to get started.\n");
+  case 2:
+    if (strcmp("batch", arguments[1]) == 0) {
+      interactive = false;
+    } else {
+      usage(arguments[0]);
+      return -1;
+    }
+    break;
 
-  rl_readline_name = "DBMSClient";
+  default:
+    usage(arguments[0]);
+    return -1;    
+  }
 
-  rl_completion_entry_function = completionGenerator;
+  if (interactive) {
+    fprintf(stdout, "Welcome to the DBMS SQL client interface.  "
+            "Type \"help\" to get started.\n");
 
-  while (not (context.trouble || context.exit)) {
-    char* line;
-    if (context.databaseName) {
-      int length = strlen(context.databaseName) + 4;
-      char* prompt = static_cast<char*>(malloc(length));
-      if (prompt == 0) {
-        fprintf(stderr, "\nunable to allocate memory\n");
-        return -1;
+    rl_readline_name = "DBMSClient";
+
+    rl_completion_entry_function = completionGenerator;
+
+    while (not (context.trouble || context.exit)) {
+      char* line;
+      if (context.databaseName) {
+        int length = strlen(context.databaseName) + 4;
+        char* prompt = static_cast<char*>(malloc(length));
+        if (prompt == 0) {
+          fprintf(stderr, "\nunable to allocate memory\n");
+          return -1;
+        }
+
+        snprintf(prompt, length, "%s > ", context.databaseName);
+        line = readline(prompt);
+        free(prompt);
+      } else {
+        line = readline("> ");
       }
 
-      snprintf(prompt, length, "%s > ", context.databaseName);
-      line = readline(prompt);
-      free(prompt);
-    } else {
-      line = readline("> ");
+      if (line == 0) {
+        fprintf(stdout, "\n");
+        break;
+      }
+
+      if (context.copying) {
+        execute(&context, line);
+      } else {
+        char* s = removeEdgeWhitespace(line);
+        if (*s) {
+          add_history(s);
+
+          execute(&context, s);
+          fprintf(stdout, "\n");
+        }
+      }
+
+      free(line);
     }
+  } else {
+    const int BufferSize = 8096;
+    char buffer[BufferSize];
+    int i = 0;
 
-    if (line == 0) {
-      fprintf(stdout, "\n");
-      break;
+    while (true) {
+      int c = fgetc(stdin);
+      switch (c) {
+      case EOF:
+        return 0;
+
+      case '\n':
+        buffer[i] = 0;
+        execute(&context, buffer);
+        i = 0;
+        break;
+
+      default:
+        if (i < BufferSize - 1) {
+          buffer[i++] = c;
+        } else {
+          fprintf(stderr, "buffer overflow\n");
+          return -1;
+        }
+        break;
+      }
     }
-
-    char* s = removeEdgeWhitespace(line);
-    if (*s) {
-      add_history(s);
-
-      execute(&context, s);
-      fprintf(stdout, "\n");
-    }
-
-    free(line);
   }
 
   close(context.socket);
