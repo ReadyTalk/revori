@@ -1143,7 +1143,7 @@ public class SQLServer {
       } else if (type == "tables") {
         QueryResult result = dbms.diff
           (dbms.revision(), dbHead(client), client.server.listTables,
-           client.database.name);
+           database(client).name);
 
         while (result.nextRow() == ResultType.Inserted) {
           sb.append("\n");
@@ -1152,7 +1152,7 @@ public class SQLServer {
       } else if (type == "tags") {
         QueryResult result = dbms.diff
           (dbms.revision(), dbHead(client), client.server.listTags,
-           client.database.name);
+           database(client).name);
 
         while (result.nextRow() == ResultType.Inserted) {
           String name = ((Tag) result.nextItem()).name;
@@ -2210,8 +2210,9 @@ public class SQLServer {
                            OutputStream out)
              throws IOException
            {
+             String list = makeList(client, tree.get(1));
              out.write(Response.Success.ordinal());
-             writeString(out, makeList(client, tree.get(1)));
+             writeString(out, list);
            }
          });
     }
@@ -2371,8 +2372,9 @@ public class SQLServer {
                            OutputStream out)
              throws IOException
            {
+             String help = makeHelp();
              out.write(Response.Success.ordinal());
-             writeString(out, makeHelp());
+             writeString(out, help);
            }
          });
     }
