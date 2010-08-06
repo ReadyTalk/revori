@@ -17,7 +17,7 @@ enum Request {
 enum Response {
   RowSet,
   NewDatabase,
-  ColumnSuccess,
+  CopySuccess,
   Success,
   Error
 };
@@ -56,7 +56,8 @@ class Context {
     socket(-1),
     completionCount(-1),
     trouble(false),
-    exit(false)
+    exit(false),
+    copying(false)
   { }
 
   ~Context() {
@@ -71,6 +72,7 @@ class Context {
   int completionCount;
   bool trouble;
   bool exit;
+  bool copying;
 };
 
 Context* globalContext = 0;
@@ -362,14 +364,27 @@ execute(Context* context, const char* command)
     return;
   }
 
-  context->buffer.position = 0;
-  context->buffer.limit = context->buffer.capacity;
+  if (not context->copying) {
+    context->buffer.position = 0;
+    context->buffer.limit = context->buffer.capacity;
+  }
 
   if (not writeByte(context, Execute)) {
     return;
   }
 
   if (not writeString(context, command, strlen(command))) {
+    return;
+  }
+
+  if (context->copying && strcmp(command, "\\.") == 0) {
+    if (not flush(context)) {
+      return;
+    }
+    context->copying = false;
+  }
+
+  if (context->copying) {
     return;
   }
 
@@ -404,8 +419,21 @@ execute(Context* context, const char* command)
     free(message);
   } break;
 
-  case ColumnSuccess:
-    break;
+  case CopySuccess: {
+    char* message = readString(context);
+    if (message == 0) {
+      return;
+    }
+
+    fprintf(stdout, "%s\n", message);
+   
+    free(message);
+
+    context->buffer.position = 0;
+    context->buffer.limit = context->buffer.capacity;
+
+    context->copying = true;
+  } break;
 
   case Success: {
     char* message = readString(context);

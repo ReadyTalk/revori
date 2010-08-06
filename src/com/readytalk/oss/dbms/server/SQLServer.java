@@ -396,6 +396,7 @@ public class SQLServer {
     public final StringBuilder stringBuilder = new StringBuilder();
     public final Object[] parameters;
     public int count;
+    public boolean trouble;
 
     public CopyContext(PatchContext context,
                        PatchTemplate template,
@@ -1391,11 +1392,15 @@ public class SQLServer {
       out.write(Response.Success.ordinal());
       writeString(out, "inserted " + c.count + " row(s)");
       client.copyContext = null;
-    } else {
-      copy(client.server.dbms, c.context, c.template, c.columnTypes,
-           c.stringBuilder, c.parameters, line);
-      ++ c.count;
-      out.write(Response.CopySuccess.ordinal());
+    } else if (! c.trouble) {
+      try {
+        copy(client.server.dbms, c.context, c.template, c.columnTypes,
+             c.stringBuilder, c.parameters, line);
+        ++ c.count;
+      } catch (Exception e) {
+        c.trouble = true;
+        log.log(Level.WARNING, null, e);
+      }
     }
   }
 
@@ -2060,7 +2065,7 @@ public class SQLServer {
 
              pushTransaction(client);
 
-             out.write(Response.Success.ordinal());
+             out.write(Response.CopySuccess.ordinal());
              writeString(out, "reading row data until \"\\.\"");
            }
          });
