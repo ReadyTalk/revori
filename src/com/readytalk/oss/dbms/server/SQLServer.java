@@ -35,6 +35,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 import java.util.logging.Level;
+import java.io.Reader;
+import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.EOFException;
 import java.io.InputStream;
@@ -67,39 +69,39 @@ public class SQLServer {
   private static final Set<Index> EmptyIndexSet = new HashSet();
 
   private static class Server {
-    private final DBMS dbms;
+    public final DBMS dbms;
 
-    private final Parser parser = new ParserFactory().parser();
+    public final Parser parser = new ParserFactory().parser();
 
-    private final PatchTemplate insertOrUpdateDatabase;
-    private final QueryTemplate listDatabases;
-    private final QueryTemplate findDatabase;
-    private final PatchTemplate deleteDatabase;
+    public final PatchTemplate insertOrUpdateDatabase;
+    public final QueryTemplate listDatabases;
+    public final QueryTemplate findDatabase;
+    public final PatchTemplate deleteDatabase;
 
-    private final PatchTemplate insertOrUpdateTable;
-    private final QueryTemplate listTables;
-    private final QueryTemplate findTable;
-    private final PatchTemplate deleteDatabaseTables;
-    private final PatchTemplate deleteTable;
+    public final PatchTemplate insertOrUpdateTable;
+    public final QueryTemplate listTables;
+    public final QueryTemplate findTable;
+    public final PatchTemplate deleteDatabaseTables;
+    public final PatchTemplate deleteTable;
 
-    private final DBMS.Column tagsDatabase;
-    private final DBMS.Column tagsName;
-    private final DBMS.Column tagsTag;
-    private final DBMS.Table tags;
+    public final DBMS.Column tagsDatabase;
+    public final DBMS.Column tagsName;
+    public final DBMS.Column tagsTag;
+    public final DBMS.Table tags;
 
-    private final PatchTemplate insertOrUpdateTag;
-    private final QueryTemplate listTags;
-    private final QueryTemplate findTag;
-    private final PatchTemplate deleteDatabaseTags;
-    private final PatchTemplate deleteTag;
+    public final PatchTemplate insertOrUpdateTag;
+    public final QueryTemplate listTags;
+    public final QueryTemplate findTag;
+    public final PatchTemplate deleteDatabaseTags;
+    public final PatchTemplate deleteTag;
 
-    private final AtomicReference<Revision> dbHead;
-    private final Map<String, BinaryOperationType> binaryOperationTypes
+    public final AtomicReference<Revision> dbHead;
+    public final Map<String, BinaryOperationType> binaryOperationTypes
       = new HashMap();
-    private final Map<String, UnaryOperationType> unaryOperationTypes
+    public final Map<String, UnaryOperationType> unaryOperationTypes
       = new HashMap();
-    private final Map<String, Class> columnTypes = new HashMap();
-    private final ConflictResolver rightPreferenceConflictResolver
+    public final Map<String, Class> columnTypes = new HashMap();
+    public final ConflictResolver rightPreferenceConflictResolver
       = new ConflictResolver() {
           public Row resolveConflict(DBMS.Table table,
                                      Collection<DBMS.Column> columns,
@@ -113,7 +115,7 @@ public class SQLServer {
             return leftPreferenceMerge(columns, baseRow, rightRow, leftRow);
           }
         };
-    private final ConflictResolver conflictResolver = new ConflictResolver() {
+    public final ConflictResolver conflictResolver = new ConflictResolver() {
         public Row resolveConflict(DBMS.Table table,
                                    Collection<DBMS.Column> columns,
                                    Revision base,
@@ -341,7 +343,7 @@ public class SQLServer {
   private static class LeftPreferenceConflictResolver
     implements ConflictResolver
   {
-    private int conflictCount;
+    public int conflictCount;
 
     public Row resolveConflict(DBMS.Table table,
                                Collection<DBMS.Column> columns,
@@ -358,7 +360,7 @@ public class SQLServer {
   }
 
   private static class HashRow implements Row {
-    private final Map<DBMS.Column, Object> values;
+    public final Map<DBMS.Column, Object> values;
 
     public HashRow(int size) {
       this.values = new HashMap(size);
@@ -374,9 +376,9 @@ public class SQLServer {
   }
 
   private static class Transaction {
-    private final Transaction next;
-    private final Revision dbTail;
-    private Revision dbHead;
+    public final Transaction next;
+    public final Revision dbTail;
+    public Revision dbHead;
 
     public Transaction(Transaction next,
                        Revision dbTail)
@@ -388,10 +390,10 @@ public class SQLServer {
   }
 
   private static class Client implements Runnable {
-    private final Server server;
-    private final SocketChannel channel;
-    private Transaction transaction;
-    private Database database;
+    public final Server server;
+    public final SocketChannel channel;
+    public Transaction transaction;
+    public Database database;
 
     public Client(Server server,
                   SocketChannel channel)
@@ -426,7 +428,7 @@ public class SQLServer {
   }
 
   private static class Database {
-    private final String name;
+    public final String name;
 
     public Database(String name) {
       this.name = name;
@@ -434,9 +436,9 @@ public class SQLServer {
   }
 
   private static class Column {
-    private final String name;
-    private final DBMS.Column column;
-    private final Class type;
+    public final String name;
+    public final DBMS.Column column;
+    public final Class type;
     
     public Column(String name,
                   DBMS.Column column,
@@ -449,10 +451,10 @@ public class SQLServer {
   }
 
   private static class Table {
-    private final String name;
-    private final Map<String, Column> columns;
-    private final List<Column> primaryKeyColumns;
-    private final DBMS.Table table;
+    public final String name;
+    public final Map<String, Column> columns;
+    public final List<Column> primaryKeyColumns;
+    public final DBMS.Table table;
 
     public Table(String name,
                  Map<String, Column> columns,
@@ -467,8 +469,8 @@ public class SQLServer {
   }
 
   private static class Tag {
-    private final String name;
-    private final Revision revision;
+    public final String name;
+    public final Revision revision;
 
     public Tag(String name,
                Revision revision)
@@ -479,8 +481,8 @@ public class SQLServer {
   }
   
   private static class TableReference {
-    private final Table table;
-    private final DBMS.TableReference reference;
+    public final Table table;
+    public final DBMS.TableReference reference;
 
     public TableReference(Table table,
                           DBMS.TableReference reference)
@@ -540,7 +542,7 @@ public class SQLServer {
   }
 
   private static class TreeList implements Tree {
-    private final List<Tree> list = new ArrayList();
+    public final List<Tree> list = new ArrayList();
     
     public void add(Tree tree) {
       list.add(tree);
@@ -1073,6 +1075,70 @@ public class SQLServer {
     return new String(array);
   }
 
+  public static String makeList(Client client,
+                                Tree tree)
+  {
+    DBMS dbms = client.server.dbms;
+    StringBuilder sb = new StringBuilder();
+    if (tree instanceof Terminal) {
+      String type = ((Terminal) tree).value;
+      if (type == "databases") {
+        QueryResult result = dbms.diff
+          (dbms.revision(), dbHead(client), client.server.listDatabases);
+
+        while (result.nextRow() == ResultType.Inserted) {
+          sb.append("\n");
+          sb.append(((Database) result.nextItem()).name);
+        }
+      } else if (type == "tables") {
+        QueryResult result = dbms.diff
+          (dbms.revision(), dbHead(client), client.server.listTables,
+           client.database.name);
+
+        while (result.nextRow() == ResultType.Inserted) {
+          sb.append("\n");
+          sb.append(((Table) result.nextItem()).name);
+        }
+      } else if (type == "tags") {
+        QueryResult result = dbms.diff
+          (dbms.revision(), dbHead(client), client.server.listTags,
+           client.database.name);
+
+        while (result.nextRow() == ResultType.Inserted) {
+          sb.append("\n");
+          sb.append(((Tag) result.nextItem()).name);
+        }
+      } else {
+        throw new RuntimeException("unexpected terminal: " + type);
+      }
+    } else {
+      for (Column c: findTable
+             (client, ((Name) tree.get(2)).value).columns.values())
+      {
+        sb.append("\n");
+        sb.append(c.name);
+      }
+    }
+    return sb.length() == 0 ? "\n no matches found" : sb.toString();
+  }
+
+  public static String makeHelp() throws IOException {
+    InputStream help = SQLServer.class.getResourceAsStream
+      ("/sql-client-help.txt");
+    try {
+      StringBuilder sb = new StringBuilder();
+      char[] buffer = new char[8096];
+      Reader in = new InputStreamReader(help);
+      int c = 0;
+      while ((c = in.read(buffer)) != -1) {
+        sb.append(buffer, 0, c);
+      }
+      return sb.toString();
+    } finally {
+      help.close();
+    }
+  }
+
   private static void diff(DBMS dbms,
                            Revision base,
                            Revision fork,
@@ -1170,6 +1236,9 @@ public class SQLServer {
   }
 
   private static void popTransaction(Client client) {
+    if (client.transaction == null) {
+      throw new RuntimeException("no transaction in progress");
+    }
     client.transaction = client.transaction.next;
   }
 
@@ -1310,10 +1379,9 @@ public class SQLServer {
                                              String start)
   {
     DBMS dbms = client.server.dbms;
-    QueryResult result = null;
     switch (type) {
     case Database: {
-      result = dbms.diff
+      QueryResult result = dbms.diff
         (dbms.revision(), dbHead(client), client.server.listDatabases);
 
       Set<String> set = new HashSet();
@@ -1328,7 +1396,7 @@ public class SQLServer {
 
     case Table:
       if (client.database != null) {
-        result = dbms.diff
+        QueryResult result = dbms.diff
           (dbms.revision(), dbHead(client), client.server.listTables,
            client.database.name);
 
@@ -1348,7 +1416,7 @@ public class SQLServer {
 
     case Tag:
       if (client.database != null) {
-        result = dbms.diff
+        QueryResult result = dbms.diff
           (dbms.revision(), dbHead(client), client.server.listTags,
            client.database.name);
 
@@ -1571,21 +1639,22 @@ public class SQLServer {
       return new Parser() {
         public ParseResult parse(ParseContext context, String in) {
           TreeList list = new TreeList();
-          ParseResult result = null;
+          ParseResult previous = null;
           for (Parser parser: parsers) {
-            if (in.length() == 0) {
-              return fail(result == null ? null : result.completions);
-            }
-
-            result = parser.parse(context, in);
+            ParseResult result = parser.parse(context, in);
             if (result.tree != null) {
               list.add(result.tree);
               in = result.next;
+              previous = result;
             } else {
+              if (in.length() == 0 && previous != null) {
+                return fail(previous.completions);
+              }
+
               return fail(result.completions);
             }
           }
-          return success(list, in, result.completions);
+          return success(list, in, previous.completions);
         }
       };
     }
@@ -2064,7 +2133,7 @@ public class SQLServer {
 
              out.write(Response.Success.ordinal());
              writeString(out, "head set to result of merge ("
-                         + conflictResolver.conflictCount + " conflicts)");
+                         + conflictResolver.conflictCount + " conflict(s))");
            }
          });
     }
@@ -2087,7 +2156,7 @@ public class SQLServer {
              throws IOException
            {
              out.write(Response.Success.ordinal());
-             writeString(out, "todo");
+             writeString(out, makeList(client, tree.get(1)));
            }
          });
     }
@@ -2248,7 +2317,7 @@ public class SQLServer {
              throws IOException
            {
              out.write(Response.Success.ordinal());
-             writeString(out, "todo");
+             writeString(out, makeHelp());
            }
          });
     }
@@ -2305,7 +2374,10 @@ public class SQLServer {
     throws IOException
   {
     int requestType = in.read();
-    if (requestType == -1) return;
+    if (requestType == -1) {
+      client.channel.close();
+      return;
+    }
 
     switch (Request.values()[requestType]) {
     case Execute:
