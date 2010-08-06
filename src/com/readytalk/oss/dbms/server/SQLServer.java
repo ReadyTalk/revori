@@ -555,6 +555,10 @@ public class SQLServer {
     public int length() {
       return list.size();
     }
+
+    public String toString() {
+      return list.toString();
+    }
   }
 
   private static class Leaf implements Tree {
@@ -573,6 +577,10 @@ public class SQLServer {
     public Terminal(String value) {
       this.value = value;
     }
+
+    public String toString() {
+      return "terminal[" + value + "]";
+    }
   }
 
   private static class Name extends Leaf {
@@ -580,6 +588,10 @@ public class SQLServer {
 
     public Name(String value) {
       this.value = value;
+    }
+
+    public String toString() {
+      return "name[" + value + "]";
     }
   }
 
@@ -589,6 +601,10 @@ public class SQLServer {
     public StringLiteral(String value) {
       this.value = value;
     }
+
+    public String toString() {
+      return "stringLiteral[" + value + "]";
+    }
   }
 
   private static class NumberLiteral extends Leaf {
@@ -597,6 +613,10 @@ public class SQLServer {
     public NumberLiteral(String value) {
       this.value = Long.parseLong(value);
     }
+
+    public String toString() {
+      return "numberLiteral[" + value + "]";
+    }
   }
 
   private static class BooleanLiteral extends Leaf {
@@ -604,6 +624,10 @@ public class SQLServer {
 
     public BooleanLiteral(boolean value) {
       this.value = value;
+    }
+
+    public String toString() {
+      return "booleanLiteral[" + value + "]";
     }
   }
 
@@ -702,13 +726,15 @@ public class SQLServer {
     } else if (tree.get(0) instanceof Terminal) {
       return makeSource(client, tree.get(1), tableReferences, tests);
     } else {
-      tests.add(makeExpression(client.server, tree.get(4), tableReferences));
-
-      return client.server.dbms.join
+      Source result = client.server.dbms.join
         ("left".equals(((Terminal) tree.get(1).get(0)).value)
          ? JoinType.LeftOuter : JoinType.Inner,
          makeSource(client, tree.get(0), tableReferences, tests),
          makeSource(client, tree.get(2), tableReferences, tests));
+
+      tests.add(makeExpression(client.server, tree.get(4), tableReferences));
+
+      return result;
     }
   }
 
@@ -739,7 +765,9 @@ public class SQLServer {
     }
 
     if (column == null) {
-      throw new RuntimeException("no such column: " + columnName);
+      throw new RuntimeException
+        ("no such column: " + (tableName == null ? "" : tableName + ".")
+         + columnName);
     }
 
     return dbms.columnReference(reference, column);
@@ -784,6 +812,11 @@ public class SQLServer {
            makeExpression(server, tree.get(0), tableReferences),
            makeExpression(server, tree.get(2), tableReferences));
       }
+    } if (tree.get(0) instanceof TreeList) {
+      return server.dbms.operation
+        (findBinaryOperationType(server, ((Terminal) tree.get(1)).value),
+         makeExpression(server, tree.get(0), tableReferences),
+         makeExpression(server, tree.get(2), tableReferences));      
     } else {
       String value = ((Terminal) tree.get(0)).value;
       if ("(".equals(value)) {
@@ -939,7 +972,7 @@ public class SQLServer {
 
     return client.server.dbms.deleteTemplate
       (tableReference.reference, makeExpressionFromWhere
-       (client.server, tree.get(4), tableReferences));
+       (client.server, tree.get(3), tableReferences));
   }
 
   private static Column findColumn(Table table, DBMS.Column column) {
@@ -1105,9 +1138,13 @@ public class SQLServer {
            client.database.name);
 
         while (result.nextRow() == ResultType.Inserted) {
-          sb.append("\n");
-          sb.append(((Tag) result.nextItem()).name);
+          String name = ((Tag) result.nextItem()).name;
+          if (! "head".equals(name)) {
+            sb.append("\n");
+            sb.append(name);
+          }
         }
+        sb.append("\nhead\ntail");
       } else {
         throw new RuntimeException("unexpected terminal: " + type);
       }
@@ -1644,8 +1681,10 @@ public class SQLServer {
             ParseResult result = parser.parse(context, in);
             if (result.tree != null) {
               list.add(result.tree);
+              if (in.length() > 0) {
+                previous = result;
+              }
               in = result.next;
-              previous = result;
             } else {
               if (in.length() == 0 && previous != null) {
                 return fail(previous.completions);
@@ -1852,10 +1891,10 @@ public class SQLServer {
 
     public static Parser columnName() {
       return or
-        (name(NameType.Column, true, false),
-         sequence(name(NameType.Table, false, false),
+        (sequence(name(NameType.Table, false, false),
                   terminal("."),
-                  name(NameType.Column, true, false)));
+                  name(NameType.Column, true, false)),
+         name(NameType.Column, true, false));
     }
 
     public Parser select() {
@@ -2194,10 +2233,10 @@ public class SQLServer {
                  dbms.apply(context, client.server.deleteDatabaseTags, name);
                } else if ("table".equals(type)) {
                  dbms.apply(context, client.server.deleteTable,
-                            database(client), name);
+                            database(client).name, name);
                } else if ("tag".equals(type)) {
                  dbms.apply(context, client.server.deleteTag,
-                            database(client), name);
+                            database(client).name, name);
                } else {
                  throw new RuntimeException();
                }
