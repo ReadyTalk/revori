@@ -862,16 +862,16 @@ public class MyDBMS implements DBMS {
   }
 
   private static void next(NodeStack stack) {
-    Node then = stack.top;
+    if (stack.top != null) {
+      if (stack.top.right != NullNode) {
+        push(stack, stack.top.right);
 
-    if (stack.top.right != NullNode) {
-      push(stack, stack.top.right);
-
-      while (stack.top.left != NullNode) {
-        push(stack, stack.top.left);
+        while (stack.top.left != NullNode) {
+          push(stack, stack.top.left);
+        }
+      } else {
+        ascendNext(stack);
       }
-    } else {
-      ascendNext(stack);
     }
   }
 
@@ -1084,6 +1084,10 @@ public class MyDBMS implements DBMS {
   }
 
   private static int compareForDescent(Node a, Node b) {
+    if (a == null || b == null) {
+      return 0;
+    }
+
     int difference = compare(a.key, b.key);
     if (difference > 0) {
       if (a.left == NullNode) {
@@ -1103,21 +1107,17 @@ public class MyDBMS implements DBMS {
   }
 
   private static void descendLeft(NodeStack s) {
-    push(s, s.top.left);
+    if (s.top != null) {
+      push(s, s.top.left);
+    }
   }
 
   private static int compareForMerge(Node a, Node b) {
-    if (a == null) {
-      if (b == null) {
-        return 0;
-      } else {
-        return 1;
-      }
-    } else if (b == null) {
-      return -1;
-    } else {
-      return compare(a.key, b.key);
+    if (a == null || b == null) {
+      return 0;
     }
+
+    return compare(a.key, b.key);
   }
 
   private static class MergeTriple {
@@ -1142,9 +1142,9 @@ public class MyDBMS implements DBMS {
       this.left = left;
       this.right = right;
 
-      push(base, baseRoot);
-      push(left, leftRoot);
-      push(right, rightRoot);
+      if (baseRoot != NullNode) push(base, baseRoot);
+      if (leftRoot != NullNode) push(left, leftRoot);
+      if (rightRoot != NullNode) push(right, rightRoot);
 
       // find leftmost nodes to start iteration
       while (true) {
@@ -1223,7 +1223,7 @@ public class MyDBMS implements DBMS {
               break;
             } else if (left.top.left == NullNode
                        && right.top.left == NullNode
-                       && base.top.left == NullNode)
+                       && (base.top == null || base.top.left == NullNode))
             {
               break;
             } else {
@@ -3482,7 +3482,7 @@ public class MyDBMS implements DBMS {
           ++ depth;
 
           iterators[depth] = new MergeIterator
-            ((Node) triple.base.value,
+            (triple.base == null ? NullNode : (Node) triple.base.value,
              baseStack = new NodeStack(baseStack),
              (Node) triple.left.value,
              leftStack = new NodeStack(leftStack),
