@@ -1842,6 +1842,54 @@ public class Test {
     expectEqual(result.nextRow(), ResultType.Inserted);
     expectEqual(result.nextItem(), "unit");
     expectEqual(result.nextRow(), ResultType.End);
+
+    context = dbms.patchContext(tail);
+
+    dbms.apply(context, insert,  1, "one");
+
+    Revision t1 = dbms.commit(context);
+
+    context = dbms.patchContext(tail);
+
+    dbms.apply(context, insert,  1, "uno");
+
+    Revision t2 = dbms.commit(context);
+
+    merge = dbms.merge(tail, t1, t2, new ConflictResolver() {
+        public Row resolveConflict(Table table,
+                                   Collection<DBMS.Column> columns,
+                                   Revision base,
+                                   Row baseRow,
+                                   Revision left,
+                                   Row leftRow,
+                                   Revision right,
+                                   Row rightRow)
+        {
+          expectEqual(baseRow, null);
+          expectEqual(leftRow.value(number), 1);
+          expectEqual(leftRow.value(name), "one");
+          expectEqual(rightRow.value(number), 1);
+          expectEqual(rightRow.value(name), "uno");
+          
+          return new Row() {
+            public Object value(Column column) {
+              if (column == number) {
+                return 1;
+              } else if (column == name) {
+                return "unit";
+              } else {
+                throw new RuntimeException("unexpected column");
+              }
+            }
+          };
+        }
+      });
+
+    result = dbms.diff(tail, merge, any);
+
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), "unit");
+    expectEqual(result.nextRow(), ResultType.End);
   }
 
   public static void testUpdateOnPartialIndex() {
