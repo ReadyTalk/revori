@@ -1,0 +1,77 @@
+command summary:
+
+  select { * | <expression> [ , ... ] } from <source> [ where <condition> ]
+
+      -- Evaluate the specified list of expressions, each of which may
+         reference tables from the specified source, which is either a
+         table name or a join of the form:
+
+           <source> { left | inner } join <source>
+
+  diff <base tag> <fork tag> select { * | <expression> [ , ... ] }
+    from <source> [ where <condition> ]
+
+      -- Calculate the difference between the result of the specified
+         query when applied to <fork tag> relative the result when
+         applied to <base tag>.
+
+  insert into <table> [ ( <column> [ , ... ] ) ] values ( <expression> )
+
+      -- Insert a row into the specified table.
+
+  update <table> { set <column> = <expression> } [ , ... ]
+    [ where <condition> ]
+
+      -- Update rows in a table which match the specified condition.
+
+  delete from <table> [ where <condition> ]
+
+      -- Delete rows from a table which match the specified condition.
+
+  copy <table> [ ( <column> [ , ... ] ) ] from stdin
+
+      -- Bulk insert rows into the specified table.
+
+  begin
+
+      -- Begin a new transaction.
+
+  commit
+
+      -- Commit the top transaction.
+
+  rollback
+
+      -- Abort the top transaction.
+
+  tag <tag to define> <tag>
+
+      -- (Re)define a tag to refer to the same revision as an
+         exisiting tag.
+
+  merge <base tag> <left tag> <right tag>
+
+      -- Merge the revisions refered to by left and right tags whose
+         shared ancestor is refered to by a base tag.  The "head" tag
+         receives the result.
+
+  drop { database <database> | table <table> | tag <tag> }
+
+      -- Unlink the reference to the specified database, table or tag
+
+  use database <database>
+
+      -- Switch the current session to use the specified database
+
+  create table <name> ( <column> <type> [ , ... ]
+    primary key ( <column> [ , ... ] ) )
+
+      -- Define a table as a list of columns and a primary key
+
+  create database <name>
+
+      -- Name a new database
+
+  help
+
+      -- Display this command summary

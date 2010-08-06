@@ -13,12 +13,20 @@
       <src path="${basedir}/src"/>
       <include name="**/*.java"/>
     </javac>
+
+    <copy todir="${basedir}/build/classes">
+      <fileset dir="${basedir}/resources">
+        <include name="*.txt"/>
+      </fileset>
+    </copy>
   </target>
 
   <target name="jar" depends="compile">
     <jar destfile="${basedir}/build/dbms.jar">
       <fileset dir="${basedir}/build/classes"
                includes="**/*.class"/>
+      <fileset dir="${basedir}/build/classes"
+               includes="**/*.txt"/>
     </jar>
   </target>
 
