@@ -1379,15 +1379,11 @@ public class MyDBMS implements DBMS {
           } else {
             // left = right = base
             if (left.top == right.top && left.top == base.top) {
-              if (left.top == null) {
-                return false;
-              } else {
-                // no need to go any deeper -- there aren't any changes
-                ascendNext(left);
-                ascendNext(right);
-                ascendNext(base);
-                continue;
-              }
+              // no need to go any deeper -- there aren't any changes
+              ascendNext(left);
+              ascendNext(right);
+              ascendNext(base);
+              continue;
             } else {
               triple.left = left.top;
               triple.right = right.top;
