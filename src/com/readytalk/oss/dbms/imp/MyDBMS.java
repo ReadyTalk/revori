@@ -22,11 +22,15 @@ public class MyDBMS implements DBMS {
   private static final boolean VerboseDiff = false;
   private static final boolean VerboseTest = false;
 
-  private static final int TableDepth = 0;
+  private static final int TreeDepth = 0;
   private static final int IndexDepth = 1;
-  private static final int IndexBodyDepth = 2;
-  private static final int MaxIndexDepth = 8;
-  private static final int MaxDepth = IndexBodyDepth + MaxIndexDepth;
+  private static final int ForeignKeyDepth = 1;
+  private static final int TableDataDepth = 1;
+  private static final int IndexDataDepth = 2;
+  private static final int IndexDataBodyDepth = 3;
+  private static final int MaxIndexDataBodyDepth = 8;
+  private static final int MaxDepth
+    = IndexDataBodyDepth + MaxIndexDataBodyDepth;
   private static final int NodeStackSize = 64;
 
   private static final Comparable Undefined = new Comparable() {
@@ -38,8 +42,10 @@ public class MyDBMS implements DBMS {
         return "undefined";
       }
     };
+
   private static final LiveExpression UndefinedExpression
     = new Constant(Undefined);
+
   private static final Comparable Dummy = new Comparable() {
       public int compareTo(Object o) {
         throw new UnsupportedOperationException();
@@ -49,16 +55,27 @@ public class MyDBMS implements DBMS {
         return "dummy";
       }
     };
+
   private static final Interval UnboundedInterval
     = new Interval(UndefinedExpression, UndefinedExpression);
+
   private static final EvaluatedInterval UnboundedEvaluatedInterval
     = new EvaluatedInterval(Undefined, Undefined);
+
   private static final Unknown UnknownInterval = new Unknown();
+
   private static final AtomicInteger nextId = new AtomicInteger();
+
   private static final Node NullNode = new Node(new Object(), null);
+
   private static final MyRevision EmptyRevision
     = new MyRevision(new Object(), NullNode);
+
   private static final NodeStack NullNodeStack = new NodeStack((Node[]) null);
+
+  private enum TreeType {
+    Index, ForeignKey, Data
+  }
 
   static {
     NullNode.left = NullNode;
@@ -201,7 +218,7 @@ public class MyDBMS implements DBMS {
     s.index = s.base;
   }
 
-  private static class MyColumn implements Column {
+  private static class MyColumn implements Column, Comparable<MyColumn> {
     public final Class type;
     public final int id;
 
@@ -209,14 +226,27 @@ public class MyDBMS implements DBMS {
       this.type = type;
       this.id = nextId();
     }
+
+    public int compareTo(MyColumn o) {
+      return id - o.id;
+    }
+      
+    public String toString() {
+      return "column[" + id + "]";
+    }
   }
 
   private static class MyIndex implements Index, Comparable<MyIndex> {
+    public final MyTable table;
     public final List<MyColumn> columns;
     public final boolean unique;
     public final int id;
 
-    public MyIndex(List<MyColumn> columns, boolean unique) {
+    public MyIndex(MyTable table,
+                   List<MyColumn> columns,
+                   boolean unique)
+    {
+      this.table = table;
       this.columns = columns;
       this.unique = unique;
       this.id = nextId();
@@ -225,41 +255,56 @@ public class MyDBMS implements DBMS {
     public int compareTo(MyIndex o) {
       return id - o.id;
     }
+      
+    public String toString() {
+      return "index[" + id + "]";
+    }
+  }
+
+  private static class MyForeignKey
+    implements ForeignKey, Comparable<MyForeignKey>
+  {
+    public final MyTable referingTable;
+    public final List<MyColumn> referingColumns;
+    public final MyTable targetTable;
+    public final List<MyColumn> targetColumns;
+    public final int id;
+
+    public MyForeignKey(MyTable referingTable,
+                        List<MyColumn> referingColumns,
+                        MyTable targetTable,
+                        List<MyColumn> targetColumns)
+    {
+      this.referingTable = referingTable;
+      this.referingColumns = referingColumns;
+      this.targetTable = targetTable;
+      this.targetColumns = targetColumns;
+      this.id = nextId();
+    }
+
+    public int compareTo(MyForeignKey o) {
+      return id - o.id;
+    }
+      
+    public String toString() {
+      return "foreignKey[" + id + "]";
+    }
   }
 
   private static class MyTable implements Table, Comparable<MyTable> {
-    public final Collection<MyColumn> columns;
-    public final Collection<MyIndex> indexes;
-    public final MyIndex primaryKey;
+    public MyIndex primaryKey;
     public final int id;
 
-    public MyTable(Collection<MyColumn> columns,
-                   Collection<MyIndex> indexes,
-                   MyIndex primaryKey)
-    {
-      this.columns = columns;
-      this.indexes = indexes;
-      this.primaryKey = primaryKey;
+    public MyTable() {
       this.id = nextId();
     }
 
     public int compareTo(MyTable o) {
       return id - o.id;
     }
-  }
-
-  private static class MyRow implements Row {
-    public final Map<MyColumn, Object> map = new HashMap();
-
-    public MyRow(MyTable table, Object[] tuple) {
-      int i = 0;
-      for (MyColumn c: table.columns) {
-        map.put(c, tuple[i++]);
-      }
-    }
-
-    public Object value(Column column) {
-      return map.get(column);
+      
+    public String toString() {
+      return "table[" + id + "]";
     }
   }
 
@@ -397,21 +442,6 @@ public class MyDBMS implements DBMS {
                                Object right)
   {
     return left == right || (left != null && left.equals(right));
-  }
-
-  private static boolean equal(Object[] left,
-                               Object[] right)
-  {
-    if (left == right) {
-      return true;
-    } else {
-      for (int i = 0; i < left.length; ++i) {
-        if (! equal(left[i], right[i])) {
-          return false;
-        }
-      }
-      return true;
-    }
   }
 
   private static int compare(Comparable left,
@@ -1417,6 +1447,125 @@ public class MyDBMS implements DBMS {
     }
   }
 
+  private static Plan improvePlan(Plan best,
+                                  MyIndex index,
+                                  LiveExpression test,
+                                  MyTableReference tableReference)
+  {
+    Plan plan = new Plan(index);
+
+    for (int i = 0; i < plan.size; ++i) {
+      MyColumn column = index.columns.get(i);
+
+      LiveColumnReference reference = findColumnReference
+        (test, tableReference, column);
+
+      if (reference != null) {
+        Scan scan = test.makeScan(reference);
+
+        plan.scans[i] = scan;
+
+        if (! scan.isUseful()) {
+          plan.match = true;
+        }
+
+        reference.value = Dummy;
+        plan.references[i] = reference;
+      } else {
+        plan.scans[i] = UnboundedInterval;              
+      }
+
+      if (! plan.match) {
+        plan.complete = false;
+      }
+    }
+
+    for (int i = 0; i < plan.size; ++i) {
+      LiveColumnReference reference = plan.references[i];
+      if (reference != null) {
+        reference.value = Undefined;
+      }
+    }
+            
+    if (best == null
+        || (plan.match && (! best.match))
+        || (plan.complete && (! best.complete)))
+    {
+      best = plan;
+    }
+    
+    return best;
+  }
+
+  private static Plan choosePlan(MyRevision base,
+                                 NodeStack baseStack,
+                                 MyRevision fork,
+                                 NodeStack forkStack,
+                                 LiveExpression test,
+                                 MyTableReference tableReference)
+  {
+    Plan best = improvePlan
+      (null, tableReference.table.primaryKey, test, tableReference);
+
+    DiffIterator indexIterator = new DiffIterator
+      (find(base.root, TreeType.Index),
+       baseStack = new NodeStack(baseStack),
+       find(fork.root, TreeType.Index),
+       forkStack = new NodeStack(forkStack),
+       list(UnboundedEvaluatedInterval).iterator(),
+       true);
+
+    DiffPair pair = new DiffPair();
+    while (indexIterator.next(pair)) {
+      if (pair.base == null || pair.fork == null) {
+        continue;
+      }
+
+      best = improvePlan(best, (MyIndex) pair.base.key, test, tableReference);
+    }
+
+    popStack(baseStack);
+    popStack(forkStack);
+
+    return best;
+  }
+
+  private static boolean valuesEqual(Node a, Node b) {
+    return (a != null && b != null && equal(a.value, b.value));
+  }
+
+  private static boolean treeEqual(NodeStack baseStack,
+                                   Node base,
+                                   NodeStack forkStack,
+                                   Node fork)
+  {
+    if (base == NullNode) {
+      return fork == NullNode;
+    } else if (fork == NullNode) {
+      return base == NullNode;
+    } else {
+      DiffIterator indexIterator = new DiffIterator
+        (base, baseStack = new NodeStack(baseStack),
+         fork, forkStack = new NodeStack(forkStack),
+         list(UnboundedEvaluatedInterval).iterator(),
+         true);
+
+      DiffPair pair = new DiffPair();
+      boolean result = true;
+      while (indexIterator.next(pair)) {
+        if (! valuesEqual(pair.base, pair.fork)) {
+          result = false;
+          break;
+        }
+      }
+
+      popStack(baseStack);
+      popStack(forkStack);
+
+      return result;
+    }
+  }
+
   private static class MyTableReference implements TableReference, MySource {
     public class MySourceIterator implements SourceIterator {
       public final Node base;
@@ -1441,59 +1590,15 @@ public class MyDBMS implements DBMS {
                               ExpressionContext expressionContext,
                               boolean visitUnchanged)
       {
-        this.base = (Node) find(base.root, table).value;
-        this.fork = (Node) find(fork.root, table).value;
+        this.base = (Node) find
+          ((Node) find(base.root, TreeType.Data).value, table).value;
+        this.fork = (Node) find
+          ((Node) find(fork.root, TreeType.Data).value, table).value;
         this.test = test;
         this.expressionContext = expressionContext;
         this.visitUnchanged = visitUnchanged;
-
-        Plan best = null;
-
-        for (MyIndex index: table.indexes) {
-          Plan plan = new Plan(index);
-
-          for (int i = 0; i < plan.size; ++i) {
-            MyColumn column = index.columns.get(i);
-
-            LiveColumnReference reference = findColumnReference
-              (test, MyTableReference.this, column);
-
-            if (reference != null) {
-              Scan scan = test.makeScan(reference);
-
-              plan.scans[i] = scan;
-
-              if (! scan.isUseful()) {
-                plan.match = true;
-              }
-
-              reference.value = Dummy;
-              plan.references[i] = reference;
-            } else {
-              plan.scans[i] = UnboundedInterval;              
-            }
-
-            if (! plan.match) {
-              plan.complete = false;
-            }
-          }
-
-          for (int i = 0; i < plan.size; ++i) {
-            LiveColumnReference reference = plan.references[i];
-            if (reference != null) {
-              reference.value = Undefined;
-            }
-          }
-            
-          if (best == null
-              || (plan.match && (! best.match))
-              || (plan.complete && (! best.complete)))
-          {
-            best = plan;
-          }
-        }
-
-        this.plan = best;
+        this.plan = choosePlan
+          (base, baseStack, fork, forkStack, test, MyTableReference.this);
 
         plan.iterators[0] = new DiffIterator
           ((Node) find(this.base, plan.index).value,
@@ -1503,26 +1608,20 @@ public class MyDBMS implements DBMS {
            plan.scans[0].evaluate().iterator(),
            visitUnchanged);
 
-        { int i = 0;
-          for (MyColumn column: table.columns) {
-            LiveColumnReference reference = findColumnReference
-              (expressionContext, MyTableReference.this, column);
-
+        for (LiveColumnReference r: expressionContext.columnReferences) {
+          if (r.tableReference == MyTableReference.this) {
             // skip references which will be populated as part of the
             // index scan:
             for (int j = 0; j < plan.size - 1; ++j) {
-              if (reference == plan.references[j]) {
-                reference = null;
+              if (r == plan.references[j]) {
+                r = null;
                 break;
               }
             }
 
-            if (reference != null) {
-              reference.index = i;
-              columnReferences.add(reference);
+            if (r != null) {
+              columnReferences.add(r);
             }
-
-            ++i;
           }
         }
       }
@@ -1542,8 +1641,8 @@ public class MyDBMS implements DBMS {
                 if (pair.fork == null) {
                   return ResultType.Deleted;
                 } else if (pair.base == pair.fork
-                           || equal((Object[]) pair.base.value,
-                                    (Object[]) pair.fork.value))
+                           || treeEqual(baseStack, (Node) pair.base.value,
+                                        forkStack, (Node) pair.fork.value))
                 {
                   if (visitUnchanged) {
                     return ResultType.Unchanged;
@@ -1580,10 +1679,15 @@ public class MyDBMS implements DBMS {
 
       private boolean test(Node node) {
         if (node != null) {
-          Object[] tuple = (Object[]) node.value;
+          Node tree = (Node) node.value;
         
           for (LiveColumnReference r: columnReferences) {
-            r.value = tuple[r.index];
+            Node n = find(tree, r.column);
+            if (n == NullNode) {
+              r.value = null;
+            } else {
+              r.value = n.value;
+            }
           }
 
           Object result = test.evaluate(false);
@@ -1662,12 +1766,9 @@ public class MyDBMS implements DBMS {
     public void visit(ExpressionContext expressionContext,
                       ColumnReferenceVisitor visitor)
     {
-      for (MyColumn column: table.columns) {
-        LiveColumnReference reference = findColumnReference
-          (expressionContext, this, column);
-
-        if (reference != null) {
-          visitor.visit(reference);
+      for (LiveColumnReference r: expressionContext.columnReferences) {
+        if (r.tableReference.table == table) {
+          visitor.visit(r);
         }
       }
     }
@@ -1749,7 +1850,6 @@ public class MyDBMS implements DBMS {
   private static class LiveColumnReference implements LiveExpression {
     public final MyTableReference tableReference;
     public final MyColumn column;
-    public int index;
     public Object value = Undefined;
 
     public LiveColumnReference(MyTableReference tableReference,
@@ -2371,8 +2471,10 @@ public class MyDBMS implements DBMS {
       public void visit(Source source) {
         if (source instanceof MyTableReference) {
           MyTableReference reference = (MyTableReference) source;
-          if (find(base.root, reference.table)
-              != find(fork.root, reference.table))
+          if (find((Node) find(base.root, TreeType.Data).value,
+                   reference.table)
+              != find((Node) find(fork.root, TreeType.Data).value,
+                      reference.table))
           {
             foundChanged = true;
           }
@@ -2635,44 +2737,33 @@ public class MyDBMS implements DBMS {
                 valueIterator.next().makeLiveExpression(expressionContext));
       }
       
-      Object[] tuple = new Object[table.columns.size()];
-      { int i = 0;
-        for (MyColumn c: table.columns) {
-          tuple[i++] = map.get(c).evaluate(false);
-        }
+      Node tree = NullNode;
+      BlazeResult result = new BlazeResult();
+      for (MyColumn c: columns) {
+        tree = blaze(result, context.token, context.stack, tree, c);
+        result.node.value = map.get(c).evaluate(false);
       }
 
-      context.setKey(0, table);
-      context.setKey(1, table.primaryKey);
+      context.setKey(TreeDepth, TreeType.Data);
+      context.setKey(TableDataDepth, table);
+      context.setKey(IndexDataDepth, table.primaryKey);
 
       List<MyColumn> columns = table.primaryKey.columns;
       int i;
       for (i = 0; i < columns.size() - 1; ++i) {
         context.setKey
-          (i + IndexBodyDepth,
+          (i + IndexDataBodyDepth,
            (Comparable) map.get(columns.get(i)).evaluate(false));
       }
 
       // todo: throw duplicate key exception if applicable and
       // updateOnDuplicateKey is false
       context.insertOrUpdate
-        (i + IndexBodyDepth,
-         (Comparable) map.get(columns.get(i)).evaluate(false), tuple);
+        (i + IndexDataBodyDepth,
+         (Comparable) map.get(columns.get(i)).evaluate(false), tree);
 
       return 1;
     }
-  }
-
-  private static int columnIndex(MyTable table, MyColumn column) {
-    int i = 0;
-    for (MyColumn c: table.columns) {
-      if (c == column) {
-        return i;
-      } else {
-        ++i;
-      }
-    }
-    throw new NoSuchElementException();
   }
 
   private static class UpdateTemplate extends MyPatchTemplate {
@@ -2698,43 +2789,33 @@ public class MyDBMS implements DBMS {
                      Object[] parameters)
     {
       ExpressionContext expressionContext = new ExpressionContext(parameters);
-
-      LiveExpression[] template = new LiveExpression
-        [tableReference.table.columns.size()];
-
-      for (int i = 0; i < template.length; ++i) {
-        template[i] = UndefinedExpression;
-      }
       
       LiveExpression liveTest = test.makeLiveExpression(expressionContext);
 
-      Iterator<MyColumn> columnIterator = columns.iterator();
-      Iterator<MyExpression> valueIterator = values.iterator();
-      while (columnIterator.hasNext()) {
-        template[columnIndex(tableReference.table, columnIterator.next())]
-          = valueIterator.next().makeLiveExpression(expressionContext);
+      List<LiveExpression> liveValues = new ArrayList(values.size());
+      for (MyExpression e: values) {
+        liveValues.add(e.makeLiveExpression(expressionContext));
       }
 
       MyTableReference.MySourceIterator iterator = tableReference.iterator
         (EmptyRevision, NullNodeStack, context.result, new NodeStack(),
          liveTest, expressionContext, false);
 
-      List<MyColumn> keyColumns = tableReference.table.primaryKey.columns;
-      int[] key = new int[keyColumns.size()];
-      for (int i = 0; i < key.length; ++i) {
-        key[i] = columnIndex(tableReference.table, keyColumns.get(i));
+      List<MyColumn> keyColumns = iterator.plan.index.columns;
+      boolean deleteAndInsert = false;
+      for (MyColumn c: keyColumns) {
+        if (columns.contains(c)) {
+          deleteAndInsert = true;
+        }
       }
 
-      boolean[] partOfKey = new boolean[template.length];
-      for (int i = 0; i < key.length; ++i) {
-        partOfKey[key[i]] = true;
-      }
-
-      context.setKey(0, tableReference.table);
-      context.setKey(1, tableReference.table.primaryKey);
+      context.setKey(TreeDepth, TreeType.Data);
+      context.setKey(TableDataDepth, tableReference.table);
+      context.setKey(IndexDataDepth, iterator.plan.index);
 
       int count = 0;
       Object deleteToken = null;
+      BlazeResult result = new BlazeResult();
 
       while (true) {
         ResultType type = iterator.nextRow();
@@ -2745,21 +2826,7 @@ public class MyDBMS implements DBMS {
         case Inserted: {
           ++ count;
 
-          Object[] tuple = new Object[template.length];
-          Object[] original = (Object[]) iterator.pair.fork.value;
-          boolean deleteAndInsert = false;
-          for (int i = 0; i < tuple.length; ++i) {
-            LiveExpression v = template[i];
-            if (v == UndefinedExpression) {
-              tuple[i] = original[i];
-            } else {
-              tuple[i] = v.evaluate(false);
-
-              if (partOfKey[i]) {
-                deleteAndInsert = true;
-              }
-            }
-          }
+          Node tree = (Node) iterator.pair.fork.value;
 
           if (deleteAndInsert) {
             if (deleteToken == null) {
@@ -2770,23 +2837,43 @@ public class MyDBMS implements DBMS {
             }
 
             int i;
-            for (i = 0; i < key.length - 1; ++i) {
+            for (i = 0; i < keyColumns.size() - 1; ++i) {
               context.setKey
-                (i + IndexBodyDepth, (Comparable) original[key[i]]);
+                (i + IndexDataBodyDepth,
+                 (Comparable) find(tree, keyColumns.get(i)).value);
             }
 
-            context.delete(i + IndexBodyDepth, (Comparable) original[key[i]]);
+            context.delete
+              (i + IndexDataBodyDepth,
+               (Comparable) find(tree, keyColumns.get(i)).value);
+          }
+
+          for (int i = 0; i < columns.size(); ++i) {
+            Object value = liveValues.get(i).evaluate(false);
+
+            if (value == null) {
+              tree = delete
+                (context.token, context.stack, tree, columns.get(i));
+            } else {
+              tree = blaze
+                (result, context.token, context.stack, tree, columns.get(i));
+
+              result.node.value = value;
+            }
           }
 
           int i;
-          for (i = 0; i < key.length - 1; ++i) {
+          for (i = 0; i < keyColumns.size() - 1; ++i) {
             context.setKey
-              (i + IndexBodyDepth, (Comparable) tuple[key[i]]);
+              (i + IndexDataBodyDepth,
+               (Comparable) find(tree, keyColumns.get(i)).value);
           }
 
           // todo: throw duplicate key exception if applicable
           context.insertOrUpdate
-            (i + IndexBodyDepth, (Comparable) tuple[key[i]], tuple);
+            (i + IndexDataBodyDepth,
+             (Comparable) find(tree, keyColumns.get(i)).value,
+             tree);
         } break;
 
         default:
@@ -2818,14 +2905,11 @@ public class MyDBMS implements DBMS {
         (EmptyRevision, NullNodeStack, context.result, new NodeStack(),
          test.makeLiveExpression(expressionContext), expressionContext, false);
 
-      List<MyColumn> keyColumns = tableReference.table.primaryKey.columns;
-      int[] key = new int[keyColumns.size()];
-      for (int i = 0; i < key.length; ++i) {
-        key[i] = columnIndex(tableReference.table, keyColumns.get(i));
-      }
+      List<MyColumn> keyColumns = iterator.plan.index.columns;
 
-      context.setKey(0, tableReference.table);
-      context.setKey(1, tableReference.table.primaryKey);
+      context.setKey(TreeDepth, TreeType.Data);
+      context.setKey(TableDataDepth, tableReference.table);
+      context.setKey(IndexDataDepth, iterator.plan.index);
 
       int count = 0;
       Object deleteToken = null;
@@ -2846,14 +2930,18 @@ public class MyDBMS implements DBMS {
             context.setToken(deleteToken = new Object());
           }
 
-          Object[] original = (Object[]) iterator.pair.fork.value;
+          Node tree = (Node) iterator.pair.fork.value;
 
           int i;
-          for (i = 0; i < key.length - 1; ++i) {
-            context.setKey(i + IndexBodyDepth, (Comparable) original[key[i]]);
+          for (i = 0; i < keyColumns.size() - 1; ++i) {
+            context.setKey
+              (i + IndexDataBodyDepth,
+               (Comparable) find(tree, keyColumns.get(i)).value);
           }
 
-          context.delete(i + IndexBodyDepth, (Comparable) original[key[i]]);
+          context.delete
+            (i + IndexDataBodyDepth,
+             (Comparable) find(tree, keyColumns.get(i)).value);
         } break;
 
         default:
@@ -2913,7 +3001,15 @@ public class MyDBMS implements DBMS {
     return new MyColumn(type);
   }
 
-  public Index index(List<Column> columns, boolean unique) {
+  public Index index(Table table, List<Column> columns, boolean unique) {
+    MyTable myTable;
+    try {
+      myTable = (MyTable) table;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("table not created by this implementation");        
+    }
+
     List copyOfColumns = new ArrayList(columns);
 
     for (Object c: copyOfColumns) {
@@ -2923,53 +3019,82 @@ public class MyDBMS implements DBMS {
       }
     }
 
-    if (copyOfColumns.size() > MaxIndexDepth) {
+    if (copyOfColumns.size() > MaxIndexDataBodyDepth) {
       throw new IllegalArgumentException
-        ("too many columns in index (maximum is " + MaxIndexDepth
+        ("too many columns in index (maximum is " + MaxIndexDataBodyDepth
          + "; got " + copyOfColumns.size() + ")");
     }
 
-    return new MyIndex(copyOfColumns, unique);
+    return new MyIndex(myTable, copyOfColumns, unique);
   }
 
-  public Table table(Set<Column> columns,
-                     Index primaryKey,
-                     Set<Index> indexes)
+  public ForeignKey foreignKey(Table referingTable,
+                               List<Column> referingColumns,
+                               Table targetTable,
+                               List<Column> targetColumns) 
   {
-    Collection copyOfColumns = new ArrayList(columns);
+    MyTable myReferingTable;
+    try {
+      myReferingTable = (MyTable) referingTable;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("table not created by this implementation");        
+    }
 
-    for (Object c: copyOfColumns) {
+    List copyOfReferingColumns = new ArrayList(referingColumns);
+
+    for (Object c: copyOfReferingColumns) {
       if (! (c instanceof MyColumn)) {
         throw new IllegalArgumentException
           ("column not created by this implementation");
       }
     }
 
-    MyIndex myPrimaryKey;
+    MyTable myTargetTable;
     try {
-      myPrimaryKey = (MyIndex) primaryKey;
+      myTargetTable = (MyTable) targetTable;
     } catch (ClassCastException e) {
       throw new IllegalArgumentException
-        ("index not created by this implementation");
+        ("table not created by this implementation");        
     }
 
-    if (! myPrimaryKey.unique) {
-      throw new IllegalArgumentException("primary key must be unique");      
-    }
+    List copyOfTargetColumns = new ArrayList(targetColumns);
 
-    Collection copyOfIndexes = new ArrayList(indexes);
-
-    for (Object i: copyOfIndexes) {
-      if (! (i instanceof MyIndex)) {
+    for (Object c: copyOfTargetColumns) {
+      if (! (c instanceof MyColumn)) {
         throw new IllegalArgumentException
-          ("index not created by this implementation");
+          ("column not created by this implementation");
       }
     }
 
-    copyOfIndexes.add(primaryKey);
+    if (referingColumns.size() != targetColumns.size()) {
+      throw new IllegalArgumentException("unequal numbers of columns");
+    }
 
-    return new MyTable(Collections.unmodifiableCollection(copyOfColumns),
-                       copyOfIndexes, myPrimaryKey);
+    if (copyOfReferingColumns.size() > MaxIndexDataBodyDepth) {
+      throw new IllegalArgumentException
+        ("too many columns in index (maximum is " + MaxIndexDataBodyDepth
+         + "; got " + copyOfReferingColumns.size() + ")");
+    }
+
+    return new MyForeignKey
+      (myReferingTable, copyOfReferingColumns,
+       myTargetTable, copyOfTargetColumns);
+  }
+
+  public Table table(List<Column> primaryKey) {
+    List copyOfPrimaryKey = new ArrayList(primaryKey);
+
+    for (Object c: copyOfPrimaryKey) {
+      if (! (c instanceof MyColumn)) {
+        throw new IllegalArgumentException
+          ("column not created by this implementation");
+      }
+    }
+
+    MyTable table = new MyTable();
+    table.primaryKey = new MyIndex(table, copyOfPrimaryKey, true);
+    return table;
   }
 
   public Revision revision() {
@@ -3005,11 +3130,6 @@ public class MyDBMS implements DBMS {
     } catch (ClassCastException e) {
       throw new IllegalArgumentException
         ("column not created by this implementation");
-    }
-
-    if (! myTableReference.table.columns.contains(myColumn)) {
-      throw new IllegalArgumentException
-        ("table does not contain specified column");
     }
 
     return new MyColumnReference(myTableReference, myColumn);
@@ -3182,23 +3302,19 @@ public class MyDBMS implements DBMS {
         ("column and value lists must be of equal length");
     }
 
-    Set set = new HashSet(myTable.columns);
+    Set set = new HashSet(myTable.primaryKey.columns);
     for (Object o: copyOfColumns) {
       if (! (o instanceof MyColumn)) {
         throw new IllegalArgumentException
           ("column not created by this implementation");
       }
 
-      if (! (set.contains(o))) {
-        throw new IllegalArgumentException
-          ("column not part of specified table");
-      }
-
       set.remove(o);
     }
 
     if (set.size() != 0) {
-      throw new IllegalArgumentException("not enough columns specified");
+      throw new IllegalArgumentException
+        ("not enough columns specified to satisfy primary key");
     }
 
     for (Object o: copyOfValues) {
@@ -3251,19 +3367,11 @@ public class MyDBMS implements DBMS {
         ("column and value lists must be of equal length");
     }
 
-    Set set = new HashSet(myTableReference.table.columns);
     for (Object o: copyOfColumns) {
       if (! (o instanceof MyColumn)) {
         throw new IllegalArgumentException
           ("column not created by this implementation");
       }
-
-      if (! (set.contains(o))) {
-        throw new IllegalArgumentException
-          ("column not part of specified table");
-      }
-
-      set.remove(o);
     }
 
     for (Object o: copyOfValues) {
@@ -3354,6 +3462,114 @@ public class MyDBMS implements DBMS {
     return myTemplate.apply(myContext, copy(parameters));
   }
 
+  public void add(PatchContext context,
+                  Index index)
+  {
+    MyPatchContext myContext;
+    try {
+      myContext = (MyPatchContext) context;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("patch context not created by this implementation");        
+    }
+
+    if (myContext.token == null) {
+      throw new IllegalStateException("patch context already committed");
+    }
+
+    MyIndex myIndex;
+    try {
+      myIndex = (MyIndex) index;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("index not created by this implementation");        
+    }
+    
+    myContext.setKey(TreeDepth, TreeType.Index);
+    myContext.insertOrUpdate(IndexDepth, myIndex, null);
+  }
+
+  public void remove(PatchContext context,
+                     Index index)
+  {
+    MyPatchContext myContext;
+    try {
+      myContext = (MyPatchContext) context;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("patch context not created by this implementation");        
+    }
+
+    if (myContext.token == null) {
+      throw new IllegalStateException("patch context already committed");
+    }
+
+    MyIndex myIndex;
+    try {
+      myIndex = (MyIndex) index;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("index not created by this implementation");        
+    }
+    
+    myContext.setKey(TreeDepth, TreeType.Index);
+    myContext.delete(IndexDepth, myIndex);
+  }
+
+  public void add(PatchContext context,
+                  ForeignKey foreignKey)
+  {
+    MyPatchContext myContext;
+    try {
+      myContext = (MyPatchContext) context;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("patch context not created by this implementation");        
+    }
+
+    if (myContext.token == null) {
+      throw new IllegalStateException("patch context already committed");
+    }
+    
+    MyForeignKey myForeignKey;
+    try {
+      myForeignKey = (MyForeignKey) foreignKey;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("foreign key not created by this implementation");        
+    }
+
+    myContext.setKey(TreeDepth, TreeType.ForeignKey);
+    myContext.insertOrUpdate(ForeignKeyDepth, myForeignKey, null);
+  }
+
+  public void remove(PatchContext context,
+                     ForeignKey foreignKey)
+  {
+    MyPatchContext myContext;
+    try {
+      myContext = (MyPatchContext) context;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("patch context not created by this implementation");        
+    }
+
+    if (myContext.token == null) {
+      throw new IllegalStateException("patch context already committed");
+    }
+    
+    MyForeignKey myForeignKey;
+    try {
+      myForeignKey = (MyForeignKey) foreignKey;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("foreign key not created by this implementation");        
+    }
+    
+    myContext.setKey(TreeDepth, TreeType.ForeignKey);
+    myContext.delete(ForeignKeyDepth, myForeignKey);
+  }
+
   public Revision commit(PatchContext context) {
     MyPatchContext myContext;
     try {
@@ -3394,13 +3610,27 @@ public class MyDBMS implements DBMS {
     return copy;
   }
 
-  private static Object[] makeTuple(MyTable table, Row row) {
-    int i = 0;
-    Object[] tuple = new Object[table.columns.size()];
-    for (MyColumn c: table.columns) {
-      tuple[i++] = row.value(c);
+  private static void leftmost(NodeStack stack) {
+    while (stack.top.left != NullNode) {
+      push(stack, stack.top.left);
     }
-    return tuple;
+  }
+
+  private static Set columnSet(NodeStack stack, Node ... trees) {
+    Set columns = new HashSet();
+    for (Node n: trees) {
+      if (n != NullNode) {
+        stack = new NodeStack(stack);
+        push(stack, n);
+        leftmost(stack);
+        while (stack.top != null) {
+          columns.add(stack.top.key);
+          next(stack);
+        }
+        popStack(stack);
+      }
+    }
+    return columns;
   }
 
   private static MyRevision mergeRevisions(MyRevision base,
@@ -3423,6 +3653,7 @@ public class MyDBMS implements DBMS {
     int depth = 0;
     int bottom = -1;
     MyTable table = null;
+    TreeType treeType = null;
     MergeTriple triple = new MergeTriple();
     while (true) {
       if (iterators[depth].next(triple)) {
@@ -3439,9 +3670,7 @@ public class MyDBMS implements DBMS {
           } else if (triple.right == null) {
             // do nothing -- left already has insert
           } else if (depth == bottom) {
-            if (equal((Object[]) triple.left.value,
-                      (Object[]) triple.right.value))
-            {
+            if (equal(triple.left.value, triple.right.value)) {
               // do nothing -- inserts match and left already has it
             } else {
               conflict = true;
@@ -3457,30 +3686,16 @@ public class MyDBMS implements DBMS {
             } else if (triple.right == triple.base) {
               // do nothing -- left already has update
             } else if (depth == bottom) {
-              if (equal((Object[]) triple.left.value,
-                        (Object[]) triple.right.value))
+              if (equal(triple.left.value, triple.right.value)
+                  || equal(triple.base.value, triple.right.value))
               {
-                // do nothing -- updates match and left already has it
+                // do nothing -- updates match or only left changed,
+                // and left already has it
+              } else if (equal(triple.base.value, triple.left.value)) {
+                context.insertOrUpdate
+                  (depth, triple.base.key, triple.right.value);
               } else {
-                Object[] baseRow = (Object[]) triple.base.value;
-                Object[] leftRow = (Object[]) triple.left.value;
-                Object[] rightRow = (Object[]) triple.right.value;
-                Object[] resultRow = new Object[baseRow.length];
-                for (int i = 0; i < baseRow.length; ++i) {
-                  if (equal(leftRow[i], rightRow[i])) {
-                    resultRow[i] = leftRow[i];
-                  } else if (equal(baseRow[i], leftRow[i])) {
-                    resultRow[i] = rightRow[i];
-                  } else if (equal(baseRow[i], rightRow[i])) {
-                    resultRow[i] = leftRow[i];
-                  } else {
-                    conflict = true;
-                  }
-                }
-
-                if (! conflict) {
-                  context.insertOrUpdate(depth, triple.base.key, resultRow);
-                }
+                conflict = true;
               }
             } else {
               descend = true;
@@ -3493,34 +3708,36 @@ public class MyDBMS implements DBMS {
         }
 
         if (conflict) {
-          Row baseRow = triple.base == null
-            ? null : new MyRow(table, (Object[]) triple.base.value);
-          Row leftRow = new MyRow(table, (Object[]) triple.left.value);
-          Row rightRow = new MyRow(table, (Object[]) triple.right.value);
-          Row row = conflictResolver.resolveConflict
-            (table, (Collection) table.columns, base, baseRow, left, leftRow,
-             right, rightRow);
-              
-          if (row == leftRow) {
+          Object result = conflictResolver.resolveConflict
+            (table, (Column) triple.left.key,
+             base, triple.base == null ? null : triple.base.value,
+             left, triple.left.value,
+             right, triple.right.value);
+
+          if (equal(result, triple.left.value)) {
             // do nothing -- left already has insert
-          } else if (row == rightRow) {
-            context.insertOrUpdate
-              (depth, triple.right.key, triple.right.value);
+          } else if (result == null) {
+            context.delete(depth, triple.left.key);
           } else {
-            // todo: if the row is not equivalent with respect to the
-            // primary key, either reject it or reset the key path in
-            // the patch context so it is inserted in the right place
-            context.insertOrUpdate
-              (depth, triple.right.key, makeTuple(table, row));
+            context.insertOrUpdate(depth, triple.left.key, result);
           }
         } else if (descend) {
           context.setKey(depth, triple.left.key);
 
-          if (depth == TableDepth) {
-            table = (MyTable) triple.left.key;
-          } else if (depth == IndexDepth) {
-            bottom = ((MyIndex) triple.left.key).columns.size()
-              + IndexBodyDepth - 1;
+          if (depth == TreeDepth) {
+            treeType = (TreeType) triple.left.key;
+
+            if (treeType != TreeType.Data) {
+              table = null;
+              bottom = 1;
+            }
+          } else if (treeType == TreeType.Data) {
+            if (depth == TableDataDepth) {
+              table = (MyTable) triple.left.key;
+            } else if (depth == IndexDataDepth) {
+              bottom = ((MyIndex) triple.left.key).columns.size()
+                + IndexDataBodyDepth;
+            }
           }
           
           ++ depth;
@@ -3932,16 +4149,6 @@ public class MyDBMS implements DBMS {
       if (node.value instanceof Node) {
         out.println(node.key + ": subtree");
         dump((Node) node.value, out, depth + 2);
-      } else if (node.value instanceof Object[]) {
-        Object[] array = (Object[]) node.value;
-        out.print(node.key + ": [");
-        for (int i = 0; i < array.length; ++i) {
-          out.print(String.valueOf(array[i]));
-          if (i < array.length - 1) {
-            out.print(", ");
-          }
-        }
-        out.println("]");
       } else {
         out.println(node.key + ": " + node.value);
       }

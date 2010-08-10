@@ -12,17 +12,19 @@ import java.util.List;
  * derived by applying patches composed of inserts, updates and
  * deletes.  It provides methods to do the following:<p>
  *
- * <ul><li>Define a set of tables, each of which has a collection of
- * columns and a primary key defined as a subset of those columns
- *
- *   <ul><li>The identity of a row is defined by its primary key, and
- *   this is what we use when comparing rows while calculating diffs
- *   and merges</li></ul></li>
+ * <ul><li>Define sets of tables and columns which represent the
+ * structure of the data to be stored</li>
  *
  * <li>Define a new, empty database revision</li>
  *
- * <li>Create new revisions by defining and applying SQL-style
- * inserts, updates, and deletes</li>
+ * <li>Create new revisions by adding indexes and foreign key
+ * constraints and by defining and applying SQL-style inserts,
+ * updates, and deletes
+ *
+ *   <ul><li>A row may contain values for any column, and there is no
+ *   fixed list of columns which each row in a table must have except
+ *   for those specified by the primary key.  A query for a column for
+ *   which a row has no value will return null.</li></ul></li>
  *
  * <li>Calculate three-way merges from revisions for concurrency
  * control</li>
@@ -213,26 +215,33 @@ public interface DBMS {
   public static class DuplicateKeyException extends RuntimeException { }
 
   /**
-   * Opaque type representing a column for use in table definition and
-   * later to identify a column of interest in a query or update.
+   * Opaque type representing a column which may be used to identify
+   * an item of interest in a query or update.
    */
   public interface Column { }
 
   /**
-   * Opaque type representing an index for use in table definition.
+   * Opaque type representing an index on a table.  Instances of this
+   * interface may used to specify a way to organize data for
+   * efficient access and, optionally, what set of columns uniquely
+   * distinguish one row from another.
    */
   public interface Index { }
 
   /**
-   * Opaque type representing a table for use in data definition and
-   * later to identify a column of interest in a query or update.
+   * Opaque type representing a reference from a given table and list
+   * of columns to another table and list of columns such that any row
+   * with a non-null values in the former must match the same value in
+   * a row of the latter.
    */
-  public interface Table { }
+  public interface ForeignKey { }
 
   /**
-   * Opaque type representing a set of tables.
+   * Opaque type representing a table.  Instances of this interface do
+   * not hold any data; they're used only to identify a collection of
+   * rows of interest in a query or update.
    */
-  public interface Database { }
+  public interface Table { }
 
   /**
    * Opaque type representing an immutable database revision.
@@ -305,27 +314,20 @@ public interface DBMS {
   }
 
   /**
-   * An interface for providing random access to the fields of a row
-   * via column identifiers.
-   */
-  public interface Row {
-    public Object value(Column column);
-  }
-
-  /**
    * An interface for resolving conflicts which accepts three versions
-   * of a row -- the base version and two forks -- and returns a row
-   * which resolves the conflict in an application-appropriate way.
+   * of a value -- the base version and two forks -- and returns a
+   * value which resolves the conflict in an application-appropriate
+   * way.
    */
   public interface ConflictResolver {
-    public Row resolveConflict(Table table,
-                               Collection<Column> columns,
-                               Revision base,
-                               Row baseRow,
-                               Revision left,
-                               Row leftRow,
-                               Revision right,
-                               Row rightRow);
+    public Object resolveConflict(Table table,
+                                  Column column,
+                                  Revision base,
+                                  Object baseValue,
+                                  Revision left,
+                                  Object leftValue,
+                                  Revision right,
+                                  Object rightValue);
   }
 
   /**
@@ -343,17 +345,26 @@ public interface DBMS {
    * in an SQL DBMS.  If the index is unique, only one row may be
    * inserted with a given combination of the specified columns.
    */
-  public Index index(List<Column> columns, boolean unique);
+  public Index index(Table table,
+                     List<Column> columns,
+                     boolean unique);
 
   /**
-   * Defines a table which is associated with the specified set of
-   * columns, primary key, and other indexes.  The combination of
-   * columns in the primary key determine the unique identity of each
-   * row in the table for the purposes of diff and merge calculation.
+   * Defines a foreign key constraint such that each row in the
+   * refering table with non-null values for the specified columns
+   * must match a row in the target table.  This key implies a unique
+   * index on the target table and columns.
    */
-  public Table table(Set<Column> columns,
-                     Index primaryKey,                     
-                     Set<Index> indexes);
+  public ForeignKey foreignKey(Table referingTable,
+                               List<Column> referingColumns,
+                               Table targetTable,
+                               List<Column> targetColumns);
+
+  /**
+   * Defines a table using the specified list of columns as the
+   * primary key.
+   */
+  public Table table(List<Column> primaryKey);
 
   /**
    * Defines an empty database revision.
@@ -522,6 +533,9 @@ public interface DBMS {
    *
    * @throws DuplicateKeyException if the specified patch introduces a
    * duplicate key on a unique index
+   *
+   * @throws InvalidReferenceException if the specified patch violates
+   * a foreign key constraint
    */
   public int apply(PatchContext context,
                    PatchTemplate template,
@@ -529,11 +543,45 @@ public interface DBMS {
     throws DuplicateKeyException;
 
   /**
+   * Adds the specified index to the specified patch context.
+   *
+   * @throws DuplicateKeyException if the index is unique and there
+   * are rows with duplicate values in the patch context
+   */
+  public void add(PatchContext context,
+                  Index index);
+
+  /**
+   * Removes the specified index from the specified patch context.
+   */
+  public void remove(PatchContext context,
+                     Index index);
+
+  /**
+   * Adds the specified foreign key to the specified patch context.
+   *
+   * @throws DuplicateKeyException if the there are rows with duplicate
+   * values in the patch context relative to the unique key constraint
+   * implied by the foreign key
+   *
+   * @throws InvalidReferenceException if there are rows in the
+   * refering table which do not match any in the target table
+   */
+  public void add(PatchContext context,
+                  ForeignKey key);
+
+  /**
+   * Removes the specified foreign key from the specified patch context.
+   */
+  public void remove(PatchContext context,
+                     ForeignKey key);
+
+  /**
    * Commits the specified patch context, producing a revision which
    * reflects the base revision with which was created plus any
-   * patches applied thereafter.  This call invalidates the specified
-   * context; any further attempts to apply patches with it will
-   * result in IllegalStateExceptions.
+   * modifications applied thereafter.  This call invalidates the
+   * specified context; any further attempts to apply modifications to
+   * it will result in IllegalStateExceptions.
    */
   public Revision commit(PatchContext context);
 

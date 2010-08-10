@@ -20,7 +20,6 @@ import com.readytalk.oss.dbms.DBMS.Revision;
 import com.readytalk.oss.dbms.DBMS.JoinType;
 import com.readytalk.oss.dbms.DBMS.BinaryOperationType;
 import com.readytalk.oss.dbms.DBMS.UnaryOperationType;
-import com.readytalk.oss.dbms.DBMS.Row;
 
 import java.util.Collection;
 import java.util.List;
@@ -49,6 +48,8 @@ import java.nio.channels.SocketChannel;
 import java.nio.channels.ServerSocketChannel;
 
 public class SQLServer {
+  private static final boolean Debug = true;
+
   private static final Logger log = Logger.getLogger("SQLServer");
 
   public enum Request {
@@ -66,7 +67,6 @@ public class SQLServer {
   private static final int ThreadPoolSize = 256;
 
   private static final Tree Nothing = new Leaf();
-  private static final Set<Index> EmptyIndexSet = new HashSet();
 
   private static class Server {
     public final DBMS dbms;
@@ -103,43 +103,40 @@ public class SQLServer {
     public final Map<String, Class> columnTypes = new HashMap();
     public final ConflictResolver rightPreferenceConflictResolver
       = new ConflictResolver() {
-          public Row resolveConflict(DBMS.Table table,
-                                     Collection<DBMS.Column> columns,
-                                     Revision base,
-                                     Row baseRow,
-                                     Revision left,
-                                     Row leftRow,
-                                     Revision right,
-                                     Row rightRow)
+          public Object resolveConflict(DBMS.Table table,
+                                        DBMS.Column column,
+                                        Revision base,
+                                        Object baseValue,
+                                        Revision left,
+                                        Object leftValue,
+                                        Revision right,
+                                        Object rightValue)
           {
-            return leftPreferenceMerge(columns, baseRow, rightRow, leftRow);
+            return rightValue;
           }
         };
     public final ConflictResolver conflictResolver = new ConflictResolver() {
-        public Row resolveConflict(DBMS.Table table,
-                                   Collection<DBMS.Column> columns,
-                                   Revision base,
-                                   Row baseRow,
-                                   Revision left,
-                                   Row leftRow,
-                                   Revision right,
-                                   Row rightRow)
+        public Object resolveConflict(DBMS.Table table,
+                                      DBMS.Column column,
+                                      Revision base,
+                                      Object baseValue,
+                                      Revision left,
+                                      Object leftValue,
+                                      Revision right,
+                                      Object rightValue)
         {
           if (table == tags) {
-            HashRow result = new HashRow(3);
-            result.put(tagsDatabase, leftRow.value(tagsDatabase));
-            result.put(tagsName, leftRow.value(tagsName));
-            result.put(tagsTag, new Tag
-                       ((String) leftRow.value(tagsName), dbms.merge
-                        (baseRow == null
-                         ? dbms.revision()
-                         : ((Tag) baseRow.value(tagsTag)).revision,
-                         ((Tag) leftRow.value(tagsTag)).revision,
-                         ((Tag) rightRow.value(tagsTag)).revision,
-                         rightPreferenceConflictResolver)));
-            return result;
+            expect(column == tagsTag);
+
+            return new Tag
+              (((Tag) leftValue).name, dbms.merge
+               (baseValue == null
+                ? dbms.revision() : ((Tag) baseValue).revision,
+                ((Tag) leftValue).revision,
+                ((Tag) rightValue).revision,
+                rightPreferenceConflictResolver));
           } else {
-            return leftPreferenceMerge(columns, baseRow, rightRow, leftRow);
+            return rightValue;
           }
         }
       };
@@ -149,10 +146,7 @@ public class SQLServer {
 
       DBMS.Column databasesName = dbms.column(String.class);
       DBMS.Column databasesDatabase = dbms.column(Object.class);
-      DBMS.Table databases = dbms.table
-        (set(databasesName, databasesDatabase),
-         dbms.index(list(databasesName), true),
-         EmptyIndexSet);
+      DBMS.Table databases = dbms.table(list(databasesName));
       DBMS.TableReference databasesReference = dbms.tableReference(databases);
 
       this.insertOrUpdateDatabase = dbms.insertTemplate
@@ -184,10 +178,7 @@ public class SQLServer {
       DBMS.Column tablesDatabase = dbms.column(String.class);
       DBMS.Column tablesName = dbms.column(String.class);
       DBMS.Column tablesTable = dbms.column(Object.class);
-      DBMS.Table tables = dbms.table
-        (set(tablesDatabase, tablesName, tablesTable),
-         dbms.index(list(tablesDatabase, tablesName), true),
-         EmptyIndexSet);
+      DBMS.Table tables = dbms.table(list(tablesDatabase, tablesName));
       DBMS.TableReference tablesReference = dbms.tableReference(tables);
 
       this.insertOrUpdateTable = dbms.insertTemplate
@@ -239,10 +230,7 @@ public class SQLServer {
       this.tagsDatabase = dbms.column(String.class);
       this.tagsName = dbms.column(String.class);
       this.tagsTag = dbms.column(Object.class);
-      this.tags = dbms.table
-        (set(tagsDatabase, tagsName, tagsTag),
-         dbms.index(list(tagsDatabase, tagsName), true),
-         EmptyIndexSet);
+      this.tags = dbms.table(list(tagsDatabase, tagsName));
       DBMS.TableReference tagsReference = dbms.tableReference(tags);
 
       this.insertOrUpdateTag = dbms.insertTemplate
@@ -310,34 +298,16 @@ public class SQLServer {
     }
   }
 
+  private static void expect(boolean v) {
+    if (Debug && ! v) {
+      throw new RuntimeException();
+    }
+  }
+
   private static boolean equal(Object left,
                                Object right)
   {
     return left == right || (left != null && left.equals(right));
-  }
-
-  private static Row leftPreferenceMerge(Collection<DBMS.Column> columns,
-                                         Row base,
-                                         Row left,
-                                         Row right)
-  {
-    if (base == null) {
-      return left;
-    } else {
-      HashRow result = new HashRow(columns.size());
-      for (DBMS.Column c: columns) {
-        Object baseItem = base.value(c);
-        Object leftItem = left.value(c);
-        Object rightItem = right.value(c);
-
-        if (equal(baseItem, leftItem)) {
-          result.put(c, rightItem);
-        } else {
-          result.put(c, leftItem);
-        }
-      }
-      return result;
-    }
   }
 
   private static class LeftPreferenceConflictResolver
@@ -345,33 +315,17 @@ public class SQLServer {
   {
     public int conflictCount;
 
-    public Row resolveConflict(DBMS.Table table,
-                               Collection<DBMS.Column> columns,
-                               Revision base,
-                               Row baseRow,
-                               Revision left,
-                               Row leftRow,
-                               Revision right,
-                               Row rightRow)
+    public Object resolveConflict(DBMS.Table table,
+                                  DBMS.Column column,
+                                  Revision base,
+                                  Object baseValue,
+                                  Revision left,
+                                  Object leftValue,
+                                  Revision right,
+                                  Object rightValue)
     {
       ++ conflictCount;
-      return leftPreferenceMerge(columns, baseRow, leftRow, rightRow);
-    }
-  }
-
-  private static class HashRow implements Row {
-    public final Map<DBMS.Column, Object> values;
-
-    public HashRow(int size) {
-      this.values = new HashMap(size);
-    }
-
-    public void put(DBMS.Column column, Object value) {
-      values.put(column, value);
-    }
-
-    public Object value(DBMS.Column column) {
-      return values.get(column);
+      return leftValue;
     }
   }
 
@@ -1058,11 +1012,9 @@ public class SQLServer {
     DBMS dbms = server.dbms;
     List<Column> columnList = new ArrayList(columns.size());
     Map<String, Column> columnMap = new HashMap(columns.size());
-    Set<DBMS.Column> columnSet = new HashSet(columns.size());
     for (Tree column: columns) {
       Class type = findColumnType(server, ((Terminal) column.get(1)).value);
       DBMS.Column dbmsColumn = dbms.column(type);
-      columnSet.add(dbmsColumn);
   
       Column myColumn = new Column
         (((Name) column.get(0)).value, dbmsColumn, type);
@@ -1087,8 +1039,7 @@ public class SQLServer {
 
     return new Table
       (((Name) tree.get(2)).value, columnList, columnMap, myPrimaryKeyColumns,
-       dbms.table
-       (columnSet, dbms.index(dbmsPrimaryKeyColumns, true), EmptyIndexSet));
+       dbms.table(dbmsPrimaryKeyColumns));
   }
 
   private static void writeInteger(OutputStream out, int v)
@@ -2391,9 +2342,9 @@ public class SQLServer {
     throws IOException
   {
     String s = readString(in);
-    log.info("execute \"" + s + "\"");
     try {
       if (client.copyContext == null) {
+        log.info("execute \"" + s + "\"");
         ParseResult result = client.server.parser.parse
           (new ParseContext(client, s), s);
         if (result.task != null) {

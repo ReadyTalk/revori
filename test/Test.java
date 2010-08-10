@@ -17,7 +17,6 @@ import com.readytalk.oss.dbms.DBMS.QueryTemplate;
 import com.readytalk.oss.dbms.DBMS.QueryResult;
 import com.readytalk.oss.dbms.DBMS.ResultType;
 import com.readytalk.oss.dbms.DBMS.ConflictResolver;
-import com.readytalk.oss.dbms.DBMS.Row;
 import com.readytalk.oss.dbms.imp.MyDBMS;
 
 import java.util.Set;
@@ -25,17 +24,10 @@ import java.util.Collections;
 import java.util.Collection;
 
 public class Test {
-  private static final Set<Index> EmptyIndexSet = Collections.emptySet();
-
   private static void expectEqual(Object value, Object expected) {
-    if (value == null) {
-      if (expected == null) {
-        return;
-      }
-    } else if (value.equals(expected)) {
-      return;
+    if (value != expected && ! value.equals(expected)) {
+      throw new RuntimeException("expected " + expected + "; got " + value);
     }
-    throw new RuntimeException("expected " + expected + "; got " + value);
   }
 
   private static void testSimpleInsertQuery() {
@@ -44,10 +36,7 @@ public class Test {
     Column key = dbms.column(Integer.class);
     Column firstName = dbms.column(String.class);
     Column lastName = dbms.column(String.class);
-    Table names = dbms.table
-      (set(key, firstName, lastName),
-       dbms.index(list(key), true),
-       EmptyIndexSet);
+    Table names = dbms.table(list(key));
 
     Revision tail = dbms.revision();
 
@@ -97,22 +86,19 @@ public class Test {
 
     Column number = dbms.column(Integer.class);
     Column name = dbms.column(String.class);
-    Table numbers = dbms.table
-      (set(number, name),
-       dbms.index(list(number), true),
-       EmptyIndexSet);
+    Table numbers = dbms.table(list(number));
 
     Revision tail = dbms.revision();
 
     PatchContext context = dbms.patchContext(tail);
 
-    dbms.apply
-      (context,
-       dbms.insertTemplate
-       (numbers,
-        list(number, name),
-        list(dbms.constant(42),
-             dbms.constant("forty two")), false));
+    PatchTemplate insert = dbms.insertTemplate
+      (numbers,
+       list(number, name),
+       list(dbms.parameter(),
+            dbms.parameter()), false);
+
+    dbms.apply(context, insert, 42, "forty two");
 
     Revision first = dbms.commit(context);
 
@@ -156,10 +142,7 @@ public class Test {
 
     Column number = dbms.column(Integer.class);
     Column name = dbms.column(String.class);
-    Table numbers = dbms.table
-      (set(number, name),
-       dbms.index(list(number), true),
-       EmptyIndexSet);
+    Table numbers = dbms.table(list(number));
 
     Revision tail = dbms.revision();
 
@@ -256,10 +239,7 @@ public class Test {
 
     Column number = dbms.column(Integer.class);
     Column name = dbms.column(String.class);
-    Table numbers = dbms.table
-      (set(number, name),
-       dbms.index(list(number), true),
-       EmptyIndexSet);
+    Table numbers = dbms.table(list(number));
 
     Revision tail = dbms.revision();
 
@@ -420,10 +400,7 @@ public class Test {
 
     Column number = dbms.column(Integer.class);
     Column name = dbms.column(String.class);
-    Table numbers = dbms.table
-      (set(number, name),
-       dbms.index(list(number), true),
-       EmptyIndexSet);
+    Table numbers = dbms.table(list(number));
 
     Revision tail = dbms.revision();
 
@@ -546,10 +523,7 @@ public class Test {
     Column city = dbms.column(String.class);
     Column zip = dbms.column(Integer.class);
     Column color = dbms.column(String.class);
-    Table places = dbms.table
-      (set(country, state, city, zip, color),
-       dbms.index(list(country, state, city), true),
-       EmptyIndexSet);
+    Table places = dbms.table(list(country, state, city));
 
     Revision tail = dbms.revision();
 
@@ -672,9 +646,9 @@ public class Test {
           dbms.columnReference(placesReference, state),
           dbms.parameter())),
         dbms.operation
-         (BinaryOperationType.Equal,
-          dbms.columnReference(placesReference, city),
-          dbms.parameter())));
+        (BinaryOperationType.Equal,
+         dbms.columnReference(placesReference, city),
+         dbms.parameter())));
 
     result = dbms.diff(tail, first, countryStateCityEqual,
                        "France", "Colorado", "Paris");
@@ -695,10 +669,7 @@ public class Test {
 
     Column number = dbms.column(Integer.class);
     Column name = dbms.column(String.class);
-    Table numbers = dbms.table
-      (set(number, name),
-       dbms.index(list(number), true),
-       EmptyIndexSet);
+    Table numbers = dbms.table(list(number));
 
     Revision tail = dbms.revision();
 
@@ -910,10 +881,7 @@ public class Test {
 
     Column number = dbms.column(Integer.class);
     Column name = dbms.column(String.class);
-    Table numbers = dbms.table
-      (set(number, name),
-       dbms.index(list(number), true),
-       EmptyIndexSet);
+    Table numbers = dbms.table(list(number));
 
     Revision tail = dbms.revision();
 
@@ -1151,10 +1119,7 @@ public class Test {
 
     Column number = dbms.column(Integer.class);
     Column name = dbms.column(String.class);
-    Table numbers = dbms.table
-      (set(number, name),
-       dbms.index(list(number), true),
-       EmptyIndexSet);
+    Table numbers = dbms.table(list(number));
 
     Revision tail = dbms.revision();
 
@@ -1238,16 +1203,10 @@ public class Test {
 
     Column id = dbms.column(Integer.class);
     Column name = dbms.column(String.class);
-    Table names = dbms.table
-      (set(id, name),
-       dbms.index(list(id), true),
-       EmptyIndexSet);
+    Table names = dbms.table(list(id));
 
     Column nickname = dbms.column(String.class);
-    Table nicknames = dbms.table
-      (set(id, nickname),
-       dbms.index(list(id, nickname), true),
-       EmptyIndexSet);
+    Table nicknames = dbms.table(list(id, nickname));
 
     Revision tail = dbms.revision();
 
@@ -1405,29 +1364,17 @@ public class Test {
 
     Column id = dbms.column(Integer.class);
     Column name = dbms.column(String.class);
-    Table names = dbms.table
-      (set(id, name),
-       dbms.index(list(id), true),
-       EmptyIndexSet);
+    Table names = dbms.table(list(id));
 
     Column nickname = dbms.column(String.class);
-    Table nicknames = dbms.table
-      (set(id, nickname),
-       dbms.index(list(id, nickname), true),
-       EmptyIndexSet);
+    Table nicknames = dbms.table(list(id, nickname));
 
     Column lastname = dbms.column(String.class);
-    Table lastnames = dbms.table
-      (set(name, lastname),
-       dbms.index(list(name), true),
-       EmptyIndexSet);
+    Table lastnames = dbms.table(list(name));
 
     Column string = dbms.column(String.class);
     Column color = dbms.column(String.class);
-    Table colors = dbms.table
-      (set(string, color),
-       dbms.index(list(string), true),
-       EmptyIndexSet);
+    Table colors = dbms.table(list(string));
 
     Revision tail = dbms.revision();
 
@@ -1610,7 +1557,7 @@ public class Test {
     expectEqual(result.nextRow(), ResultType.End);
 
     QueryTemplate namesInnerLastnamesLeftNicknamesLeftColors
-       = dbms.queryTemplate
+      = dbms.queryTemplate
       (list((Expression) dbms.columnReference(namesReference, name),
             (Expression) dbms.columnReference(lastnamesReference, lastname),
             (Expression) dbms.columnReference(nicknamesReference, nickname),
@@ -1671,12 +1618,9 @@ public class Test {
   public static void testMerges() {
     DBMS dbms = new MyDBMS();
 
-    final Column number = dbms.column(Integer.class);
-    final Column name = dbms.column(String.class);
-    Table numbers = dbms.table
-      (set(number, name),
-       dbms.index(list(number), true),
-       EmptyIndexSet);
+    Column number = dbms.column(Integer.class);
+    Column name = dbms.column(String.class);
+    Table numbers = dbms.table(list(number));
 
     Revision tail = dbms.revision();
 
@@ -1811,32 +1755,20 @@ public class Test {
     right = dbms.commit(context);
 
     merge = dbms.merge(base, left, right, new ConflictResolver() {
-        public Row resolveConflict(Table table,
-                                   Collection<DBMS.Column> columns,
-                                   Revision base,
-                                   Row baseRow,
-                                   Revision left,
-                                   Row leftRow,
-                                   Revision right,
-                                   Row rightRow)
+        public Object resolveConflict(Table table,
+                                      Column column,
+                                      Revision base,
+                                      Object baseValue,
+                                      Revision left,
+                                      Object leftValue,
+                                      Revision right,
+                                      Object rightValue)
         {
-          expectEqual(baseRow, null);
-          expectEqual(leftRow.value(number), 4);
-          expectEqual(leftRow.value(name), "four");
-          expectEqual(rightRow.value(number), 4);
-          expectEqual(rightRow.value(name), "shi");
+          expectEqual(baseValue, null);
+          expectEqual(leftValue, "four");
+          expectEqual(rightValue, "shi");
           
-          return new Row() {
-            public Object value(Column column) {
-              if (column == number) {
-                return 4;
-              } else if (column == name) {
-                return "quatro";
-              } else {
-                throw new RuntimeException("unexpected column");
-              }
-            }
-          };
+          return "quatro";
         }
       });
 
@@ -1859,33 +1791,20 @@ public class Test {
     right = dbms.commit(context);
 
     merge = dbms.merge(base, left, right, new ConflictResolver() {
-        public Row resolveConflict(Table table,
-                                   Collection<DBMS.Column> columns,
-                                   Revision base,
-                                   Row baseRow,
-                                   Revision left,
-                                   Row leftRow,
-                                   Revision right,
-                                   Row rightRow)
+        public Object resolveConflict(Table table,
+                                      Column column,
+                                      Revision base,
+                                      Object baseValue,
+                                      Revision left,
+                                      Object leftValue,
+                                      Revision right,
+                                      Object rightValue)
         {
-          expectEqual(baseRow.value(number), 1);
-          expectEqual(baseRow.value(name), "one");
-          expectEqual(leftRow.value(number), 1);
-          expectEqual(leftRow.value(name), "ichi");
-          expectEqual(rightRow.value(number), 1);
-          expectEqual(rightRow.value(name), "uno");
+          expectEqual(baseValue, "one");
+          expectEqual(leftValue, "ichi");
+          expectEqual(rightValue, "uno");
           
-          return new Row() {
-            public Object value(Column column) {
-              if (column == number) {
-                return 1;
-              } else if (column == name) {
-                return "unit";
-              } else {
-                throw new RuntimeException("unexpected column");
-              }
-            }
-          };
+          return "unit";
         }
       });
 
@@ -1910,32 +1829,20 @@ public class Test {
     Revision t2 = dbms.commit(context);
 
     merge = dbms.merge(tail, t1, t2, new ConflictResolver() {
-        public Row resolveConflict(Table table,
-                                   Collection<DBMS.Column> columns,
-                                   Revision base,
-                                   Row baseRow,
-                                   Revision left,
-                                   Row leftRow,
-                                   Revision right,
-                                   Row rightRow)
+        public Object resolveConflict(Table table,
+                                      Column column,
+                                      Revision base,
+                                      Object baseValue,
+                                      Revision left,
+                                      Object leftValue,
+                                      Revision right,
+                                      Object rightValue)
         {
-          expectEqual(baseRow, null);
-          expectEqual(leftRow.value(number), 1);
-          expectEqual(leftRow.value(name), "one");
-          expectEqual(rightRow.value(number), 1);
-          expectEqual(rightRow.value(name), "uno");
+          expectEqual(baseValue, null);
+          expectEqual(leftValue, "one");
+          expectEqual(rightValue, "uno");
           
-          return new Row() {
-            public Object value(Column column) {
-              if (column == number) {
-                return 1;
-              } else if (column == name) {
-                return "unit";
-              } else {
-                throw new RuntimeException("unexpected column");
-              }
-            }
-          };
+          return "unit";
         }
       });
 
@@ -1960,32 +1867,20 @@ public class Test {
     t2 = dbms.commit(context);
 
     merge = dbms.merge(tail, t1, t2, new ConflictResolver() {
-        public Row resolveConflict(Table table,
-                                   Collection<DBMS.Column> columns,
-                                   Revision base,
-                                   Row baseRow,
-                                   Revision left,
-                                   Row leftRow,
-                                   Revision right,
-                                   Row rightRow)
+        public Object resolveConflict(Table table,
+                                      Column column,
+                                      Revision base,
+                                      Object baseValue,
+                                      Revision left,
+                                      Object leftValue,
+                                      Revision right,
+                                      Object rightValue)
         {
-          expectEqual(baseRow, null);
-          expectEqual(leftRow.value(number), 1);
-          expectEqual(leftRow.value(name), "one");
-          expectEqual(rightRow.value(number), 1);
-          expectEqual(rightRow.value(name), "uno");
+          expectEqual(baseValue, null);
+          expectEqual(leftValue, "one");
+          expectEqual(rightValue, "uno");
           
-          return new Row() {
-            public Object value(Column column) {
-              if (column == number) {
-                return 1;
-              } else if (column == name) {
-                return "unit";
-              } else {
-                throw new RuntimeException("unexpected column");
-              }
-            }
-          };
+          return "unit";
         }
       });
 
@@ -2006,10 +1901,7 @@ public class Test {
     Column number = dbms.column(Integer.class);
     Column color = dbms.column(String.class);
     Column shape = dbms.column(String.class);
-    Table numbers = dbms.table
-      (set(number, color, shape),
-       dbms.index(list(number, color), true),
-       EmptyIndexSet);
+    Table numbers = dbms.table(list(number, color));
 
     Revision tail = dbms.revision();
 
@@ -2053,7 +1945,7 @@ public class Test {
 
     PatchTemplate updateShapeWhereNumberEqual = dbms.updateTemplate
       (numbersReference,
-        dbms.operation
+       dbms.operation
        (BinaryOperationType.Equal,
         dbms.columnReference(numbersReference, number),
         dbms.parameter()),
@@ -2083,10 +1975,7 @@ public class Test {
     Column number = dbms.column(Integer.class);
     Column color = dbms.column(String.class);
     Column shape = dbms.column(String.class);
-    Table numbers = dbms.table
-      (set(number, color, shape),
-       dbms.index(list(number, color), true),
-       EmptyIndexSet);
+    Table numbers = dbms.table(list(number, color));
 
     Revision tail = dbms.revision();
 
@@ -2130,7 +2019,7 @@ public class Test {
 
     PatchTemplate deleteWhereNumberEqual = dbms.deleteTemplate
       (numbersReference,
-        dbms.operation
+       dbms.operation
        (BinaryOperationType.Equal,
         dbms.columnReference(numbersReference, number),
         dbms.parameter()));
@@ -2151,10 +2040,7 @@ public class Test {
 
     Column number = dbms.column(Integer.class);
     Column name = dbms.column(String.class);
-    Table numbers = dbms.table
-      (set(number, name),
-       dbms.index(list(number), true),
-       EmptyIndexSet);
+    Table numbers = dbms.table(list(number));
 
     Revision tail = dbms.revision();
 
@@ -2176,7 +2062,7 @@ public class Test {
 
     PatchTemplate updateNumberWhereNumberEqual = dbms.updateTemplate
       (numbersReference,
-        dbms.operation
+       dbms.operation
        (BinaryOperationType.Equal,
         dbms.columnReference(numbersReference, number),
         dbms.parameter()),
