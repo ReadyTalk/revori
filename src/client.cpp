@@ -228,10 +228,10 @@ readInteger(Context* context)
 {
   char dst[4];
   int r = readBytes(context, dst, 4);
-  return r < 4 ? -1 : (  (((int) dst[0]) << 24)
-                       | (((int) dst[1]) << 16)
-                       | (((int) dst[2]) <<  8)
-                       | (((int) dst[3])      ));
+  return r < 4 ? -1 : (((dst[0] & 0xFF) << 24) |
+                       ((dst[1] & 0xFF) << 16) |
+                       ((dst[2] & 0xFF) <<  8) |
+                       ((dst[3] & 0xFF)      ));
 }
 
 char*
