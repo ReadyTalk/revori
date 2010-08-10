@@ -38,6 +38,60 @@ public class Test {
     throw new RuntimeException("expected " + expected + "; got " + value);
   }
 
+  private static void testSimpleInsertQuery() {
+    DBMS dbms = new MyDBMS();
+
+    Column key = dbms.column(Integer.class);
+    Column firstName = dbms.column(String.class);
+    Column lastName = dbms.column(String.class);
+    Table names = dbms.table
+      (set(key, firstName, lastName),
+       dbms.index(list(key), true),
+       EmptyIndexSet);
+
+    Revision tail = dbms.revision();
+
+    PatchContext context = dbms.patchContext(tail);
+
+    PatchTemplate insert = dbms.insertTemplate
+      (names,
+       list(key, firstName, lastName),
+       list(dbms.parameter(),
+            dbms.parameter(),
+            dbms.parameter()), false);
+
+    dbms.apply(context, insert, 1, "Charles", "Norris");
+    dbms.apply(context, insert, 2, "Chuck", "Norris");
+    dbms.apply(context, insert, 3, "Chuck", "Taylor");
+
+    Revision first = dbms.commit(context);
+
+    TableReference namesReference = dbms.tableReference(names);
+
+    QueryTemplate any = dbms.queryTemplate
+      (list((Expression) dbms.columnReference(namesReference, key),
+            (Expression) dbms.columnReference(namesReference, firstName),
+            (Expression) dbms.columnReference(namesReference, lastName)),
+       namesReference,
+       dbms.constant(true));
+
+    QueryResult result = dbms.diff(tail, first, any);
+
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), 1);
+    expectEqual(result.nextItem(), "Charles");
+    expectEqual(result.nextItem(), "Norris");
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), 2);
+    expectEqual(result.nextItem(), "Chuck");
+    expectEqual(result.nextItem(), "Norris");
+    expectEqual(result.nextRow(), ResultType.Inserted);
+    expectEqual(result.nextItem(), 3);
+    expectEqual(result.nextItem(), "Chuck");
+    expectEqual(result.nextItem(), "Taylor");
+    expectEqual(result.nextRow(), ResultType.End);
+  }
+
   private static void testSimpleInsertDiffs() {
     DBMS dbms = new MyDBMS();
 
@@ -2155,6 +2209,8 @@ public class Test {
   }
 
   public static void main(String[] args) {
+    testSimpleInsertQuery();
+
     testSimpleInsertDiffs();
 
     testLargerInsertDiffs();
