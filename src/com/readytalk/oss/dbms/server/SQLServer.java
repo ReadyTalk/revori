@@ -473,17 +473,20 @@ public class SQLServer {
 
   private static class Table {
     public final String name;
-    public final Map<String, Column> columns;
+    public final List<Column> columnList;
+    public final Map<String, Column> columnMap;
     public final List<Column> primaryKeyColumns;
     public final DBMS.Table table;
 
     public Table(String name,
-                 Map<String, Column> columns,
+                 List<Column> columnList,
+                 Map<String, Column> columnMap,
                  List<Column> primaryKeyColumns,
                  DBMS.Table table)
     {
       this.name = name;
-      this.columns = columns;
+      this.columnList = columnList;
+      this.columnMap = columnMap;
       this.primaryKeyColumns = primaryKeyColumns;
       this.table = table;
     }
@@ -769,7 +772,7 @@ public class SQLServer {
     DBMS.Column column = null;
     for (TableReference r: tableReferences) {
       if (tableName == null || tableName.equals(r.table.name)) {
-        Column c = r.table.columns.get(columnName);
+        Column c = r.table.columnMap.get(columnName);
         if (c != null) {
           if (column != null) {
             throw new RuntimeException("ambiguous column name: " + columnName);
@@ -855,7 +858,7 @@ public class SQLServer {
     if (tree instanceof Terminal) {
       DBMS dbms = server.dbms;
       for (TableReference tableReference: tableReferences) {
-        for (Column column: tableReference.table.columns.values()) {
+        for (Column column: tableReference.table.columnList) {
           expressions.add
             (dbms.columnReference(tableReference.reference, column.column));
         }
@@ -914,7 +917,7 @@ public class SQLServer {
   private static Column findColumn(Table table,
                                    String name)
   {
-    Column c = table.columns.get(name);
+    Column c = table.columnMap.get(name);
     if (c == null) {
       throw new RuntimeException("no such column: " + name);
     } else {
@@ -936,8 +939,8 @@ public class SQLServer {
                                                           Tree tree)
   {
     if (tree == Nothing) {
-      List<DBMS.Column> columns = new ArrayList(table.columns.size());
-      for (Column c: table.columns.values()) {
+      List<DBMS.Column> columns = new ArrayList(table.columnList.size());
+      for (Column c: table.columnList) {
         columns.add(c.column);
       }
       return columns;
@@ -993,7 +996,7 @@ public class SQLServer {
   }
 
   private static Column findColumn(Table table, DBMS.Column column) {
-    for (Column c: table.columns.values()) {
+    for (Column c: table.columnList) {
       if (c.column == column) {
         return c;
       }
@@ -1053,6 +1056,7 @@ public class SQLServer {
     }
 
     DBMS dbms = server.dbms;
+    List<Column> columnList = new ArrayList(columns.size());
     Map<String, Column> columnMap = new HashMap(columns.size());
     Set<DBMS.Column> columnSet = new HashSet(columns.size());
     for (Tree column: columns) {
@@ -1062,6 +1066,7 @@ public class SQLServer {
   
       Column myColumn = new Column
         (((Name) column.get(0)).value, dbmsColumn, type);
+      columnList.add(myColumn);
       columnMap.put(myColumn.name, myColumn);
     }
 
@@ -1081,7 +1086,7 @@ public class SQLServer {
     }
 
     return new Table
-      (((Name) tree.get(2)).value, columnMap, myPrimaryKeyColumns,
+      (((Name) tree.get(2)).value, columnList, columnMap, myPrimaryKeyColumns,
        dbms.table
        (columnSet, dbms.index(dbmsPrimaryKeyColumns, true), EmptyIndexSet));
   }
@@ -1167,7 +1172,7 @@ public class SQLServer {
       }
     } else {
       for (Column c: findTable
-             (client, ((Name) tree.get(2)).value).columns.values())
+             (client, ((Name) tree.get(2)).value).columnList)
       {
         sb.append("\n");
         sb.append(c.name);
@@ -1503,7 +1508,7 @@ public class SQLServer {
                  context.client.database.name, tableName);
 
               if (result.nextRow() == ResultType.Inserted) {
-                for (Column c: ((Table) result.nextItem()).columns.values()) {
+                for (Column c: ((Table) result.nextItem()).columnList) {
                   if (c.name.startsWith(start)) {
                     columns.add(c.name);
                   }
@@ -2386,6 +2391,7 @@ public class SQLServer {
     throws IOException
   {
     String s = readString(in);
+    log.info("execute \"" + s + "\"");
     try {
       if (client.copyContext == null) {
         ParseResult result = client.server.parser.parse
