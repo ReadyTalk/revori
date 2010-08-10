@@ -72,6 +72,14 @@ command summary:
 
       -- Name a new database
 
+  list { databases | tables | tags }
+
+      -- List all the databases, tables, or tags in the current scope
+
+  list columns of <table>
+
+      -- list the columns of the specified table
+
   help
 
       -- Display this command summary
