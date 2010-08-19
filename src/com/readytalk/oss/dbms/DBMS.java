@@ -17,9 +17,8 @@ import java.util.List;
  *
  * <li>Define a new, empty database revision</li>
  *
- * <li>Create new revisions by adding indexes and foreign key
- * constraints and by defining and applying SQL-style inserts,
- * updates, and deletes
+ * <li>Create new revisions by adding indexes and by defining and
+ * applying SQL-style inserts, updates, and deletes
  *
  *   <ul><li>A row may contain values for any column, and there is no
  *   fixed list of columns which each row in a table must have except
@@ -210,7 +209,7 @@ public interface DBMS {
   /**
    * Exception thrown when an insert or update introduces a row which
    * conflicts with an existing row by matching the same key of a
-   * unique index.
+   * primary key.
    */
   public static class DuplicateKeyException extends RuntimeException { }
 
@@ -223,18 +222,9 @@ public interface DBMS {
   /**
    * Opaque type representing an index on a table.  Instances of this
    * interface may used to specify a way to organize data for
-   * efficient access and, optionally, what set of columns uniquely
-   * distinguish one row from another.
+   * efficient access.
    */
   public interface Index { }
-
-  /**
-   * Opaque type representing a reference from a given table and list
-   * of columns to another table and list of columns such that any row
-   * with a non-null values in the former must match the same value in
-   * a row of the latter.
-   */
-  public interface ForeignKey { }
 
   /**
    * Opaque type representing a table.  Instances of this interface do
@@ -342,23 +332,10 @@ public interface DBMS {
   /**
    * Defines an index which is associated with the specified list of
    * columns.  The order of the list determines the indexing order as
-   * in an SQL DBMS.  If the index is unique, only one row may be
-   * inserted with a given combination of the specified columns.
+   * in an SQL DBMS.
    */
   public Index index(Table table,
-                     List<Column> columns,
-                     boolean unique);
-
-  /**
-   * Defines a foreign key constraint such that each row in the
-   * refering table with non-null values for the specified columns
-   * must match a row in the target table.  This key implies a unique
-   * index on the target table and columns.
-   */
-  public ForeignKey foreignKey(Table referingTable,
-                               List<Column> referingColumns,
-                               Table targetTable,
-                               List<Column> targetColumns);
+                     List<Column> columns);
 
   /**
    * Defines a table using the specified list of columns as the
@@ -480,9 +457,9 @@ public interface DBMS {
    * the values to be placed into those columns.
    *
    * If, when this template is applied, there is already row with a
-   * matching key on a unique index in the table, a duplicate key
-   * exception is thrown unless updateOnDuplicateKey is true, in which
-   * case the existing row is replaced.
+   * matching primary key in the table, a duplicate key exception is
+   * thrown unless updateOnDuplicateKey is true, in which case the
+   * existing row is replaced.
    */
   public PatchTemplate insertTemplate(Table table,
                                       List<Column> columns,
@@ -526,27 +503,26 @@ public interface DBMS {
    * left-to-right in the order they where specified when the patch
    * template was defined.
    *
-   * @returns the number of rows affected by the patch
+   * @return the number of rows affected by the patch
    *
    * @throws IllegalStateException if the specified patch context has
    * already been committed
    *
    * @throws DuplicateKeyException if the specified patch introduces a
-   * duplicate key on a unique index
+   * duplicate primary key
    *
-   * @throws InvalidReferenceException if the specified patch violates
-   * a foreign key constraint
+   * @throws ClassCastException if an inserted or updated value cannot
+   * be cast to the declared type of its column
    */
   public int apply(PatchContext context,
                    PatchTemplate template,
                    Object ... parameters)
-    throws DuplicateKeyException;
+    throws IllegalStateException,
+           DuplicateKeyException,
+           ClassCastException;
 
   /**
    * Adds the specified index to the specified patch context.
-   *
-   * @throws DuplicateKeyException if the index is unique and there
-   * are rows with duplicate values in the patch context
    */
   public void add(PatchContext context,
                   Index index);
@@ -556,25 +532,6 @@ public interface DBMS {
    */
   public void remove(PatchContext context,
                      Index index);
-
-  /**
-   * Adds the specified foreign key to the specified patch context.
-   *
-   * @throws DuplicateKeyException if the there are rows with duplicate
-   * values in the patch context relative to the unique key constraint
-   * implied by the foreign key
-   *
-   * @throws InvalidReferenceException if there are rows in the
-   * refering table which do not match any in the target table
-   */
-  public void add(PatchContext context,
-                  ForeignKey key);
-
-  /**
-   * Removes the specified foreign key from the specified patch context.
-   */
-  public void remove(PatchContext context,
-                     ForeignKey key);
 
   /**
    * Commits the specified patch context, producing a revision which
