@@ -94,7 +94,7 @@ connect(const char* host, int port)
   addrinfo* result;
   int r = getaddrinfo(host, 0, &hints, &result);
   if (r != 0) {
-    fprintf(stderr, "unable to resolve localhost: %s\n", gai_strerror(r));
+    fprintf(stderr, "unable to resolve host %s: %s\n", host, gai_strerror(r));
     return -1;
   }
 
