@@ -17,6 +17,7 @@ import com.readytalk.oss.dbms.DBMS.QueryTemplate;
 import com.readytalk.oss.dbms.DBMS.QueryResult;
 import com.readytalk.oss.dbms.DBMS.ResultType;
 import com.readytalk.oss.dbms.DBMS.ConflictResolver;
+import com.readytalk.oss.dbms.DBMS.DuplicateKeyResolution;
 import com.readytalk.oss.dbms.DBMS.DuplicateKeyException;
 import com.readytalk.oss.dbms.imp.MyDBMS;
 
@@ -48,7 +49,7 @@ public class Test {
        list(key, firstName, lastName),
        list(dbms.parameter(),
             dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     dbms.apply(context, insert, 1, "Charles", "Norris");
     dbms.apply(context, insert, 2, "Chuck", "Norris");
@@ -97,7 +98,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     dbms.apply(context, insert, 42, "forty two");
 
@@ -151,7 +152,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -248,7 +249,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -409,7 +410,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -535,7 +536,7 @@ public class Test {
             dbms.parameter(),
             dbms.parameter(),
             dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
     
     PatchContext context = dbms.patchContext(tail);
 
@@ -678,7 +679,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -890,7 +891,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -1128,7 +1129,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -1215,13 +1216,13 @@ public class Test {
       (names,
        list(id, name),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchTemplate nicknameInsert = dbms.insertTemplate
       (nicknames,
        list(id, nickname),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -1383,25 +1384,25 @@ public class Test {
       (names,
        list(id, name),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchTemplate nicknameInsert = dbms.insertTemplate
       (nicknames,
        list(id, nickname),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchTemplate lastnameInsert = dbms.insertTemplate
       (lastnames,
        list(name, lastname),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchTemplate colorInsert = dbms.insertTemplate
       (colors,
        list(string, color),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -1629,7 +1630,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -1911,7 +1912,7 @@ public class Test {
        list(number, color, shape),
        list(dbms.parameter(),
             dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -1985,7 +1986,7 @@ public class Test {
        list(number, color, shape),
        list(dbms.parameter(),
             dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -2049,7 +2050,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -2108,7 +2109,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -2141,7 +2142,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()), true);
+            dbms.parameter()), DuplicateKeyResolution.Overwrite);
 
     dbms.apply(context, insertOrUpdate, 1, "uno");
 
@@ -2180,7 +2181,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -2252,7 +2253,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     try {
       dbms.apply(dbms.patchContext(tail), insert, "1", "one");
@@ -2300,7 +2301,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -2454,7 +2455,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -2554,7 +2555,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchContext context = dbms.patchContext(tail);
 
@@ -2677,7 +2678,7 @@ public class Test {
       (numbers,
        list(number, name),
        list(dbms.parameter(),
-            dbms.parameter()), false);
+            dbms.parameter()), DuplicateKeyResolution.Throw);
 
     PatchContext context = dbms.patchContext(tail);
 

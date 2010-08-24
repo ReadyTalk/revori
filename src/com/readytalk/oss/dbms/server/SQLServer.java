@@ -151,7 +151,8 @@ public class SQLServer {
 
       this.insertOrUpdateDatabase = dbms.insertTemplate
         (databases, list(databasesName, databasesDatabase),
-         list(dbms.parameter(), dbms.parameter()), true);
+         list(dbms.parameter(), dbms.parameter()),
+         DBMS.DuplicateKeyResolution.Overwrite);
 
       this.listDatabases = dbms.queryTemplate
         (list((Expression) dbms.columnReference
@@ -183,7 +184,8 @@ public class SQLServer {
 
       this.insertOrUpdateTable = dbms.insertTemplate
         (tables, list(tablesDatabase, tablesName, tablesTable),
-         list(dbms.parameter(), dbms.parameter(), dbms.parameter()), true);
+         list(dbms.parameter(), dbms.parameter(), dbms.parameter()),
+         DBMS.DuplicateKeyResolution.Overwrite);
 
       this.listTables = dbms.queryTemplate
         (list((Expression) dbms.columnReference(tablesReference, tablesTable)),
@@ -235,7 +237,8 @@ public class SQLServer {
 
       this.insertOrUpdateTag = dbms.insertTemplate
         (tags, list(tagsDatabase, tagsName, tagsTag),
-         list(dbms.parameter(), dbms.parameter(), dbms.parameter()), true);
+         list(dbms.parameter(), dbms.parameter(), dbms.parameter()),
+         DBMS.DuplicateKeyResolution.Overwrite);
 
       this.listTags = dbms.queryTemplate
         (list((Expression) dbms.columnReference(tagsReference, tagsTag)),
@@ -910,7 +913,8 @@ public class SQLServer {
 
     return client.server.dbms.insertTemplate
       (table.table, makeOptionalColumnList(table, tree.get(3)),
-       makeExpressionList(client.server, tree.get(6), null), false);
+       makeExpressionList(client.server, tree.get(6), null),
+       DBMS.DuplicateKeyResolution.Throw);
   }
 
   private static PatchTemplate makeUpdateTemplate(Client client,
@@ -972,7 +976,8 @@ public class SQLServer {
       columnTypes.add(findColumn(table, c).type);
     }
 
-    return dbms.insertTemplate(table.table, columns, values, false);
+    return dbms.insertTemplate
+      (table.table, columns, values, DBMS.DuplicateKeyResolution.Throw);
   }
 
   private static Class findColumnType(Server server,
