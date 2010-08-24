@@ -3930,8 +3930,8 @@ public class MyDBMS implements DBMS {
     MyPatchContext context = new MyPatchContext
       (new Object(), left, new NodeStack());
 
-    Map<MyTable, List<IndexKey>> indexKeyMap = new HashMap();
-    Map<MyTable, List<IndexKey>> newIndexKeyMap = new HashMap();
+    List<IndexKey> indexKeys = new ArrayList();
+    List<IndexKey> newIndexKeys = new ArrayList();
 
     NodeStack baseStack = new NodeStack();
     NodeStack leftStack = new NodeStack();
@@ -4020,9 +4020,6 @@ public class MyDBMS implements DBMS {
               table = (MyTable) triple.left.key;
 
               if (table != IndexTable) {
-                List<IndexKey> indexKeys = null;
-                List<IndexKey> newIndexKeys = null;
-
                 DiffIterator indexIterator = new DiffIterator
                   (pathFind(left.root, IndexTable, IndexTable.primaryKey.key,
                             table),
@@ -4039,9 +4036,6 @@ public class MyDBMS implements DBMS {
                     if (pair.fork != null) {
                       IndexKey indexKey = (IndexKey) pair.base.key;
                       if (! indexKey.equals(table.primaryKey.key)) {
-                        if (indexKeys == null) {
-                          indexKeyMap.put(table, indexKeys = new ArrayList());
-                        }
                         indexKeys.add(indexKey);
                       }
                     } else {
@@ -4051,11 +4045,7 @@ public class MyDBMS implements DBMS {
                   } else if (pair.fork != null) {
                     IndexKey indexKey = (IndexKey) pair.fork.key;
                     if (! indexKey.equals(table.primaryKey.key)) {
-                      if (newIndexKeys == null) {
-                        newIndexKeyMap.put
-                          (table, newIndexKeys = new ArrayList());
-                      }
-                      newIndexKeys.add((IndexKey) indexKey);
+                      newIndexKeys.add(indexKey);
                     }
                   }
                 }
@@ -4101,75 +4091,68 @@ public class MyDBMS implements DBMS {
     }
 
     // Update non-primary-key data trees
-    for (Map.Entry<MyTable, List<IndexKey>> e: indexKeyMap.entrySet()) {
-      MyTable table = e.getKey();
+    for (IndexKey indexKey: indexKeys) {
+      List<MyColumn> keyColumns = indexKey.index.columns;
 
-      context.setKey(TableDataDepth, table);
+      MyTableReference.MySourceIterator iterator
+        = new MyTableReference(indexKey.index.table).iterator
+        (left, baseStack, context.result, leftStack, TrueConstant,
+         new ExpressionContext(null), false);
 
-      for (IndexKey indexKey: e.getValue()) {
-        List<MyColumn> keyColumns = indexKey.index.columns;
+      context.setKey(TableDataDepth, indexKey.index.table);
+      context.setKey(IndexDataDepth, indexKey);
 
-        MyTableReference.MySourceIterator iterator
-          = new MyTableReference(table).iterator
-          (left, baseStack, context.result, leftStack, TrueConstant,
-           new ExpressionContext(null), false);
-
-        context.setKey(IndexDataDepth, indexKey);
-
-        boolean done = false;
-        while (! done) {
-          ResultType type = iterator.nextRow();
-          switch (type) {
-          case End:
-            done = true;
-            break;
+      boolean done = false;
+      while (! done) {
+        ResultType type = iterator.nextRow();
+        switch (type) {
+        case End:
+          done = true;
+          break;
       
-          case Inserted: {
-            Node tree = (Node) iterator.pair.fork.value;
+        case Inserted: {
+          Node tree = (Node) iterator.pair.fork.value;
 
-            int i = 0;
-            for (; i < keyColumns.size() - 1; ++i) {
-              context.setKey
-                (i + IndexDataBodyDepth,
-                 (Comparable) find(tree, keyColumns.get(i)).value);
-            }
-
-            Node n = context.blaze
+          int i = 0;
+          for (; i < keyColumns.size() - 1; ++i) {
+            context.setKey
               (i + IndexDataBodyDepth,
                (Comparable) find(tree, keyColumns.get(i)).value);
-
-            expect(n.value == NullNode);
-      
-            n.value = tree;
-          } break;
-
-          case Deleted: {
-            Node tree = (Node) iterator.pair.base.value;
-
-            int i = 0;
-            for (; i < keyColumns.size() - 1; ++i) {
-              context.setKey
-                (i + IndexDataBodyDepth,
-                 (Comparable) find(tree, keyColumns.get(i)).value);
-            }
-
-            context.delete
-              (i + IndexDataBodyDepth,
-               (Comparable) find(tree, keyColumns.get(i)).value);            
-          } break;
-      
-          default:
-            throw new RuntimeException("unexpected result type: " + type);
           }
+
+          Node n = context.blaze
+            (i + IndexDataBodyDepth,
+             (Comparable) find(tree, keyColumns.get(i)).value);
+
+          expect(n.value == NullNode);
+      
+          n.value = tree;
+        } break;
+
+        case Deleted: {
+          Node tree = (Node) iterator.pair.base.value;
+
+          int i = 0;
+          for (; i < keyColumns.size() - 1; ++i) {
+            context.setKey
+              (i + IndexDataBodyDepth,
+               (Comparable) find(tree, keyColumns.get(i)).value);
+          }
+
+          context.delete
+            (i + IndexDataBodyDepth,
+             (Comparable) find(tree, keyColumns.get(i)).value);            
+        } break;
+      
+        default:
+          throw new RuntimeException("unexpected result type: " + type);
         }
       }
     }
 
     // build data trees for any new index keys
-    for (Map.Entry<MyTable, List<IndexKey>> e: newIndexKeyMap.entrySet()) {
-      for (IndexKey indexKey: e.getValue()) {
-        buildIndexTree(context, indexKey.index);
-      }
+    for (IndexKey indexKey: newIndexKeys) {
+      buildIndexTree(context, indexKey.index);
     }
 
     return context.result;
