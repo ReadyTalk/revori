@@ -105,11 +105,9 @@ public class SQLServer {
       = new ConflictResolver() {
           public Object resolveConflict(DBMS.Table table,
                                         DBMS.Column column,
-                                        Revision base,
+                                        Object[] primaryKeyValues,
                                         Object baseValue,
-                                        Revision left,
                                         Object leftValue,
-                                        Revision right,
                                         Object rightValue)
           {
             return rightValue;
@@ -118,11 +116,9 @@ public class SQLServer {
     public final ConflictResolver conflictResolver = new ConflictResolver() {
         public Object resolveConflict(DBMS.Table table,
                                       DBMS.Column column,
-                                      Revision base,
+                                      Object[] primaryKeyValues,
                                       Object baseValue,
-                                      Revision left,
                                       Object leftValue,
-                                      Revision right,
                                       Object rightValue)
         {
           if (table == tags) {
@@ -320,11 +316,9 @@ public class SQLServer {
 
     public Object resolveConflict(DBMS.Table table,
                                   DBMS.Column column,
-                                  Revision base,
+                                  Object[] primaryKeyValues,
                                   Object baseValue,
-                                  Revision left,
                                   Object leftValue,
-                                  Revision right,
                                   Object rightValue)
     {
       ++ conflictCount;

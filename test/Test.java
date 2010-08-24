@@ -1759,11 +1759,9 @@ public class Test {
     merge = dbms.merge(base, left, right, new ConflictResolver() {
         public Object resolveConflict(Table table,
                                       Column column,
-                                      Revision base,
+                                      Object[] primaryKeyValues,
                                       Object baseValue,
-                                      Revision left,
                                       Object leftValue,
-                                      Revision right,
                                       Object rightValue)
         {
           expectEqual(baseValue, null);
@@ -1795,11 +1793,9 @@ public class Test {
     merge = dbms.merge(base, left, right, new ConflictResolver() {
         public Object resolveConflict(Table table,
                                       Column column,
-                                      Revision base,
+                                      Object[] primaryKeyValues,
                                       Object baseValue,
-                                      Revision left,
                                       Object leftValue,
-                                      Revision right,
                                       Object rightValue)
         {
           expectEqual(baseValue, "one");
@@ -1833,11 +1829,9 @@ public class Test {
     merge = dbms.merge(tail, t1, t2, new ConflictResolver() {
         public Object resolveConflict(Table table,
                                       Column column,
-                                      Revision base,
+                                      Object[] primaryKeyValues,
                                       Object baseValue,
-                                      Revision left,
                                       Object leftValue,
-                                      Revision right,
                                       Object rightValue)
         {
           expectEqual(baseValue, null);
@@ -1871,11 +1865,9 @@ public class Test {
     merge = dbms.merge(tail, t1, t2, new ConflictResolver() {
         public Object resolveConflict(Table table,
                                       Column column,
-                                      Revision base,
+                                      Object[] primaryKeyValues,
                                       Object baseValue,
-                                      Revision left,
                                       Object leftValue,
-                                      Revision right,
                                       Object rightValue)
         {
           expectEqual(baseValue, null);
@@ -2708,11 +2700,9 @@ public class Test {
     Revision merge = dbms.merge(tail, left, right, new ConflictResolver() {
         public Object resolveConflict(Table table,
                                       Column column,
-                                      Revision base,
+                                      Object[] primaryKeyValues,
                                       Object baseValue,
-                                      Revision left,
                                       Object leftValue,
-                                      Revision right,
                                       Object rightValue)
         {
           throw new RuntimeException();
@@ -2804,11 +2794,9 @@ public class Test {
     merge = dbms.merge(merge, left, right, new ConflictResolver() {
         public Object resolveConflict(Table table,
                                       Column column,
-                                      Revision base,
+                                      Object[] primaryKeyValues,
                                       Object baseValue,
-                                      Revision left,
                                       Object leftValue,
-                                      Revision right,
                                       Object rightValue)
         {
           throw new RuntimeException();

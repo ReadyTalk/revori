@@ -359,11 +359,9 @@ public interface DBMS {
   public interface ConflictResolver {
     public Object resolveConflict(Table table,
                                   Column column,
-                                  Revision base,
+                                  Object[] primaryKeyValues,
                                   Object baseValue,
-                                  Revision left,
                                   Object leftValue,
-                                  Revision right,
                                   Object rightValue);
   }
 

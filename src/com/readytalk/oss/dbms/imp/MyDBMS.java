@@ -4002,11 +4002,20 @@ public class MyDBMS implements DBMS {
           }
 
           if (conflict) {
+            Object[] primaryKeyValues = new Object
+              [depth - 1 - IndexDataBodyDepth];
+
+            for (int i = 0; i < primaryKeyValues.length; ++i) {
+              primaryKeyValues[i] = context.keys[i + IndexDataBodyDepth];
+            }
+
             Object result = conflictResolver.resolveConflict
-              (table, (Column) triple.left.key,
-               base, triple.base == null ? null : triple.base.value,
-               left, triple.left.value,
-               right, triple.right.value);
+              (table,
+               (Column) triple.left.key,
+               primaryKeyValues,
+               triple.base == null ? null : triple.base.value,
+               triple.left.value,
+               triple.right.value);
 
             if (equal(result, triple.left.value)) {
               // do nothing -- left already has insert
