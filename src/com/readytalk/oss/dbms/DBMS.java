@@ -17,8 +17,9 @@ import java.util.List;
  *
  * <li>Define a new, empty database revision</li>
  *
- * <li>Create new revisions by adding indexes and by defining and
- * applying SQL-style inserts, updates, and deletes
+ * <li>Create new revisions by performing actions such as adding and
+ * removing indexes and applying SQL-style inserts, updates, and
+ * deletes
  *
  *   <ul><li>A row may contain values for any column, and there is no
  *   fixed list of columns which each row in a table must have except
@@ -207,6 +208,31 @@ public interface DBMS {
   }
 
   /**
+   * These are the possible actions to take when an insert or update
+   * introduces a row which conflicts with an existing row by matching
+   * the same key of a primary key.
+   */
+  public enum DuplicateKeyResolution {
+    /**
+     * Instructs the DBMS to silently skip the insert or update,
+     * leaving the old row(s) intact.
+     */
+    Skip,
+      
+      /**
+       * Instructs the DBMS to silently overwrite the old row with the
+       * new one.
+       */
+      Overwrite,
+
+      /**
+       * Instructs the DBMS to throw a DuplicateKeyException when a
+       * conflict is detected.
+       */
+      Throw
+  }
+
+  /**
    * Exception thrown when an insert or update introduces a row which
    * conflicts with an existing row by matching the same key of a
    * primary key.
@@ -291,16 +317,37 @@ public interface DBMS {
    * Represents an iterative view of a list of rows produced via
    * execution of a query diff, consisting of any rows added or
    * updated (ResultType.Inserted) and any removed or made obsolete by
-   * an update (ResultType.Deleted).  Once the last row has been
-   * visited, ResultType.End.<p>
+   * an update (ResultType.Deleted).<p>
    *
    * See {@link #diff(Revision, Revision, QueryTemplate, Object[])
    * diff(Revision, Revision, QueryTemplate, Object[])} for details on
    * the algorithm used to generate the list.
    */
   public interface QueryResult {
+    /**
+     * Visits the next row of the query diff, if any.  If the next row
+     * consists of added or updated data, ResultType.Inserted is
+     * returned.  If the next row consists of removed or obsolete
+     * data, ResultType.Deleted is returned.  If there are no further
+     * rows in the diff, ResultType.End is returned.
+     */
     public ResultType nextRow();
+
+    /**
+     * Visits the next item of data in the current row.
+     *
+     * @throws NoSuchElementException if there is no current row or the
+     * end of the row has been reached.
+     */
     public Object nextItem();
+
+    /**
+     * Returns true if and only if the query source is a table (not a
+     * join), the current row consists of obsolete data, and the next
+     * row consists of updated data with the same primary key as the
+     * current row.
+     */
+    public boolean rowUpdated();
   }
 
   /**
@@ -457,14 +504,14 @@ public interface DBMS {
    * the values to be placed into those columns.
    *
    * If, when this template is applied, there is already row with a
-   * matching primary key in the table, a duplicate key exception is
-   * thrown unless updateOnDuplicateKey is true, in which case the
-   * existing row is replaced.
+   * matching primary key in the table, the DBMS will act according to
+   * the specified DuplicateKeyResolution.
    */
-  public PatchTemplate insertTemplate(Table table,
-                                      List<Column> columns,
-                                      List<Expression> values,
-                                      boolean updateOnDuplicateKey);
+  public PatchTemplate insertTemplate
+    (Table table,
+     List<Column> columns,
+     List<Expression> values,
+     DuplicateKeyResolution duplicateKeyResolution);
 
   /**
    * Defines a patch template (AKA prepared statement) which

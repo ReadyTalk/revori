@@ -923,6 +923,7 @@ public class MyDBMS implements DBMS {
     public void visit(ExpressionVisitor visitor);
     public Object evaluate(boolean convertDummyToNull);
     public Scan makeScan(LiveColumnReference reference);
+    public Class type();
   }
 
   private static class ExpressionContext {
@@ -943,6 +944,7 @@ public class MyDBMS implements DBMS {
 
   private static interface SourceIterator {
     public ResultType nextRow();
+    public boolean rowUpdated();
   }
 
   private static interface MySource extends Source {
@@ -1828,6 +1830,14 @@ public class MyDBMS implements DBMS {
         }
       }
 
+      public boolean rowUpdated() {
+        return depth == plan.size - 1
+          && pair.base != null
+          && pair.fork != null
+          && testFork
+          && test(pair.fork);
+      }
+
       private boolean test(Node node) {
         if (node != null) {
           Node tree = (Node) node.value;
@@ -2031,6 +2041,10 @@ public class MyDBMS implements DBMS {
     public Scan makeScan(LiveColumnReference reference) {
       throw new UnsupportedOperationException();
     }
+
+    public Class type() {
+      return column.type;
+    }
   }
 
   private interface ColumnReferenceVisitor {
@@ -2058,6 +2072,10 @@ public class MyDBMS implements DBMS {
 
     public LiveExpression makeLiveExpression(ExpressionContext context) {
       return this;
+    }
+
+    public Class type() {
+      return value == null ? null : value.getClass();
     }
   }
 
@@ -2105,6 +2123,13 @@ public class MyDBMS implements DBMS {
     }
   }
 
+  private static boolean comparable(Class a, Class b) {
+    return a == null || b == null
+      || (Comparable.class.isAssignableFrom(a)
+          && Comparable.class.isAssignableFrom(b)
+          && (a.isAssignableFrom(b) || b.isAssignableFrom(a)));
+  }
+
   private static class LiveComparison implements LiveExpression {
     public final BinaryOperationType type;
     public final LiveExpression left;
@@ -2117,6 +2142,11 @@ public class MyDBMS implements DBMS {
       this.type = type;
       this.left = left;
       this.right = right;
+
+      if (! comparable(left.type(), right.type())) {
+        throw new ClassCastException
+          ("types not comparable: " + left.type() + " and " + right.type());
+      }
     }
 
     public void visit(ExpressionVisitor visitor) {
@@ -2221,6 +2251,10 @@ public class MyDBMS implements DBMS {
         return UnboundedInterval;
       }
     }
+
+    public Class type() {
+      return Boolean.class;
+    }
   }
 
   private static class BooleanBinaryOperation implements MyExpression {
@@ -2262,6 +2296,14 @@ public class MyDBMS implements DBMS {
       this.type = type;
       this.left = left;
       this.right = right;
+
+      if (left.type() != Boolean.class) {
+        throw new ClassCastException
+          (left.type() + " cannot be cast to " + Boolean.class);
+      } else if (right.type() != Boolean.class) {
+        throw new ClassCastException
+          (right.type() + " cannot be cast to " + Boolean.class);
+      }
     }
 
     public void visit(ExpressionVisitor visitor) {
@@ -2305,6 +2347,10 @@ public class MyDBMS implements DBMS {
       default: throw new RuntimeException
           ("unexpected comparison type: " + type);
       }
+    }
+
+    public Class type() {
+      return Boolean.class;
     }
   }
 
@@ -2372,6 +2418,10 @@ public class MyDBMS implements DBMS {
       default: throw new RuntimeException
           ("unexpected comparison type: " + type);
       }
+    }
+
+    public Class type() {
+      return Boolean.class;
     }
   }
 
@@ -2556,6 +2606,10 @@ public class MyDBMS implements DBMS {
           }
         }
       }
+
+      public boolean rowUpdated() {
+        return false;
+      }
     }
 
     public final JoinType type;
@@ -2692,6 +2746,10 @@ public class MyDBMS implements DBMS {
       } else {
         return expressions.get(nextItemIndex++).evaluate(true);
       }      
+    }
+
+    public boolean rowUpdated() {
+      return iterator != null && iterator.rowUpdated();
     }
   }
 
@@ -2895,19 +2953,19 @@ public class MyDBMS implements DBMS {
     public final MyTable table;
     public final List<MyColumn> columns;
     public final List<MyExpression> values;
-    public final boolean updateOnDuplicateKey;
+    public final DuplicateKeyResolution duplicateKeyResolution;
 
     public InsertTemplate(int parameterCount,
                           MyTable table,
                           List<MyColumn> columns,
                           List<MyExpression> values,
-                          boolean updateOnDuplicateKey)
+                          DuplicateKeyResolution duplicateKeyResolution)
     {
       super(parameterCount);
       this.table = table;
       this.columns = columns;
       this.values = values;
-      this.updateOnDuplicateKey = updateOnDuplicateKey;
+      this.duplicateKeyResolution = duplicateKeyResolution;
     }
 
     public int apply(MyPatchContext context,
@@ -2916,18 +2974,23 @@ public class MyDBMS implements DBMS {
       ExpressionContext expressionContext = new ExpressionContext(parameters);
 
       Map<MyColumn, Object> map = new HashMap();
-      Iterator<MyColumn> columnIterator = columns.iterator();
-      Iterator<MyExpression> valueIterator = values.iterator();
-      while (columnIterator.hasNext()) {
-        MyColumn column = columnIterator.next();
-        Object value = valueIterator.next().makeLiveExpression
-          (expressionContext).evaluate(false);
+      { int index = 0;
+        Iterator<MyColumn> columnIterator = columns.iterator();
+        Iterator<MyExpression> valueIterator = values.iterator();
+        while (columnIterator.hasNext()) {
+          MyColumn column = columnIterator.next();
+          Object value = valueIterator.next().makeLiveExpression
+            (expressionContext).evaluate(false);
 
-        if (value == null || column.type.isInstance(value)) {
-          map.put(column, value);
-        } else {
-          throw new ClassCastException
-            (value.getClass() + " cannot be cast to " + column.type);
+          if (value == null || column.type.isInstance(value)) {
+            map.put(column, value);
+          } else {
+            throw new ClassCastException
+              (value.getClass() + " cannot be cast to " + column.type
+               + " in column " + index);
+          }
+
+          ++ index;
         }
       }
       
@@ -2955,10 +3018,24 @@ public class MyDBMS implements DBMS {
         Node n = context.blaze
           (i + IndexDataBodyDepth, (Comparable) map.get(columns.get(i)));
 
-        if (updateOnDuplicateKey || n.value == NullNode) {
+        if (n.value == NullNode) {
           n.value = tree;
         } else {
-          throw new DuplicateKeyException();
+          switch (duplicateKeyResolution) {
+          case Skip:
+            break;
+
+          case Overwrite:
+            n.value = tree;
+            break;
+
+          case Throw:
+            throw new DuplicateKeyException();
+
+          default:
+            throw new RuntimeException
+              ("unexpected resolution: " + duplicateKeyResolution);
+          }
         }
       }
 
@@ -3536,10 +3613,11 @@ public class MyDBMS implements DBMS {
     return new MyQueryResult(myBase, myFork, myTemplate, copy(parameters));
   }
 
-  public PatchTemplate insertTemplate(Table table,
-                                      List<Column> columns,
-                                      List<Expression> values,
-                                      boolean updateOnDuplicateKey)
+  public PatchTemplate insertTemplate
+    (Table table,
+     List<Column> columns,
+     List<Expression> values,
+     DuplicateKeyResolution duplicateKeyResolution)
   {
     MyTable myTable;
     try {
@@ -3588,7 +3666,7 @@ public class MyDBMS implements DBMS {
 
     return new InsertTemplate
       (counter.count, myTable, copyOfColumns, copyOfValues,
-       updateOnDuplicateKey);
+       duplicateKeyResolution);
   }
 
   public PatchTemplate updateTemplate
