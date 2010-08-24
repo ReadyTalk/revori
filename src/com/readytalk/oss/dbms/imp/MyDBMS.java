@@ -358,8 +358,9 @@ public class MyDBMS implements DBMS {
   private static void addIndex(MyPatchContext context,
                                MyIndex index)
   {
-    if (pathFind(context.result.root, IndexTable, IndexTable.primaryKey.key,
-                 index.table, index.key)
+    if ((! index.key.equals(index.table.primaryKey.key))
+        && pathFind(context.result.root, IndexTable, IndexTable.primaryKey.key,
+                    index.table, index.key)
         == NullNode)
     {
       buildIndexTree(context, index);
@@ -401,8 +402,9 @@ public class MyDBMS implements DBMS {
       }
     }
 
-    if (pathFind(context.result.root, IndexTable, IndexTable.primaryKey.key,
-                 index.table, index.key)
+    if ((! index.key.equals(index.table.primaryKey.key))
+        && pathFind(context.result.root, IndexTable, IndexTable.primaryKey.key,
+                    index.table, index.key)
         == NullNode)
     {
       context.setKey(TableDataDepth, index.table);
