@@ -4002,9 +4002,7 @@ public class MyDBMS implements DBMS {
           }
 
           if (conflict) {
-            Object[] primaryKeyValues = new Object
-              [depth - 1 - IndexDataBodyDepth];
-
+            Object[] primaryKeyValues = new Object[depth - IndexDataBodyDepth];
             for (int i = 0; i < primaryKeyValues.length; ++i) {
               primaryKeyValues[i] = context.keys[i + IndexDataBodyDepth];
             }

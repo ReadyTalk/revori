@@ -1764,6 +1764,8 @@ public class Test {
                                       Object leftValue,
                                       Object rightValue)
         {
+          expectEqual(primaryKeyValues.length, 1);
+          expectEqual(primaryKeyValues[0], 4);
           expectEqual(baseValue, null);
           expectEqual(leftValue, "four");
           expectEqual(rightValue, "shi");
@@ -1798,6 +1800,8 @@ public class Test {
                                       Object leftValue,
                                       Object rightValue)
         {
+          expectEqual(primaryKeyValues.length, 1);
+          expectEqual(primaryKeyValues[0], 1);
           expectEqual(baseValue, "one");
           expectEqual(leftValue, "ichi");
           expectEqual(rightValue, "uno");
@@ -1834,6 +1838,8 @@ public class Test {
                                       Object leftValue,
                                       Object rightValue)
         {
+          expectEqual(primaryKeyValues.length, 1);
+          expectEqual(primaryKeyValues[0], 1);
           expectEqual(baseValue, null);
           expectEqual(leftValue, "one");
           expectEqual(rightValue, "uno");
@@ -1870,6 +1876,8 @@ public class Test {
                                       Object leftValue,
                                       Object rightValue)
         {
+          expectEqual(primaryKeyValues.length, 1);
+          expectEqual(primaryKeyValues[0], 1);
           expectEqual(baseValue, null);
           expectEqual(leftValue, "one");
           expectEqual(rightValue, "uno");
