@@ -1620,9 +1620,9 @@ public class Test {
   public static void testMerges() {
     DBMS dbms = new MyDBMS();
 
-    Column number = dbms.column(Integer.class);
-    Column name = dbms.column(String.class);
-    Table numbers = dbms.table(list(number));
+    final Column number = dbms.column(Integer.class);
+    final Column name = dbms.column(String.class);
+    final Table numbers = dbms.table(list(number));
 
     Revision tail = dbms.revision();
 
@@ -1764,6 +1764,8 @@ public class Test {
                                       Object leftValue,
                                       Object rightValue)
         {
+          expectEqual(table, numbers);
+          expectEqual(column, name);
           expectEqual(primaryKeyValues.length, 1);
           expectEqual(primaryKeyValues[0], 4);
           expectEqual(baseValue, null);
@@ -1800,6 +1802,8 @@ public class Test {
                                       Object leftValue,
                                       Object rightValue)
         {
+          expectEqual(table, numbers);
+          expectEqual(column, name);
           expectEqual(primaryKeyValues.length, 1);
           expectEqual(primaryKeyValues[0], 1);
           expectEqual(baseValue, "one");
@@ -1838,6 +1842,8 @@ public class Test {
                                       Object leftValue,
                                       Object rightValue)
         {
+          expectEqual(table, numbers);
+          expectEqual(column, name);
           expectEqual(primaryKeyValues.length, 1);
           expectEqual(primaryKeyValues[0], 1);
           expectEqual(baseValue, null);
@@ -1876,6 +1882,8 @@ public class Test {
                                       Object leftValue,
                                       Object rightValue)
         {
+          expectEqual(table, numbers);
+          expectEqual(column, name);
           expectEqual(primaryKeyValues.length, 1);
           expectEqual(primaryKeyValues[0], 1);
           expectEqual(baseValue, null);
