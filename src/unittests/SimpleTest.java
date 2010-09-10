@@ -20,9 +20,9 @@ import com.readytalk.oss.dbms.DBMS.DuplicateKeyResolution;
 import com.readytalk.oss.dbms.imp.MyDBMS;
 
 public class SimpleTest{
-		
-	@Test
-	public void testSimpleInsertQuery(){
+    
+    @Test
+    public void testSimpleInsertQuery(){
         DBMS dbms = new MyDBMS();
         
         Column key = dbms.column(Integer.class);
@@ -34,10 +34,10 @@ public class SimpleTest{
         PatchContext context = dbms.patchContext(tail);
         PatchTemplate insert = dbms.insertTemplate
          (names,
-        		 list(key, firstName, lastName),
-        		 list(dbms.parameter(),
-        				 dbms.parameter(),
-        				 dbms.parameter()), DuplicateKeyResolution.Throw);
+                 list(key, firstName, lastName),
+                 list(dbms.parameter(),
+                         dbms.parameter(),
+                         dbms.parameter()), DuplicateKeyResolution.Throw);
         dbms.apply(context, insert, 1, "Charles", "Norris");
         dbms.apply(context, insert, 2, "Chuck", "Norris");
         dbms.apply(context, insert, 3, "Chuck", "Taylor");
@@ -49,9 +49,9 @@ public class SimpleTest{
         QueryTemplate any = dbms.queryTemplate
           (list((Expression) dbms.columnReference(namesReference, key),
         		  (Expression) dbms.columnReference(namesReference, firstName),
-        		  (Expression) dbms.columnReference(namesReference, lastName)),
-        		  namesReference,
-        		  dbms.constant(true));
+                  (Expression) dbms.columnReference(namesReference, lastName)),
+                  namesReference,
+                  dbms.constant(true));
 
         QueryResult result = dbms.diff(tail, first, any);
         
@@ -69,4 +69,4 @@ public class SimpleTest{
         assertEquals(result.nextItem(), "Taylor");
         assertEquals(result.nextRow(), ResultType.End);
         }
-}
+    }
