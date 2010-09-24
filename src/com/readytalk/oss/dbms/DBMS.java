@@ -350,6 +350,22 @@ public interface DBMS {
     public boolean rowUpdated();
   }
 
+  public enum DiffResultType {
+    End, Descend, Ascend, Key, Value;
+  }
+
+  public interface DiffResult {
+    public DiffResultType next();
+
+    public Object get();
+
+    public boolean baseHasKey();
+
+    public boolean forkHasKey();
+
+    public void skip();
+  }
+
   /**
    * An interface for resolving conflicts which accepts three versions
    * of a value -- the base version and two forks -- and returns a
@@ -494,6 +510,9 @@ public interface DBMS {
                           QueryTemplate template,
                           Object ... parameters);
 
+  public DiffResult diff(Revision base,
+                         Revision fork);
+
   /**
    * Defines a patch template (AKA prepared statement) which
    * represents an insert operation on the specified table.  The
@@ -565,6 +584,13 @@ public interface DBMS {
     throws IllegalStateException,
            DuplicateKeyException,
            ClassCastException;
+
+  public void treeDelete(PatchContext context,
+                         Object ... path);
+
+  public void treeInsert(PatchContext context,
+                         DuplicateKeyResolution duplicateKeyResolution,
+                         Object ... path);
 
   /**
    * Adds the specified index to the specified patch context.

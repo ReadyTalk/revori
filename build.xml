@@ -60,13 +60,17 @@
     </javadoc>
   </target>
 
-  <target name="compile-test" depends="compile">
+  <property name="junit" value="/usr/share/java/junit4-4.3.1.jar"/>
 
+  <target name="compile-test" depends="compile">
     <mkdir dir="${basedir}/build/test"/>
 
-    <javac destdir="${basedir}/build/test"
-           classpath="${basedir}/build/classes"
-           debug="true">
+    <javac destdir="${basedir}/build/test" debug="true">
+      <classpath>
+        <pathelement location="${basedir}/build/classes"/>
+        <pathelement location="${junit}"/>
+      </classpath>
+
       <compilerarg line="-Xmaxerrs 10"/>
       <src path="${basedir}/test"/>
       <include name="**/*.java"/>
@@ -74,9 +78,21 @@
   </target>
 
   <target name="test" depends="compile-test">
-    <java classpath="${basedir}/build/test:${basedir}/build/classes"
-          classname="Test"
-          failonerror="true"/>
+    <junit showoutput="yes" haltonfailure="yes">
+      <formatter usefile="false" type="plain"/>
+
+      <classpath>
+        <pathelement location="${basedir}/build/classes"/>
+        <pathelement location="${basedir}/build/test"/>
+        <pathelement location="${junit}"/>
+      </classpath>
+
+      <batchtest todir="${basedir}/build">
+        <fileset dir="${basedir}/test">
+          <include name="**/*.java"/>
+        </fileset>
+      </batchtest>
+    </junit>
   </target>
 
 </project>

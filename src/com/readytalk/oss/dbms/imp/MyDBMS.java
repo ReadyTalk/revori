@@ -363,6 +363,11 @@ public class MyDBMS implements DBMS {
                     index.table, index.key)
         == NullNode)
     {
+      // flush any changes out to the existing indexes, since we don't
+      // want to get confused later when some indexes are up-to-date
+      // and some aren't:
+      updateIndexes(context);
+
       buildIndexTree(context, index);
     }
     
@@ -2766,6 +2771,195 @@ public class MyDBMS implements DBMS {
                               Object ... parameters);
   }
 
+  private static class MyDiffResult implements DiffResult {
+    public enum State {
+      Start, Descend, Ascend, DescendValue, Value, Iterate, End;
+    }
+
+    public final DiffIterator[] iterators = new DiffIterator[MaxDepth];
+    public final DiffPair pair = new DiffPair();
+    public State state = State.Start;
+    public NodeStack baseStack;
+    public NodeStack forkStack;
+    public MyTable table;
+    public int depth;
+    public int bottom;
+
+    public MyDiffResult(MyRevision base,
+                        NodeStack baseStack,
+                        MyRevision fork,
+                        NodeStack forkStack)
+    {
+      iterators[0] = new DiffIterator
+        (base.root,
+         this.baseStack = new NodeStack(baseStack),
+         fork.root,
+         this.forkStack = new NodeStack(forkStack),
+         list(UnboundedEvaluatedInterval).iterator(),
+         false);
+    }
+
+    public DiffResultType next() {
+      while (true) {
+        switch (state) {
+        case Descend:
+          descend();
+          break;
+
+        case Ascend:
+          ascend();
+          break;
+
+        case DescendValue:
+          state = State.Value;
+          return DiffResultType.Value;
+
+        case Start:
+        case Value:
+          state = State.Iterate;
+          break;
+
+        case Iterate:
+          if (iterators[depth].next(pair)) {
+            if (depth == TableDataDepth) {
+              table = (MyTable) get();
+              state = State.Descend;
+              return DiffResultType.Key;
+            } else if (depth == IndexDataDepth) {
+              IndexKey indexKey = (IndexKey)
+                (pair.base == null ? pair.fork.key : pair.base.key);
+
+              if (equal(indexKey, table.primaryKey.key)) {
+                bottom = indexKey.index.columns.size() + IndexDataBodyDepth;
+                descend();
+              }
+            } else if (depth == bottom) {
+              state = State.DescendValue;
+              return DiffResultType.Key;
+            } else {
+              state = State.Descend;
+              return DiffResultType.Key;
+            }
+          } else if (depth == 0) {
+            state = State.End;
+          } else {
+            state = State.Ascend;
+            return DiffResultType.Ascend;
+          }
+          break;
+
+        case End:
+          return DiffResultType.End;
+
+        default:
+          throw new RuntimeException("unexpected state: " + state);
+        }
+      }
+    }
+
+    private void descend() {
+      Node base = pair.base;
+      Node fork = pair.fork;
+
+      ++ depth;
+
+      iterators[depth] = new DiffIterator
+        (base == null ? NullNode : (Node) base.value,
+         baseStack = new NodeStack(baseStack),
+         fork == null ? NullNode : (Node) fork.value,
+         forkStack = new NodeStack(forkStack),
+         list(UnboundedEvaluatedInterval).iterator(),
+         false);
+    }
+
+    private void ascend() {
+      iterators[depth] = null;
+
+      -- depth;
+
+      baseStack = popStack(baseStack);
+      forkStack = popStack(forkStack);
+    }
+
+    // todo: use enum-value-specific virtual methods instead of switch
+    // statements for the following four methods:
+
+    public Object get() {
+      switch (state) {
+      case Value:
+        return pair.base == null ? pair.fork.value : pair.base.value;
+
+      case Start:
+      case End:
+        throw new IllegalStateException();
+
+      case Descend:
+      case Ascend:
+      case DescendValue:
+      case Iterate:
+        return pair.base == null ? pair.fork.key : pair.base.key;
+
+      default:
+        throw new RuntimeException("unexpected state: " + state);
+      }
+    }
+
+    public boolean baseHasKey() {
+      switch (state) {
+      case Value:
+      case Start:
+      case End:
+        throw new IllegalStateException();
+
+      case Descend:
+      case Ascend:
+      case DescendValue:
+      case Iterate:
+        return pair.base != null;
+
+      default:
+        throw new RuntimeException("unexpected state: " + state);
+      }
+    }
+
+    public boolean forkHasKey() {
+      switch (state) {
+      case Value:
+      case Start:
+      case End:
+        throw new IllegalStateException();
+
+      case Descend:
+      case Ascend:
+      case DescendValue:
+      case Iterate:
+        return pair.fork != null;
+
+      default:
+        throw new RuntimeException("unexpected state: " + state);
+      }
+    }
+
+    public void skip() {
+      switch (state) {
+      case Value:
+      case Start:
+      case End:
+      case Ascend:
+      case Iterate:
+        throw new IllegalStateException();
+
+      case Descend:
+      case DescendValue:
+        state = State.Iterate;
+        break;
+
+      default:
+        throw new RuntimeException("unexpected state: " + state);
+      }
+    }
+  }
+
   private static class MyPatchContext implements PatchContext {
     public Object token;
     public final NodeStack stack;
@@ -2774,14 +2968,16 @@ public class MyDBMS implements DBMS {
     public final Node[] blazedLeaves;
     public final Node[] found;
     public final BlazeResult blazeResult = new BlazeResult();
+    public MyRevision indexBase;
     public MyRevision result;
-    public int max;
+    public int max = -1;
 
     public MyPatchContext(Object token,
                           MyRevision result,
                           NodeStack stack)
     {
       this.token = token;
+      this.indexBase = result;
       this.result = result;
       this.stack = stack;
       keys = new Comparable[MaxDepth + 1];
@@ -2823,6 +3019,11 @@ public class MyDBMS implements DBMS {
     public void delete(int index, Comparable key) {
       setKey(index, key);
       delete(index);
+    }
+
+    public void deleteAll() {
+      result = EmptyRevision;
+      max = -1;
     }
 
     private void delete(int index) {
@@ -2930,25 +3131,190 @@ public class MyDBMS implements DBMS {
     }
   }
 
-  private static Set<IndexKey> indexKeys(NodeStack stack,
-                                         MyRevision revision,
-                                         MyTable table,
-                                         boolean includePrimaryKey)
+  private static void updateIndexTree(MyPatchContext context,
+                                      IndexKey indexKey,
+                                      MyRevision base,
+                                      NodeStack baseStack,
+                                      NodeStack forkStack)
   {
-    Set<IndexKey> keys = new HashSet();
-    for (NodeIterator indexKeys = new NodeIterator
-           (stack, pathFind
-            (revision.root, IndexTable, IndexTable.primaryKey.key, table));
-         indexKeys.hasNext();)
+    expect(indexKey != indexKey.index.table.primaryKey.key);
+
+    List<MyColumn> keyColumns = indexKey.index.columns;
+
+    MyTableReference.MySourceIterator iterator
+      = new MyTableReference(indexKey.index.table).iterator
+      (base, baseStack, context.result, forkStack, TrueConstant,
+       new ExpressionContext(null), false);
+
+    context.setKey(TableDataDepth, indexKey.index.table);
+    context.setKey(IndexDataDepth, indexKey);
+
+    boolean done = false;
+    while (! done) {
+      ResultType type = iterator.nextRow();
+      switch (type) {
+      case End:
+        done = true;
+        break;
+      
+      case Inserted: {
+        Node tree = (Node) iterator.pair.fork.value;
+
+        int i = 0;
+        for (; i < keyColumns.size() - 1; ++i) {
+          context.setKey
+            (i + IndexDataBodyDepth,
+             (Comparable) find(tree, keyColumns.get(i)).value);
+        }
+
+        Node n = context.blaze
+          (i + IndexDataBodyDepth,
+           (Comparable) find(tree, keyColumns.get(i)).value);
+
+        expect(n.value == NullNode);
+      
+        n.value = tree;
+      } break;
+
+      case Deleted: {
+        Node tree = (Node) iterator.pair.base.value;
+
+        int i = 0;
+        for (; i < keyColumns.size() - 1; ++i) {
+          context.setKey
+            (i + IndexDataBodyDepth,
+             (Comparable) find(tree, keyColumns.get(i)).value);
+        }
+
+        context.delete
+          (i + IndexDataBodyDepth,
+           (Comparable) find(tree, keyColumns.get(i)).value);            
+      } break;
+      
+      default:
+        throw new RuntimeException("unexpected result type: " + type);
+      }
+    }
+  }
+
+  private static void updateIndexes(MyPatchContext context) {
+    if (context.indexBase != context.result) {
+      NodeStack baseStack = new NodeStack();
+      NodeStack forkStack = new NodeStack();
+
+      DiffIterator iterator = new DiffIterator
+        (context.indexBase.root, baseStack, context.result.root, forkStack,
+         list(UnboundedEvaluatedInterval).iterator(), false);
+
+      DiffPair pair = new DiffPair();
+
+      while (iterator.next(pair)) {
+        if (pair.fork != null) {
+          for (NodeIterator indexKeys = new NodeIterator
+                 (baseStack, pathFind
+                  (context.result.root, IndexTable, IndexTable.primaryKey.key,
+                   (MyTable) pair.fork.key));
+               indexKeys.hasNext();)
+          {
+            updateIndexTree
+              (context, (IndexKey) indexKeys.next().key, context.indexBase,
+               baseStack, forkStack);
+          }
+        }
+      }
+
+      context.indexBase = context.result;
+    }
+  }
+
+  private static void updateIndex(MyPatchContext context,
+                                  MyIndex index)
+  {
+    if (! equal(index.table.primaryKey.key, index.key)) {
+      updateIndexes(context);
+    }
+  }
+
+  private static void prepareForUpdate(MyPatchContext context,
+                                       MyTable table)
+  {
+    // since we update non-primary-key indexes lazily, we may need to
+    // freeze a copy of the last revision which contained up-to-date
+    // indexes so we can do a diff later and use it to update them
+
+    if (context.indexBase == context.result && pathFind
+        (context.result.root, IndexTable, IndexTable.primaryKey.key, table)
+        != NullNode)
     {
-      keys.add((IndexKey) indexKeys.next().key);
+      context.setToken(new Object());
+    }
+  }
+
+  private void treeDelete(MyPatchContext context,
+                          Comparable[] keys)
+  {
+    if (keys.length == 0) {
+      context.deleteAll();
+      return;
     }
 
-    if (includePrimaryKey) {
-      keys.add(table.primaryKey.key);
+    MyTable table = (MyTable) keys[0];
+
+    if (keys.length == 1) {
+      context.delete(TableDataDepth, table);
+      return;
     }
 
-    return keys;
+    prepareForUpdate(context, table);
+
+    context.setKey(TableDataDepth, table);
+    context.setKey(IndexDataDepth, table.primaryKey);
+
+    int i = 0;
+    for (; i < keys.length - 1; ++i) {
+      context.setKey(i + IndexDataBodyDepth, keys[i]);
+    }
+
+    context.delete(i + IndexDataBodyDepth, keys[i]);
+  }
+
+  private void treeInsert(MyPatchContext context,
+                          DuplicateKeyResolution duplicateKeyResolution,
+                          MyTable table,
+                          MyColumn column,
+                          Object value,
+                          Comparable[] path)
+  {
+    prepareForUpdate(context, table);
+
+    context.setKey(TableDataDepth, table);
+    context.setKey(IndexDataDepth, table.primaryKey);
+
+    for (int i = 0; i < path.length; ++i) {
+      context.setKey(i + IndexDataBodyDepth, path[i]);
+    }
+
+    Node n = context.blaze(path.length + IndexDataBodyDepth, column);
+
+    if (n.value == NullNode) {
+      n.value = value;
+    } else {
+      switch (duplicateKeyResolution) {
+      case Skip:
+        break;
+
+      case Overwrite:
+        n.value = value;
+        break;
+
+      case Throw:
+        throw new DuplicateKeyException();
+
+      default:
+        throw new RuntimeException
+          ("unexpected resolution: " + duplicateKeyResolution);
+      }
+    }
   }
 
   private static class InsertTemplate extends MyPatchTemplate {
@@ -3003,45 +3369,43 @@ public class MyDBMS implements DBMS {
         result.node.value = map.get(c);
       }
 
+      prepareForUpdate(context, table);
+
+      IndexKey indexKey = table.primaryKey.key;
+
       context.setKey(TableDataDepth, table);
+      context.setKey(IndexDataDepth, indexKey);
 
-      for (IndexKey indexKey: indexKeys
-             (context.stack, context.result, table, true))
-      {
-        context.setKey(IndexDataDepth, indexKey);
-
-        List<MyColumn> columns = indexKey.index.columns;
-        int i;
-        for (i = 0; i < columns.size() - 1; ++i) {
-          context.setKey
-            (i + IndexDataBodyDepth, (Comparable) map.get(columns.get(i)));
-        }
-
-        Node n = context.blaze
+      List<MyColumn> columns = indexKey.index.columns;
+      int i;
+      for (i = 0; i < columns.size() - 1; ++i) {
+        context.setKey
           (i + IndexDataBodyDepth, (Comparable) map.get(columns.get(i)));
-
-        if (n.value == NullNode) {
-          n.value = tree;
-        } else {
-          switch (duplicateKeyResolution) {
-          case Skip:
-            break;
-
-          case Overwrite:
-            n.value = tree;
-            break;
-
-          case Throw:
-            throw new DuplicateKeyException();
-
-          default:
-            throw new RuntimeException
-              ("unexpected resolution: " + duplicateKeyResolution);
-          }
-        }
       }
 
-      return 1;
+      Node n = context.blaze
+        (i + IndexDataBodyDepth, (Comparable) map.get(columns.get(i)));
+
+      if (n.value == NullNode) {
+        n.value = tree;
+        return 1;
+      } else {
+        switch (duplicateKeyResolution) {
+        case Skip:
+          return 0;
+
+        case Overwrite:
+          n.value = tree;
+          return 1;
+
+        case Throw:
+          throw new DuplicateKeyException();
+
+        default:
+          throw new RuntimeException
+            ("unexpected resolution: " + duplicateKeyResolution);
+        }
+      }
     }
   }
 
@@ -3080,158 +3444,146 @@ public class MyDBMS implements DBMS {
 
       context.setKey(TableDataDepth, table);
 
-      NodeStack stack = new NodeStack();
-
       Plan plan = choosePlan
-        (EmptyRevision, NullNodeStack, context.result, stack, liveTest,
+        (EmptyRevision, NullNodeStack, context.result, context.stack, liveTest,
          tableReference);
 
-      Set<IndexKey> indexKeySet = indexKeys
-        (context.stack, context.result, table, true);
-
-      // we must modify the plan index data tree last or else we'll
-      // clobber the data we're supposed to update before we've
-      // visited all the index data trees
-      List<IndexKey> indexKeyList = new ArrayList(indexKeySet.size());
-      for (IndexKey key: indexKeySet) {
-        if (! key.equals(plan.index.key)) {
-          indexKeyList.add(key);
-        }
-      }
-      indexKeyList.add(plan.index.key);
+      updateIndex(context, plan.index);
 
       Object[] values = new Object[columns.size()];
       BlazeResult result = new BlazeResult();
       int count = 0;
       MyRevision revision = context.result;
 
-      for (IndexKey indexKey: indexKeyList) {
-        context.setKey(IndexDataDepth, indexKey);
+      IndexKey indexKey = table.primaryKey.key;
 
-        MyTableReference.MySourceIterator iterator = tableReference.iterator
-          (EmptyRevision, NullNodeStack, revision, stack, liveTest,
-           expressionContext, plan, false);
+      context.setKey(IndexDataDepth, indexKey);
+
+      MyTableReference.MySourceIterator iterator = tableReference.iterator
+        (EmptyRevision, NullNodeStack, revision, new NodeStack(), liveTest,
+         expressionContext, plan, false);
                                                                             
-        List<MyColumn> keyColumns = indexKey.index.columns;
+      List<MyColumn> keyColumns = indexKey.index.columns;
 
-        int[] keyColumnsUpdated;
-        { List<MyColumn> columnList = new ArrayList();
-          for (MyColumn c: keyColumns) {
-            if (columns.contains(c)) {
-              if (columnList == null) {
-                columnList = new ArrayList();
-              }
-              columnList.add(c);
+      int[] keyColumnsUpdated;
+      { List<MyColumn> columnList = new ArrayList();
+        for (MyColumn c: keyColumns) {
+          if (columns.contains(c)) {
+            if (columnList == null) {
+              columnList = new ArrayList();
             }
-          }
-
-          if (columnList.isEmpty()) {
-            keyColumnsUpdated = null;
-          } else {
-            keyColumnsUpdated = new int[columnList.size()];
-            for (int i = 0; i < keyColumnsUpdated.length; ++i) {
-              keyColumnsUpdated[i] = columns.indexOf(columnList.get(i));
-            }
+            columnList.add(c);
           }
         }
+
+        if (columnList.isEmpty()) {
+          keyColumnsUpdated = null;
+        } else {
+          keyColumnsUpdated = new int[columnList.size()];
+          for (int i = 0; i < keyColumnsUpdated.length; ++i) {
+            keyColumnsUpdated[i] = columns.indexOf(columnList.get(i));
+          }
+        }
+      }
         
-        Object deleteToken = indexKey.equals(plan.index.key)
-          ? null : context.token;
+      Object deleteToken = indexKey.equals(plan.index.key)
+        ? null : context.token;
 
-        count = 0;
-        boolean done = false;
-        while (! done) {
-          ResultType type = iterator.nextRow();
-          switch (type) {
-          case End:
-            done = true;
-            break;
+      count = 0;
+      boolean done = false;
+      while (! done) {
+        ResultType type = iterator.nextRow();
+        switch (type) {
+        case End:
+          done = true;
+          break;
       
-          case Inserted: {
-            ++ count;
+        case Inserted: {
+          prepareForUpdate(context, table);
 
-            for (int i = 0; i < columns.size(); ++i) {
-              values[i] = liveValues.get(i).evaluate(false);
-            }
+          ++ count;
 
-            Node original = (Node) iterator.pair.fork.value;
+          for (int i = 0; i < columns.size(); ++i) {
+            values[i] = liveValues.get(i).evaluate(false);
+          }
 
-            boolean keyValuesChanged = false;
-            if (keyColumnsUpdated != null) {
-              // some of the columns in the current index are being
-              // updated, but we don't need to remove and reinsert the
-              // row unless at least one is actually changing to a new
-              // value
-              for (int columnIndex: keyColumnsUpdated) {
-                if (! equal(values[columnIndex], find
-                            (original, keyColumns.get(columnIndex)).value))
-                {
-                  keyValuesChanged = true;
-                  break;
-                }
-              }
+          Node original = (Node) iterator.pair.fork.value;
 
-              if (! keyValuesChanged) {
+          boolean keyValuesChanged = false;
+          if (keyColumnsUpdated != null) {
+            // some of the columns in the current index are being
+            // updated, but we don't need to remove and reinsert the
+            // row unless at least one is actually changing to a new
+            // value
+            for (int columnIndex: keyColumnsUpdated) {
+              if (! equal(values[columnIndex], find
+                          (original, keyColumns.get(columnIndex)).value))
+              {
+                keyValuesChanged = true;
                 break;
               }
-
-              if (deleteToken == null) {
-                context.setToken(deleteToken = new Object());
-              }
-
-              int i = 0;
-              for (; i < keyColumns.size() - 1; ++i) {
-                context.setKey
-                  (i + IndexDataBodyDepth,
-                   (Comparable) find(original, keyColumns.get(i)).value);
-              }
-
-              context.delete
-                (i + IndexDataBodyDepth,
-                 (Comparable) find(original, keyColumns.get(i)).value);
             }
 
-            Node tree = original;
+            if (! keyValuesChanged) {
+              break;
+            }
 
-            for (int i = 0; i < columns.size(); ++i) {
-              MyColumn column = columns.get(i);
-              Object value = values[i];
-
-              if (value != null && ! column.type.isInstance(value)) {
-                throw new ClassCastException
-                  (value.getClass() + " cannot be cast to " + column.type);
-              }
-
-              if (value == null) {
-                tree = delete(context.token, context.stack, tree, column);
-              } else {
-                tree = blaze
-                  (result, context.token, context.stack, tree, column);
-                result.node.value = value;
-              }
+            if (deleteToken == null) {
+              context.setToken(deleteToken = new Object());
             }
 
             int i = 0;
             for (; i < keyColumns.size() - 1; ++i) {
               context.setKey
                 (i + IndexDataBodyDepth,
-                 (Comparable) find(tree, keyColumns.get(i)).value);
+                 (Comparable) find(original, keyColumns.get(i)).value);
             }
 
-            Node n = context.blaze
+            context.delete
+              (i + IndexDataBodyDepth,
+               (Comparable) find(original, keyColumns.get(i)).value);
+          }
+
+          Node tree = original;
+
+          for (int i = 0; i < columns.size(); ++i) {
+            MyColumn column = columns.get(i);
+            Object value = values[i];
+
+            if (value != null && ! column.type.isInstance(value)) {
+              throw new ClassCastException
+                (value.getClass() + " cannot be cast to " + column.type);
+            }
+
+            if (value == null) {
+              tree = delete(context.token, context.stack, tree, column);
+            } else {
+              tree = blaze
+                (result, context.token, context.stack, tree, column);
+              result.node.value = value;
+            }
+          }
+
+          int i = 0;
+          for (; i < keyColumns.size() - 1; ++i) {
+            context.setKey
               (i + IndexDataBodyDepth,
                (Comparable) find(tree, keyColumns.get(i)).value);
-
-            if (n.value == NullNode || (! keyValuesChanged)) {
-              n.value = tree;
-            } else {
-              throw new DuplicateKeyException();
-            }
-          } break;
-
-          default:
-            throw new RuntimeException("unexpected result type: " + type);
           }
+
+          Node n = context.blaze
+            (i + IndexDataBodyDepth,
+             (Comparable) find(tree, keyColumns.get(i)).value);
+
+          if (n.value == NullNode || (! keyValuesChanged)) {
+            n.value = tree;
+          } else {
+            throw new DuplicateKeyException();
+          }
+        } break;
+
+        default:
+          throw new RuntimeException("unexpected result type: " + type);
         }
       }
       
@@ -3261,74 +3613,62 @@ public class MyDBMS implements DBMS {
 
       context.setKey(TableDataDepth, tableReference.table);
 
-      NodeStack stack = new NodeStack();
-
       Plan plan = choosePlan
-        (EmptyRevision, NullNodeStack, context.result, stack, liveTest,
+        (EmptyRevision, NullNodeStack, context.result, context.stack, liveTest,
          tableReference);
 
-      Set<IndexKey> indexKeySet = indexKeys
-        (context.stack, context.result, tableReference.table, true);
-
-      // we must modify the plan index data tree last or else we'll
-      // clobber the data we're supposed to update before we've
-      // visited all the index data trees
-      List<IndexKey> indexKeyList = new ArrayList(indexKeySet.size());
-      for (IndexKey key: indexKeySet) {
-        if (! key.equals(plan.index.key)) {
-          indexKeyList.add(key);
-        }
-      }
-      indexKeyList.add(plan.index.key);
+      updateIndex(context, plan.index);
 
       int count = 0;
       MyRevision revision = context.result;
+      MyTable table = tableReference.table;
+      IndexKey indexKey = table.primaryKey.key;
 
-      for (IndexKey indexKey: indexKeyList) {
-        context.setKey(IndexDataDepth, indexKey);
+      context.setKey(IndexDataDepth, indexKey);
 
-        MyTableReference.MySourceIterator iterator = tableReference.iterator
-          (EmptyRevision, NullNodeStack, revision, stack, liveTest,
-           expressionContext, plan, false);
+      MyTableReference.MySourceIterator iterator = tableReference.iterator
+        (EmptyRevision, NullNodeStack, revision, new NodeStack(), liveTest,
+         expressionContext, plan, false);
 
-        List<MyColumn> keyColumns = indexKey.index.columns;
+      List<MyColumn> keyColumns = indexKey.index.columns;
 
-        Object deleteToken = indexKey.equals(plan.index.key)
-          ? null : context.token;
+      Object deleteToken = indexKey.equals(plan.index.key)
+        ? null : context.token;
 
-        count = 0;
-        boolean done = false;
-        while (! done) {
-          ResultType type = iterator.nextRow();
-          switch (type) {
-          case End:
-            done = true;
-            break;
+      count = 0;
+      boolean done = false;
+      while (! done) {
+        ResultType type = iterator.nextRow();
+        switch (type) {
+        case End:
+          done = true;
+          break;
       
-          case Inserted: {
-            ++ count;
+        case Inserted: {
+          prepareForUpdate(context, table);
 
-            if (deleteToken == null) {
-              context.setToken(deleteToken = new Object());
-            }
+          ++ count;
 
-            Node tree = (Node) iterator.pair.fork.value;
+          if (deleteToken == null) {
+            context.setToken(deleteToken = new Object());
+          }
 
-            int i = 0;
-            for (; i < keyColumns.size() - 1; ++i) {
-              context.setKey
-                (i + IndexDataBodyDepth,
-                 (Comparable) find(tree, keyColumns.get(i)).value);
-            }
+          Node tree = (Node) iterator.pair.fork.value;
 
-            context.delete
+          int i = 0;
+          for (; i < keyColumns.size() - 1; ++i) {
+            context.setKey
               (i + IndexDataBodyDepth,
                (Comparable) find(tree, keyColumns.get(i)).value);
-          } break;
-
-          default:
-            throw new RuntimeException("unexpected result type: " + type);
           }
+
+          context.delete
+            (i + IndexDataBodyDepth,
+             (Comparable) find(tree, keyColumns.get(i)).value);
+        } break;
+
+        default:
+          throw new RuntimeException("unexpected result type: " + type);
         }
       }
 
@@ -3615,6 +3955,22 @@ public class MyDBMS implements DBMS {
     return new MyQueryResult(myBase, myFork, myTemplate, copy(parameters));
   }
 
+  public DiffResult diff(Revision base,
+                         Revision fork)
+  {
+    MyRevision myBase;
+    MyRevision myFork;
+    try {
+      myBase = (MyRevision) base;
+      myFork = (MyRevision) fork;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("revision not created by this implementation");        
+    }
+
+    return new MyDiffResult(myBase, new NodeStack(), myFork, new NodeStack());
+  }
+
   public PatchTemplate insertTemplate
     (Table table,
      List<Column> columns,
@@ -3798,13 +4154,85 @@ public class MyDBMS implements DBMS {
            + parameters.length + ")");
       }
 
-      Object[] myParameters = copy(parameters);
-
       return myTemplate.apply(myContext, copy(parameters));
     } catch (RuntimeException e) {
       myContext.token = null;
       throw e;
     }
+  }
+
+  public void treeDelete(PatchContext context,
+                         Object ... path)
+  {
+    MyPatchContext myContext;
+    try {
+      myContext = (MyPatchContext) context;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("patch context not created by this implementation");        
+    }
+
+    Comparable[] myPath = new Comparable[path.length];
+    for (int i = 0; i < path.length; ++i) {
+      myPath[i] = (Comparable) path[i];
+    }
+    
+    treeDelete(myContext, myPath);
+  }
+
+  public void treeInsert(PatchContext context,
+                         DuplicateKeyResolution duplicateKeyResolution,
+                         Object ... path)
+  {
+    MyPatchContext myContext;
+    try {
+      myContext = (MyPatchContext) context;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("patch context not created by this implementation");        
+    }
+
+    MyTable myTable;
+    try {
+      myTable = (MyTable) path[0];
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("table not created by this implementation");        
+    }
+
+    List<MyColumn> columns = myTable.primaryKey.columns;
+
+    if (path.length < columns.size() + 3) {
+      throw new IllegalArgumentException
+        ("too few parameters specified for primary key");
+    }
+
+    MyColumn myColumn;
+    try {
+      myColumn = (MyColumn) path[columns.size() + 1];
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("column not created by this implementation");        
+    }
+
+    Comparable[] myPath = new Comparable[columns.size()];
+    for (int i = 0; i < myPath.length; ++i) {
+      Comparable c = (Comparable) path[i + 1];
+      if (columns.get(i) == myColumn) {
+        throw new IllegalArgumentException
+          ("cannot use treeInsert to update a primary key column");        
+      }
+      myPath[i] = c;
+    }
+
+    Object value = path[columns.size() + 2];
+    if (value != null && ! myColumn.type.isInstance(value)) {
+      throw new ClassCastException
+        (value.getClass() + " cannot be cast to " + myColumn.type);
+    }
+
+    treeInsert
+      (myContext, duplicateKeyResolution, myTable, myColumn, value, myPath);
   }
 
   public void add(PatchContext context,
@@ -3877,6 +4305,12 @@ public class MyDBMS implements DBMS {
       throw new IllegalArgumentException
         ("patch context not created by this implementation");        
     }
+
+    if (myContext.token == null) {
+      throw new IllegalStateException("patch context already committed");
+    }
+
+    updateIndexes(myContext);
 
     myContext.token = null;
 
@@ -4099,62 +4533,7 @@ public class MyDBMS implements DBMS {
 
     // Update non-primary-key data trees
     for (IndexKey indexKey: indexKeys) {
-      List<MyColumn> keyColumns = indexKey.index.columns;
-
-      MyTableReference.MySourceIterator iterator
-        = new MyTableReference(indexKey.index.table).iterator
-        (left, baseStack, context.result, leftStack, TrueConstant,
-         new ExpressionContext(null), false);
-
-      context.setKey(TableDataDepth, indexKey.index.table);
-      context.setKey(IndexDataDepth, indexKey);
-
-      boolean done = false;
-      while (! done) {
-        ResultType type = iterator.nextRow();
-        switch (type) {
-        case End:
-          done = true;
-          break;
-      
-        case Inserted: {
-          Node tree = (Node) iterator.pair.fork.value;
-
-          int i = 0;
-          for (; i < keyColumns.size() - 1; ++i) {
-            context.setKey
-              (i + IndexDataBodyDepth,
-               (Comparable) find(tree, keyColumns.get(i)).value);
-          }
-
-          Node n = context.blaze
-            (i + IndexDataBodyDepth,
-             (Comparable) find(tree, keyColumns.get(i)).value);
-
-          expect(n.value == NullNode);
-      
-          n.value = tree;
-        } break;
-
-        case Deleted: {
-          Node tree = (Node) iterator.pair.base.value;
-
-          int i = 0;
-          for (; i < keyColumns.size() - 1; ++i) {
-            context.setKey
-              (i + IndexDataBodyDepth,
-               (Comparable) find(tree, keyColumns.get(i)).value);
-          }
-
-          context.delete
-            (i + IndexDataBodyDepth,
-             (Comparable) find(tree, keyColumns.get(i)).value);            
-        } break;
-      
-        default:
-          throw new RuntimeException("unexpected result type: " + type);
-        }
-      }
+      updateIndexTree(context, indexKey, left, leftStack, baseStack);
     }
 
     // build data trees for any new index keys

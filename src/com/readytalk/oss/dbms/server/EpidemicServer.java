@@ -4,13 +4,20 @@ import com.readytalk.oss.dbms.DBMS;
 import com.readytalk.oss.dbms.DBMS.PatchContext;
 import com.readytalk.oss.dbms.DBMS.Revision;
 import com.readytalk.oss.dbms.DBMS.ConflictResolver;
+import com.readytalk.oss.dbms.DBMS.DiffResult;
+import com.readytalk.oss.dbms.DBMS.DiffResultType;
+import com.readytalk.oss.dbms.DBMS.DuplicateKeyResolution;
 
 import java.lang.ref.WeakReference;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.IOException;
+import java.io.EOFException;
+import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.List;
 import java.util.ArrayList;
@@ -18,6 +25,40 @@ import java.util.Iterator;
 
 public class EpidemicServer {
   private static final boolean Debug = true;
+
+  private static final Map<Class, Serializer> Serializers = new HashMap();
+
+  static {
+    Serializers.put(Integer.class, new Serializer() {
+      public void writeTo(OutputStream out, Object v) throws IOException {
+        writeInteger(out, (Integer) v);
+      }
+
+      public Object readFrom(InputStream in) throws IOException {
+        return readInteger(in);
+      }
+    });
+
+    Serializers.put(String.class, new Serializer() {
+      public void writeTo(OutputStream out, Object v) throws IOException {
+        writeString(out, (String) v);
+      }
+
+      public Object readFrom(InputStream in) throws IOException {
+        return readString(in);
+      }
+    });
+  }
+
+  private static final int End = 0;
+  private static final int Descend = 1;
+  private static final int Ascend = 2;
+  private static final int Key = 3;
+  private static final int Delete = 4;
+  private static final int Insert = 5;
+  private static final int ClassDefinition = 6;
+  private static final int ClassReference = 7;
+  private static final int Reference = 8;
 
   private final DBMS dbms;
   private final ConflictResolver conflictResolver;
@@ -187,7 +228,7 @@ public class EpidemicServer {
       } else {
         send(state, new Diff
              (state.id, lastSent.sequenceNumber, record.sequenceNumber,
-              new RevisionDiffBody(lastSent.revision, record.revision)));
+              new RevisionDiffBody(dbms, lastSent.revision, record.revision)));
       }
 
       state.connectionState.lastSent.put(target.node, record);
@@ -321,6 +362,153 @@ public class EpidemicServer {
     }
   }
 
+  private static void write(OutputStream out,
+                            WriteContext context,
+                            Object value)
+    throws IOException
+  {
+    Integer id = context.objectIDs.get(value);
+    if (id == null) {
+      Class c = value.getClass();
+      Integer classID = context.classIDs.get(c);
+      if (classID == null) {
+        int newClassID = context.nextID++;
+
+        out.write(ClassDefinition);
+        writeInteger(out, newClassID);
+        writeString(out, c.getName());
+
+        context.objectIDs.put(c, newClassID);
+      } else {
+        out.write(ClassReference);
+        writeInteger(out, classID);
+      }
+
+      int newID = context.nextID++;
+      writeInteger(out, newID);
+      writeObject(out, value);
+
+      context.objectIDs.put(value, newID);
+    } else {
+      out.write(Reference);
+      writeInteger(out, id);
+    }
+  }
+
+  private static void writeInteger(OutputStream out, int v)
+    throws IOException
+  {
+    if (v == (v & 0x7F)) {
+      out.write(v);
+    } else {
+      out.write((v & 0x7F) | 0x80);
+      writeInteger(out, v >>> 7);
+    }
+  }
+
+  public static void writeString(OutputStream out, String s)
+    throws IOException
+  {
+    byte[] bytes = s.getBytes("UTF-8");
+    writeInteger(out, bytes.length);
+    out.write(bytes);
+  }
+
+  private static void writeObject(OutputStream out, Object v)
+    throws IOException
+  {
+    if (v instanceof Writable) {
+      ((Writable) v).writeTo(out);
+    } else {
+      Serializers.get(v.getClass()).writeTo(out, v);
+    }
+  }
+
+  private static int readInteger(InputStream in)
+    throws IOException
+  {
+    int b = in.read();
+    if (b < 0) {
+      throw new EOFException();
+    } else if ((b & 0x80) == 0) {
+      return b;
+    } else {
+      return (b & 0x7F) | (readInteger(in) << 7);
+    }
+  }
+
+  private static String readString(InputStream in)
+    throws IOException
+  {
+    byte[] array = new byte[readInteger(in)];
+    if (StreamUtil.readFully(in, array, 0, array.length) != array.length) {
+      throw new EOFException();
+    }
+    return new String(array, "UTF-8");
+  }
+
+  private static Object readObject(Class c, InputStream in)
+    throws IOException
+  {
+    if (c.isAssignableFrom(Readable.class)) {
+      Readable v;
+      try {
+        v = (Readable) c.newInstance();
+      } catch (InstantiationException e) {
+        throw new RuntimeException(e);
+      } catch (IllegalAccessException e) {
+        throw new RuntimeException(e);
+      }
+      v.readFrom(in);
+      return v;
+    } else {
+      return Serializers.get(c).readFrom(in);
+    }
+  }
+
+  private static Object readDefinition(Class c,
+                                       InputStream in,
+                                       ReadContext context)
+    throws IOException
+  {
+    int id = readInteger(in);
+    Object value = readObject(c, in);
+    context.objects.put(id, value);
+    return value;
+  }
+
+  private static Object read(InputStream in,
+                             ReadContext context)
+    throws IOException
+  {
+    int flag = in.read();
+    switch (flag) {
+    case ClassDefinition: {
+      int classID = readInteger(in);
+      Class c;
+      try {
+        c = Class.forName(readString(in));
+      } catch (ClassNotFoundException e) {
+        throw new RuntimeException(e);
+      }
+      context.classes.put(classID, c);
+      return readDefinition(c, in, context);
+    }
+      
+    case ClassReference: {
+      return readDefinition
+        (context.classes.get(readInteger(in)), in, context);
+    }
+      
+    case Reference: {
+      return context.objects.get(readInteger(in));
+    }
+      
+    default:
+      throw new RuntimeException("unexpected flag: " + flag);
+    }    
+  }
+
   private static class NodeState {
     public final NodeID id;
     public Record head;
@@ -421,7 +609,7 @@ public class EpidemicServer {
       origin = new NodeID(StreamUtil.readString(in));
       startSequenceNumber = StreamUtil.readLong(in);
       endSequenceNumber = StreamUtil.readLong(in);
-      ListDiffBody list = new ListDiffBody();
+      BufferDiffBody list = new BufferDiffBody();
       list.readFrom(in);
       body = list;
     }
@@ -450,10 +638,12 @@ public class EpidemicServer {
   }
 
   private static class RevisionDiffBody implements DiffBody, Writable {
+    public final DBMS dbms;
     public final Revision base;
     public final Revision fork;
 
-    public RevisionDiffBody(Revision base, Revision fork) {
+    public RevisionDiffBody(DBMS dbms, Revision base, Revision fork) {
+      this.dbms = dbms;
       this.base = base;
       this.fork = fork;
     }
@@ -463,28 +653,129 @@ public class EpidemicServer {
     }
 
     public void writeTo(OutputStream out) throws IOException {
-      // todo
+      DiffResult result = dbms.diff(base, fork);
+      WriteContext writeContext = new WriteContext();
+      while (true) {
+        DiffResultType type = result.next();
+        switch (type) {
+        case End:
+          out.write(End);
+          return;
+
+        case Descend: {
+          out.write(Descend);
+        } break;
+
+        case Ascend: {
+          out.write(Ascend);
+        } break;
+
+        case Key: {
+          if (result.forkHasKey()) {
+            out.write(Key);
+            write(out, writeContext, result.get());
+          } else {
+            out.write(Delete);
+            write(out, writeContext, result.get());
+            result.skip();
+          }
+        } break;
+
+        case Value: {
+          out.write(Insert);
+          write(out, writeContext, result.get());
+        } break;
+
+        default:
+          throw new RuntimeException("unexpected result type: " + type);
+        }
+      }
     }
   }
 
-  private static class ListDiffBody implements DiffBody, Readable {
-    public final List<Operation> operations = new ArrayList();
+  private static class BufferDiffBody implements DiffBody, Readable {
+    public BufferOutputStream buffer;
 
     public Revision apply(DBMS dbms, Revision base) {
-      PatchContext context = dbms.patchContext(base);
-      for (Operation operation: operations) {
-        operation.apply(context);
+      PatchContext patchContext = dbms.patchContext(base);
+      ReadContext readContext = new ReadContext();
+      final int MaxDepth = 16;
+      Object[] path = new Object[MaxDepth];
+      int depth = 0;
+      InputStream in = new ByteArrayInputStream
+        (buffer.getBuffer(), 0, buffer.size());
+
+      try {
+        while (true) {
+          int flag = in.read();
+          switch (flag) {
+          case End:
+            return dbms.commit(patchContext);
+
+          case Descend:
+            ++ depth;
+            break;
+
+          case Ascend:
+            -- depth;
+            break;
+
+          case Key:
+            path[depth] = read(in, readContext);
+            break;
+
+          case Delete:
+            path[depth] = read(in, readContext);
+            dbms.treeDelete(patchContext, path);
+            break;
+
+          case Insert:
+            path[depth] = read(in, readContext);
+            dbms.treeInsert
+              (patchContext, DuplicateKeyResolution.Overwrite, path);
+            break;
+
+          default:
+            throw new RuntimeException("unexpected flag: " + flag);
+          }
+        }
+      } catch (IOException e) {
+        // shouldn't be possible, since we're reading from a byte array
+        throw new RuntimeException(e);
       }
-      return dbms.commit(context);
     }
 
     public void readFrom(InputStream in) throws IOException {
-      // todo
-    }
-  }
+      buffer = new BufferOutputStream();
+      ReadContext readContext = new ReadContext();
+      WriteContext writeContext = new WriteContext();
+      while (true) {
+        int flag = in.read();
+        switch (flag) {
+        case -1:
+          throw new EOFException();
 
-  private static interface Operation {
-    public void apply(PatchContext context);
+        case End:
+          buffer.write(flag);
+          return;
+
+        case Descend:          
+        case Ascend:
+          buffer.write(flag);
+          break;
+
+        case Key:
+        case Delete:
+        case Insert:
+          buffer.write(flag);
+          write(buffer, writeContext, read(in, readContext));
+          break;
+
+        default:
+          throw new RuntimeException("unexpected flag: " + flag);
+        }
+      }
+    }
   }
 
   public static interface Writable {
@@ -505,5 +796,27 @@ public class EpidemicServer {
     public NodeID(String id) {
       this.id = id;
     }
+  }
+
+  private static class BufferOutputStream extends ByteArrayOutputStream {
+    public byte[] getBuffer() {
+      return buf;
+    }
+  }
+
+  private static class WriteContext {
+    public final Map<Class, Integer> classIDs = new IdentityHashMap();
+    public final Map<Object, Integer> objectIDs = new IdentityHashMap();
+    public int nextID;
+  }
+
+  private static class ReadContext {
+    public final Map<Integer, Class> classes = new HashMap();
+    public final Map<Integer, Object> objects = new HashMap();
+  }
+
+  private interface Serializer {
+    public void writeTo(OutputStream out, Object v) throws IOException;
+    public Object readFrom(InputStream in) throws IOException;
   }
 }
