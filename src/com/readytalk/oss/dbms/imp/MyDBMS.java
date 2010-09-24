@@ -2968,9 +2968,12 @@ public class MyDBMS implements DBMS {
     public final Node[] blazedLeaves;
     public final Node[] found;
     public final BlazeResult blazeResult = new BlazeResult();
+    public NodeStack indexUpdateBaseStack;
+    public NodeStack indexUpdateForkStack;
     public MyRevision indexBase;
     public MyRevision result;
     public int max = -1;
+    public boolean dirtyIndexes;
 
     public MyPatchContext(Object token,
                           MyRevision result,
@@ -3198,12 +3201,15 @@ public class MyDBMS implements DBMS {
   }
 
   private static void updateIndexes(MyPatchContext context) {
-    if (context.indexBase != context.result) {
-      NodeStack baseStack = new NodeStack();
-      NodeStack forkStack = new NodeStack();
+    if (context.dirtyIndexes && context.indexBase != context.result) {
+      if (context.indexUpdateBaseStack == null) {
+        context.indexUpdateBaseStack = new NodeStack();
+        context.indexUpdateForkStack = new NodeStack();
+      }
 
       DiffIterator iterator = new DiffIterator
-        (context.indexBase.root, baseStack, context.result.root, forkStack,
+        (context.indexBase.root, context.indexUpdateBaseStack,
+         context.result.root, context.indexUpdateForkStack,
          list(UnboundedEvaluatedInterval).iterator(), false);
 
       DiffPair pair = new DiffPair();
@@ -3211,20 +3217,21 @@ public class MyDBMS implements DBMS {
       while (iterator.next(pair)) {
         if (pair.fork != null) {
           for (NodeIterator indexKeys = new NodeIterator
-                 (baseStack, pathFind
+                 (context.indexUpdateBaseStack, pathFind
                   (context.result.root, IndexTable, IndexTable.primaryKey.key,
                    (MyTable) pair.fork.key));
                indexKeys.hasNext();)
           {
             updateIndexTree
               (context, (IndexKey) indexKeys.next().key, context.indexBase,
-               baseStack, forkStack);
+               context.indexUpdateBaseStack, context.indexUpdateForkStack);
           }
         }
       }
-
-      context.indexBase = context.result;
     }
+
+    context.dirtyIndexes = false;
+    context.indexBase = context.result;
   }
 
   private static void updateIndex(MyPatchContext context,
@@ -3242,11 +3249,14 @@ public class MyDBMS implements DBMS {
     // freeze a copy of the last revision which contained up-to-date
     // indexes so we can do a diff later and use it to update them
 
-    if (context.indexBase == context.result && pathFind
-        (context.result.root, IndexTable, IndexTable.primaryKey.key, table)
-        != NullNode)
+    if (pathFind(context.result.root, IndexTable, IndexTable.primaryKey.key,
+                 table) != NullNode)
     {
-      context.setToken(new Object());
+      context.dirtyIndexes = true;
+
+      if (context.indexBase == context.result) {
+        context.setToken(new Object());
+      }
     }
   }
 
