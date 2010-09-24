@@ -585,12 +585,12 @@ public interface DBMS {
            DuplicateKeyException,
            ClassCastException;
 
-  public void treeDelete(PatchContext context,
-                         Object ... path);
+  public void delete(PatchContext context,
+                     Object ... path);
 
-  public void treeInsert(PatchContext context,
-                         DuplicateKeyResolution duplicateKeyResolution,
-                         Object ... path);
+  public void insert(PatchContext context,
+                     DuplicateKeyResolution duplicateKeyResolution,
+                     Object ... path);
 
   /**
    * Adds the specified index to the specified patch context.

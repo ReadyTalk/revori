@@ -3260,8 +3260,8 @@ public class MyDBMS implements DBMS {
     }
   }
 
-  private void treeDelete(MyPatchContext context,
-                          Comparable[] keys)
+  private void delete(MyPatchContext context,
+                      Comparable[] keys)
   {
     if (keys.length == 0) {
       context.deleteAll();
@@ -3288,12 +3288,12 @@ public class MyDBMS implements DBMS {
     context.delete(i + IndexDataBodyDepth, keys[i]);
   }
 
-  private void treeInsert(MyPatchContext context,
-                          DuplicateKeyResolution duplicateKeyResolution,
-                          MyTable table,
-                          MyColumn column,
-                          Object value,
-                          Comparable[] path)
+  private void insert(MyPatchContext context,
+                      DuplicateKeyResolution duplicateKeyResolution,
+                      MyTable table,
+                      MyColumn column,
+                      Object value,
+                      Comparable[] path)
   {
     prepareForUpdate(context, table);
 
@@ -4171,8 +4171,8 @@ public class MyDBMS implements DBMS {
     }
   }
 
-  public void treeDelete(PatchContext context,
-                         Object ... path)
+  public void delete(PatchContext context,
+                     Object ... path)
   {
     MyPatchContext myContext;
     try {
@@ -4187,12 +4187,12 @@ public class MyDBMS implements DBMS {
       myPath[i] = (Comparable) path[i];
     }
     
-    treeDelete(myContext, myPath);
+    delete(myContext, myPath);
   }
 
-  public void treeInsert(PatchContext context,
-                         DuplicateKeyResolution duplicateKeyResolution,
-                         Object ... path)
+  public void insert(PatchContext context,
+                     DuplicateKeyResolution duplicateKeyResolution,
+                     Object ... path)
   {
     MyPatchContext myContext;
     try {
@@ -4230,7 +4230,7 @@ public class MyDBMS implements DBMS {
       Comparable c = (Comparable) path[i + 1];
       if (columns.get(i) == myColumn) {
         throw new IllegalArgumentException
-          ("cannot use treeInsert to update a primary key column");        
+          ("cannot use insert to update a primary key column");        
       }
       myPath[i] = c;
     }
@@ -4241,7 +4241,7 @@ public class MyDBMS implements DBMS {
         (value.getClass() + " cannot be cast to " + myColumn.type);
     }
 
-    treeInsert
+    insert
       (myContext, duplicateKeyResolution, myTable, myColumn, value, myPath);
   }
 
