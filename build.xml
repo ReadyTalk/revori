@@ -78,7 +78,7 @@
   </target>
 
   <target name="test" depends="compile-test">
-    <junit showoutput="yes" haltonfailure="yes">
+    <junit haltonfailure="yes">
       <formatter usefile="false" type="plain"/>
 
       <classpath>
