@@ -1636,8 +1636,8 @@ public class MyDBMS implements DBMS {
   }
 
   private static Node pathFind(Node root, Comparable ... path) {
-    for (Comparable c: path) {
-      root = (Node) find(root, c).value;
+    for (int i = 0; i < path.length && root != NullNode; ++i) {
+      root = (Node) find(root, path[i]).value;
     }
     return root;
   }
