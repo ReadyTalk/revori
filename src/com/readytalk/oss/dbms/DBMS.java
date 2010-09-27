@@ -357,11 +357,9 @@ public interface DBMS {
   public interface DiffResult {
     public DiffResultType next();
 
-    public Object get();
+    public Object base();
 
-    public boolean baseHasKey();
-
-    public boolean forkHasKey();
+    public Object fork();
 
     public void skip();
   }

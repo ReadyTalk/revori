@@ -671,19 +671,20 @@ public class EpidemicServer {
         } break;
 
         case Key: {
-          if (result.forkHasKey()) {
+          Object forkKey = result.fork();
+          if (forkKey != null) {
             out.write(Key);
-            write(out, writeContext, result.get());
+            write(out, writeContext, forkKey);
           } else {
             out.write(Delete);
-            write(out, writeContext, result.get());
+            write(out, writeContext, result.base());
             result.skip();
           }
         } break;
 
         case Value: {
           out.write(Insert);
-          write(out, writeContext, result.get());
+          write(out, writeContext, result.fork());
         } break;
 
         default:
@@ -717,7 +718,7 @@ public class EpidemicServer {
             break;
 
           case Ascend:
-            -- depth;
+            path[depth--] = null;
             break;
 
           case Key:

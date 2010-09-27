@@ -2822,7 +2822,8 @@ public class MyDBMS implements DBMS {
         case Iterate:
           if (iterators[depth].next(pair)) {
             if (depth == TableDataDepth) {
-              table = (MyTable) get();
+              table = (MyTable)
+                (pair.base == null ? pair.fork.key : pair.base.key);
               state = State.Descend;
               return DiffResultType.Key;
             } else if (depth == IndexDataDepth) {
@@ -2882,12 +2883,12 @@ public class MyDBMS implements DBMS {
     }
 
     // todo: use enum-value-specific virtual methods instead of switch
-    // statements for the following four methods:
+    // statements for the following methods:
 
-    public Object get() {
+    public Object fork() {
       switch (state) {
       case Value:
-        return pair.base == null ? pair.fork.value : pair.base.value;
+        return pair.fork == null ? null : pair.fork.value;
 
       case Start:
       case End:
@@ -2897,16 +2898,18 @@ public class MyDBMS implements DBMS {
       case Ascend:
       case DescendValue:
       case Iterate:
-        return pair.base == null ? pair.fork.key : pair.base.key;
+        return pair.fork == null ? null : pair.fork.key;
 
       default:
         throw new RuntimeException("unexpected state: " + state);
       }
     }
 
-    public boolean baseHasKey() {
+    public Object base() {
       switch (state) {
       case Value:
+        return pair.base == null ? null : pair.base.value;
+
       case Start:
       case End:
         throw new IllegalStateException();
@@ -2915,25 +2918,7 @@ public class MyDBMS implements DBMS {
       case Ascend:
       case DescendValue:
       case Iterate:
-        return pair.base != null;
-
-      default:
-        throw new RuntimeException("unexpected state: " + state);
-      }
-    }
-
-    public boolean forkHasKey() {
-      switch (state) {
-      case Value:
-      case Start:
-      case End:
-        throw new IllegalStateException();
-
-      case Descend:
-      case Ascend:
-      case DescendValue:
-      case Iterate:
-        return pair.fork != null;
+        return pair.base == null ? null : pair.base.key;
 
       default:
         throw new RuntimeException("unexpected state: " + state);
