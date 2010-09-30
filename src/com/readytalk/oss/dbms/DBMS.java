@@ -586,9 +586,20 @@ public interface DBMS {
   public void delete(PatchContext context,
                      Object ... path);
 
+  public void delete(PatchContext context,
+                     Object[] path,
+                     int pathOffset,
+                     int pathLength);
+
   public void insert(PatchContext context,
                      DuplicateKeyResolution duplicateKeyResolution,
                      Object ... path);
+
+  public void insert(PatchContext context,
+                     DuplicateKeyResolution duplicateKeyResolution,
+                     Object[] path,
+                     int pathOffset,
+                     int pathLength);
 
   /**
    * Adds the specified index to the specified patch context.

@@ -727,12 +727,13 @@ public class EpidemicServer {
 
           case Delete:
             path[depth] = read(in, readContext);
-            dbms.delete(patchContext, path);
+            dbms.delete(patchContext, path, 0, depth + 1);
             break;
 
           case Insert:
             path[depth] = read(in, readContext);
-            dbms.insert(patchContext, DuplicateKeyResolution.Overwrite, path);
+            dbms.insert(patchContext, DuplicateKeyResolution.Overwrite,
+                        path, 0, depth + 1);
             break;
 
           default:

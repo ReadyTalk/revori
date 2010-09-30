@@ -17,6 +17,10 @@ import com.readytalk.oss.dbms.DBMS.DiffResultType;
 import com.readytalk.oss.dbms.imp.MyDBMS;
 
 public class LowLevel {
+  private static void expectEqual(Object actual, Object expected) {
+    assertEquals(expected, actual);
+  }
+
   @Test
   public void testLowLevelDiffs() {
     DBMS dbms = new MyDBMS();
@@ -43,121 +47,121 @@ public class LowLevel {
 
     DiffResult result = dbms.diff(tail, first);
 
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), numbers);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), numbers);
 
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), 1);
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), name);
-    assertEquals(result.next(), DiffResultType.Value);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), "one");
+    expectEqual(result.next(), DiffResultType.Descend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), 1);
+    expectEqual(result.next(), DiffResultType.Descend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), name);
+    expectEqual(result.next(), DiffResultType.Value);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), "one");
 
-    assertEquals(result.next(), DiffResultType.Ascend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), 2);
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), name);
-    assertEquals(result.next(), DiffResultType.Value);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), "two");
+    expectEqual(result.next(), DiffResultType.Ascend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), 2);
+    expectEqual(result.next(), DiffResultType.Descend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), name);
+    expectEqual(result.next(), DiffResultType.Value);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), "two");
 
-    assertEquals(result.next(), DiffResultType.Ascend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), 3);
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), name);
-    assertEquals(result.next(), DiffResultType.Value);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), "three");
+    expectEqual(result.next(), DiffResultType.Ascend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), 3);
+    expectEqual(result.next(), DiffResultType.Descend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), name);
+    expectEqual(result.next(), DiffResultType.Value);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), "three");
 
-    assertEquals(result.next(), DiffResultType.Ascend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), 4);
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), name);
-    assertEquals(result.next(), DiffResultType.Value);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), "four");
+    expectEqual(result.next(), DiffResultType.Ascend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), 4);
+    expectEqual(result.next(), DiffResultType.Descend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), name);
+    expectEqual(result.next(), DiffResultType.Value);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), "four");
 
-    assertEquals(result.next(), DiffResultType.Ascend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), 5);
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), name);
-    assertEquals(result.next(), DiffResultType.Value);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), "five");
+    expectEqual(result.next(), DiffResultType.Ascend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), 5);
+    expectEqual(result.next(), DiffResultType.Descend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), name);
+    expectEqual(result.next(), DiffResultType.Value);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), "five");
 
-    assertEquals(result.next(), DiffResultType.Ascend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), 6);
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), name);
-    assertEquals(result.next(), DiffResultType.Value);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), "six");
+    expectEqual(result.next(), DiffResultType.Ascend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), 6);
+    expectEqual(result.next(), DiffResultType.Descend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), name);
+    expectEqual(result.next(), DiffResultType.Value);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), "six");
 
-    assertEquals(result.next(), DiffResultType.Ascend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), 7);
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), name);
-    assertEquals(result.next(), DiffResultType.Value);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), "seven");
+    expectEqual(result.next(), DiffResultType.Ascend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), 7);
+    expectEqual(result.next(), DiffResultType.Descend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), name);
+    expectEqual(result.next(), DiffResultType.Value);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), "seven");
 
-    assertEquals(result.next(), DiffResultType.Ascend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), 8);
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), name);
-    assertEquals(result.next(), DiffResultType.Value);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), "eight");
+    expectEqual(result.next(), DiffResultType.Ascend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), 8);
+    expectEqual(result.next(), DiffResultType.Descend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), name);
+    expectEqual(result.next(), DiffResultType.Value);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), "eight");
 
-    assertEquals(result.next(), DiffResultType.Ascend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), 9);
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), name);
-    assertEquals(result.next(), DiffResultType.Value);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), "nine");
+    expectEqual(result.next(), DiffResultType.Ascend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), 9);
+    expectEqual(result.next(), DiffResultType.Descend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), name);
+    expectEqual(result.next(), DiffResultType.Value);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), "nine");
 
-    assertEquals(result.next(), DiffResultType.Ascend);
-    assertEquals(result.next(), DiffResultType.Ascend);
-    assertEquals(result.next(), DiffResultType.End);
+    expectEqual(result.next(), DiffResultType.Ascend);
+    expectEqual(result.next(), DiffResultType.Ascend);
+    expectEqual(result.next(), DiffResultType.End);
 
     context = dbms.patchContext(first);
 
@@ -173,85 +177,85 @@ public class LowLevel {
 
     result = dbms.diff(first, second);
 
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), numbers);
-    assertEquals(result.fork(), numbers);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), numbers);
+    expectEqual(result.fork(), numbers);
 
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), 2);
-    assertEquals(result.fork(), null);
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), name);
-    assertEquals(result.fork(), null);
-    assertEquals(result.next(), DiffResultType.Value);
-    assertEquals(result.base(), "two");
-    assertEquals(result.fork(), null);
+    expectEqual(result.next(), DiffResultType.Descend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), 2);
+    expectEqual(result.fork(), null);
+    expectEqual(result.next(), DiffResultType.Descend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), name);
+    expectEqual(result.fork(), null);
+    expectEqual(result.next(), DiffResultType.Value);
+    expectEqual(result.base(), "two");
+    expectEqual(result.fork(), null);
 
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), 3);
-    assertEquals(result.fork(), null);
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), name);
-    assertEquals(result.fork(), null);
-    assertEquals(result.next(), DiffResultType.Value);
-    assertEquals(result.base(), "three");
-    assertEquals(result.fork(), null);
+    expectEqual(result.next(), DiffResultType.Ascend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), 3);
+    expectEqual(result.fork(), null);
+    expectEqual(result.next(), DiffResultType.Descend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), name);
+    expectEqual(result.fork(), null);
+    expectEqual(result.next(), DiffResultType.Value);
+    expectEqual(result.base(), "three");
+    expectEqual(result.fork(), null);
 
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), 4);
-    assertEquals(result.fork(), 4);
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), name);
-    assertEquals(result.fork(), name);
-    assertEquals(result.next(), DiffResultType.Value);
-    assertEquals(result.base(), "four");
-    assertEquals(result.fork(), "quatro");
+    expectEqual(result.next(), DiffResultType.Ascend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), 4);
+    expectEqual(result.fork(), 4);
+    expectEqual(result.next(), DiffResultType.Descend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), name);
+    expectEqual(result.fork(), name);
+    expectEqual(result.next(), DiffResultType.Value);
+    expectEqual(result.base(), "four");
+    expectEqual(result.fork(), "quatro");
 
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), 5);
-    assertEquals(result.fork(), null);
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), name);
-    assertEquals(result.fork(), null);
-    assertEquals(result.next(), DiffResultType.Value);
-    assertEquals(result.base(), "five");
-    assertEquals(result.fork(), null);
+    expectEqual(result.next(), DiffResultType.Ascend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), 5);
+    expectEqual(result.fork(), null);
+    expectEqual(result.next(), DiffResultType.Descend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), name);
+    expectEqual(result.fork(), null);
+    expectEqual(result.next(), DiffResultType.Value);
+    expectEqual(result.base(), "five");
+    expectEqual(result.fork(), null);
 
-    assertEquals(result.next(), DiffResultType.Ascend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), 10);
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), name);
-    assertEquals(result.next(), DiffResultType.Value);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), "ten");
+    expectEqual(result.next(), DiffResultType.Ascend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), 10);
+    expectEqual(result.next(), DiffResultType.Descend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), name);
+    expectEqual(result.next(), DiffResultType.Value);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), "ten");
 
-    assertEquals(result.next(), DiffResultType.Ascend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), 25);
-    assertEquals(result.next(), DiffResultType.Descend);
-    assertEquals(result.next(), DiffResultType.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), name);
-    assertEquals(result.next(), DiffResultType.Value);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), "twenty-five");
+    expectEqual(result.next(), DiffResultType.Ascend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), 25);
+    expectEqual(result.next(), DiffResultType.Descend);
+    expectEqual(result.next(), DiffResultType.Key);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), name);
+    expectEqual(result.next(), DiffResultType.Value);
+    expectEqual(result.base(), null);
+    expectEqual(result.fork(), "twenty-five");
 
-    assertEquals(result.next(), DiffResultType.Ascend);
-    assertEquals(result.next(), DiffResultType.Ascend);
-    assertEquals(result.next(), DiffResultType.End);
+    expectEqual(result.next(), DiffResultType.Ascend);
+    expectEqual(result.next(), DiffResultType.Ascend);
+    expectEqual(result.next(), DiffResultType.End);
   }
 
   private static void apply(DBMS dbms, PatchContext context, DiffResult result)
@@ -281,15 +285,14 @@ public class LowLevel {
           path[depth] = forkKey;
         } else {
           path[depth] = result.base();          
-          dbms.delete(context, path, depth + 1);
+          dbms.delete(context, path, 0, depth + 1);
           result.skip();
         }
       } break;
 
       case Value: {
         path[depth + 1] = result.fork();
-        dbms.insert
-          (context, Overwrite, path, depth + 2);
+        dbms.insert(context, Overwrite, path, 0, depth + 2);
       } break;
 
       default:
@@ -330,7 +333,7 @@ public class LowLevel {
     
     DiffResult result = dbms.diff(first, firstApplied);
     
-    assertEquals(result.next(), DiffResultType.End);
+    expectEqual(result.next(), DiffResultType.End);
 
     context = dbms.patchContext(first);
 
@@ -352,7 +355,7 @@ public class LowLevel {
     
     result = dbms.diff(second, secondApplied);
 
-    assertEquals(result.next(), DiffResultType.End);
+    expectEqual(result.next(), DiffResultType.End);
 
     context = dbms.patchContext(tail);
 
@@ -362,7 +365,7 @@ public class LowLevel {
     
     result = dbms.diff(second, secondApplied);
 
-    assertEquals(result.next(), DiffResultType.End);
+    expectEqual(result.next(), DiffResultType.End);
 
     context = dbms.patchContext(firstApplied);
 
@@ -372,6 +375,6 @@ public class LowLevel {
     
     result = dbms.diff(second, secondApplied);
 
-    assertEquals(result.next(), DiffResultType.End);
+    expectEqual(result.next(), DiffResultType.End);
   }
 }

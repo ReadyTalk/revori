@@ -2773,17 +2773,61 @@ public class MyDBMS implements DBMS {
 
   private static class MyDiffResult implements DiffResult {
     public enum State {
-      Start, Descend, Ascend, DescendValue, Value, Iterate, End;
+      Flush, FlushKey() {
+        public Object fork(MyDiffResult r) {
+          Node n = r.pairs[r.clientDepth].fork;
+          return n == null ? null : n.key;
+        }
+
+        public Object base(MyDiffResult r) {
+          Node n = r.pairs[r.clientDepth].base;
+          return n == null ? null : n.key;
+        }
+
+        public void skip(MyDiffResult r) {
+          int clientDepth = r.clientDepth;
+          while (r.depth > clientDepth) {
+            r.ascend();
+          }
+          r.clientDepth = r.depth;
+          r.state = Iterate;
+        }  
+      }, Descend, Ascend, Key, Value, PostValue() {
+        public Object fork(MyDiffResult r) {
+          Node n = r.pairs[r.clientDepth].fork;
+          return n == null ? null : n.value;
+        }
+
+        public Object base(MyDiffResult r) {
+          Node n = r.pairs[r.clientDepth].base;
+          return n == null ? null : n.value;
+        }
+      }, Iterate, End;
+
+      public Object fork(MyDiffResult r) {
+        throw new IllegalStateException();
+      }
+
+      public Object base(MyDiffResult r) {
+        throw new IllegalStateException();
+      }
+
+      public void skip(MyDiffResult r) {
+        throw new IllegalStateException();
+      }
     }
 
     public final DiffIterator[] iterators = new DiffIterator[MaxDepth];
-    public final DiffPair pair = new DiffPair();
-    public State state = State.Start;
+    public final DiffPair[] pairs = new DiffPair[MaxDepth];
+    public final boolean[] clientHasKey = new boolean[MaxDepth];
+    public State state = State.Iterate;
+    public State nextState;
     public NodeStack baseStack;
     public NodeStack forkStack;
     public MyTable table;
     public int depth;
     public int bottom;
+    public int clientDepth;
 
     public MyDiffResult(MyRevision base,
                         NodeStack baseStack,
@@ -2797,35 +2841,84 @@ public class MyDBMS implements DBMS {
          this.forkStack = new NodeStack(forkStack),
          list(UnboundedEvaluatedInterval).iterator(),
          false);
+
+      pairs[0] = new DiffPair();
     }
 
     public DiffResultType next() {
       while (true) {
         switch (state) {
+        case Flush:
+          if (! clientHasKey[clientDepth]) {
+            state = State.FlushKey; 
+            clientHasKey[clientDepth] = true;
+            return DiffResultType.Key;
+          } else if (clientDepth != depth) {
+            if (clientDepth == TableDataDepth) {
+              clientDepth += 2;
+            } else {
+              ++ clientDepth;
+            }
+
+            return DiffResultType.Descend;
+          } else {
+            state = nextState;
+            nextState = null;
+          }
+          break;
+
+        case FlushKey:
+          state = State.Flush;
+          break;
+
         case Descend:
           descend();
+          state = State.Iterate;
           break;
 
         case Ascend:
           ascend();
-          break;
-
-        case DescendValue:
-          state = State.Value;
-          return DiffResultType.Value;
-
-        case Start:
-        case Value:
           state = State.Iterate;
           break;
 
-        case Iterate:
+        case Key: {
+          DiffPair pair = pairs[depth];
+          if (pair.base != null && pair.fork != null) {
+            if (depth > IndexDataDepth && depth == bottom) {
+              if (equal(pair.base.value, pair.fork.value)) {
+                state = State.Iterate;
+              } else {
+                nextState = State.Value;
+                state = State.Flush;
+              }
+            } else {
+              state = State.Descend;
+            }
+          } else {
+            if (depth > IndexDataDepth && depth == bottom) {
+              nextState = State.Value;
+            } else {
+              nextState = State.Descend;
+            }
+            state = State.Flush;
+          }
+        } break;
+
+        case Value:
+          state = State.PostValue;
+          return DiffResultType.Value;
+
+        case PostValue:
+          state = State.Iterate;
+          break;
+
+        case Iterate: {
+          clientHasKey[depth] = false;
+          DiffPair pair = pairs[depth];
           if (iterators[depth].next(pair)) {
             if (depth == TableDataDepth) {
               table = (MyTable)
                 (pair.base == null ? pair.fork.key : pair.base.key);
-              state = State.Descend;
-              return DiffResultType.Key;
             } else if (depth == IndexDataDepth) {
               IndexKey indexKey = (IndexKey)
                 (pair.base == null ? pair.fork.key : pair.base.key);
@@ -2834,20 +2927,24 @@ public class MyDBMS implements DBMS {
                 bottom = indexKey.index.columns.size() + IndexDataBodyDepth;
                 descend();
               }
-            } else if (depth == bottom) {
-              state = State.DescendValue;
-              return DiffResultType.Key;
-            } else {
-              state = State.Descend;
-              return DiffResultType.Key;
+              break;
             }
+
+            state = State.Key;
           } else if (depth == 0) {
             state = State.End;
           } else {
             state = State.Ascend;
-            return DiffResultType.Ascend;
+            if (clientDepth == depth) {
+              if (depth == IndexDataDepth + 1) {
+                clientDepth -= 2;
+              } else {
+                -- clientDepth;
+              }
+              return DiffResultType.Ascend;
+            }
           }
-          break;
+        } break;
 
         case End:
           return DiffResultType.End;
@@ -2858,7 +2955,8 @@ public class MyDBMS implements DBMS {
       }
     }
 
-    private void descend() {
+    public void descend() {
+      DiffPair pair = pairs[depth];
       Node base = pair.base;
       Node fork = pair.fork;
 
@@ -2871,9 +2969,13 @@ public class MyDBMS implements DBMS {
          forkStack = new NodeStack(forkStack),
          list(UnboundedEvaluatedInterval).iterator(),
          false);
+
+      if (pairs[depth] == null) {
+        pairs[depth] = new DiffPair();
+      }
     }
 
-    private void ascend() {
+    public void ascend() {
       iterators[depth] = null;
 
       -- depth;
@@ -2882,66 +2984,16 @@ public class MyDBMS implements DBMS {
       forkStack = popStack(forkStack);
     }
 
-    // todo: use enum-value-specific virtual methods instead of switch
-    // statements for the following methods:
-
     public Object fork() {
-      switch (state) {
-      case Value:
-        return pair.fork == null ? null : pair.fork.value;
-
-      case Start:
-      case End:
-        throw new IllegalStateException();
-
-      case Descend:
-      case Ascend:
-      case DescendValue:
-      case Iterate:
-        return pair.fork == null ? null : pair.fork.key;
-
-      default:
-        throw new RuntimeException("unexpected state: " + state);
-      }
+      return state.fork(this);
     }
 
     public Object base() {
-      switch (state) {
-      case Value:
-        return pair.base == null ? null : pair.base.value;
-
-      case Start:
-      case End:
-        throw new IllegalStateException();
-
-      case Descend:
-      case Ascend:
-      case DescendValue:
-      case Iterate:
-        return pair.base == null ? null : pair.base.key;
-
-      default:
-        throw new RuntimeException("unexpected state: " + state);
-      }
+      return state.base(this);
     }
 
     public void skip() {
-      switch (state) {
-      case Value:
-      case Start:
-      case End:
-      case Ascend:
-      case Iterate:
-        throw new IllegalStateException();
-
-      case Descend:
-      case DescendValue:
-        state = State.Iterate;
-        break;
-
-      default:
-        throw new RuntimeException("unexpected state: " + state);
-      }
+      state.skip(this);
     }
   }
 
@@ -3263,14 +3315,14 @@ public class MyDBMS implements DBMS {
     prepareForUpdate(context, table);
 
     context.setKey(TableDataDepth, table);
-    context.setKey(IndexDataDepth, table.primaryKey);
+    context.setKey(IndexDataDepth, table.primaryKey.key);
 
-    int i = 0;
+    int i = 1;
     for (; i < keys.length - 1; ++i) {
-      context.setKey(i + IndexDataBodyDepth, keys[i]);
+      context.setKey(i - 1 + IndexDataBodyDepth, keys[i]);
     }
 
-    context.delete(i + IndexDataBodyDepth, keys[i]);
+    context.delete(i - 1 + IndexDataBodyDepth, keys[i]);
   }
 
   private void insert(MyPatchContext context,
@@ -3283,7 +3335,7 @@ public class MyDBMS implements DBMS {
     prepareForUpdate(context, table);
 
     context.setKey(TableDataDepth, table);
-    context.setKey(IndexDataDepth, table.primaryKey);
+    context.setKey(IndexDataDepth, table.primaryKey.key);
 
     for (int i = 0; i < path.length; ++i) {
       context.setKey(i + IndexDataBodyDepth, path[i]);
@@ -4157,7 +4209,9 @@ public class MyDBMS implements DBMS {
   }
 
   public void delete(PatchContext context,
-                     Object ... path)
+                     Object[] path,
+                     int pathOffset,
+                     int pathLength)
   {
     MyPatchContext myContext;
     try {
@@ -4167,17 +4221,25 @@ public class MyDBMS implements DBMS {
         ("patch context not created by this implementation");        
     }
 
-    Comparable[] myPath = new Comparable[path.length];
-    for (int i = 0; i < path.length; ++i) {
-      myPath[i] = (Comparable) path[i];
+    Comparable[] myPath = new Comparable[pathLength];
+    for (int i = 0; i < pathLength; ++i) {
+      myPath[i] = (Comparable) path[pathOffset + i];
     }
     
     delete(myContext, myPath);
   }
 
+  public void delete(PatchContext context,
+                     Object ... path)
+  {
+    delete(context, path, 0, path.length);
+  }
+
   public void insert(PatchContext context,
                      DuplicateKeyResolution duplicateKeyResolution,
-                     Object ... path)
+                     Object[] path,
+                     int pathOffset,
+                     int pathLength)
   {
     MyPatchContext myContext;
     try {
@@ -4189,7 +4251,7 @@ public class MyDBMS implements DBMS {
 
     MyTable myTable;
     try {
-      myTable = (MyTable) path[0];
+      myTable = (MyTable) path[pathOffset];
     } catch (ClassCastException e) {
       throw new IllegalArgumentException
         ("table not created by this implementation");        
@@ -4197,14 +4259,14 @@ public class MyDBMS implements DBMS {
 
     List<MyColumn> columns = myTable.primaryKey.columns;
 
-    if (path.length < columns.size() + 3) {
+    if (pathLength != columns.size() + 3) {
       throw new IllegalArgumentException
-        ("too few parameters specified for primary key");
+        ("wrong number of parameters for primary key");
     }
 
     MyColumn myColumn;
     try {
-      myColumn = (MyColumn) path[columns.size() + 1];
+      myColumn = (MyColumn) path[pathOffset + columns.size() + 1];
     } catch (ClassCastException e) {
       throw new IllegalArgumentException
         ("column not created by this implementation");        
@@ -4212,7 +4274,7 @@ public class MyDBMS implements DBMS {
 
     Comparable[] myPath = new Comparable[columns.size()];
     for (int i = 0; i < myPath.length; ++i) {
-      Comparable c = (Comparable) path[i + 1];
+      Comparable c = (Comparable) path[pathOffset + i + 1];
       if (columns.get(i) == myColumn) {
         throw new IllegalArgumentException
           ("cannot use insert to update a primary key column");        
@@ -4220,7 +4282,7 @@ public class MyDBMS implements DBMS {
       myPath[i] = c;
     }
 
-    Object value = path[columns.size() + 2];
+    Object value = path[pathOffset + columns.size() + 2];
     if (value != null && ! myColumn.type.isInstance(value)) {
       throw new ClassCastException
         (value.getClass() + " cannot be cast to " + myColumn.type);
@@ -4228,6 +4290,13 @@ public class MyDBMS implements DBMS {
 
     insert
       (myContext, duplicateKeyResolution, myTable, myColumn, value, myPath);
+  }
+
+  public void insert(PatchContext context,
+                     DuplicateKeyResolution duplicateKeyResolution,
+                     Object ... path)
+  {
+    insert(context, duplicateKeyResolution, path, 0, path.length);
   }
 
   public void add(PatchContext context,
@@ -4753,6 +4822,11 @@ public class MyDBMS implements DBMS {
     }
 
     if (old == NullNode) {
+      if (stack.top.left == new_) {
+        stack.top.left = NullNode;
+      } else {
+        stack.top.right = NullNode;
+      }
       popStack(stack);
       return root;
     }
