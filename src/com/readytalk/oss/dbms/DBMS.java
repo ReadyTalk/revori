@@ -240,24 +240,62 @@ public interface DBMS {
   public static class DuplicateKeyException extends RuntimeException { }
 
   /**
-   * Opaque type representing a column which may be used to identify
-   * an item of interest in a query or update.
+   * Class representing a column which may be used to identify an item
+   * of interest in a query or update.
    */
-  public interface Column { }
+  public interface Column {
+    /**
+     * Returns the type which values stored to this column must be
+     * instances of.
+     */
+    public Class type();
+
+    /**
+     * Returns the ID specified when this column was defined.
+     */
+    public String id();
+  }
 
   /**
-   * Opaque type representing an index on a table.  Instances of this
+   * Class representing an index on a table.  Instances of this
    * interface may used to specify a way to organize data for
    * efficient access.
    */
-  public interface Index { }
+  public interface Index {
+    /**
+     * Returns the table specified when this index was defined.
+     */
+    public Table table();
+
+    /**
+     * Returns an immutable list of columns which determine the
+     * organization of data in the index.<p>
+     *
+     * The returned list may contain more columns than were specified
+     * when the index was defined if the original list did not contain
+     * all the columns of the primary key.  In this case, any missing
+     * columns are added to the end of the original list to ensure
+     * each row maps to a unique key in the index.
+     */
+    public List<Column> columns();
+  }
 
   /**
-   * Opaque type representing a table.  Instances of this interface do
-   * not hold any data; they're used only to identify a collection of
-   * rows of interest in a query or update.
+   * Class representing a table.  Instances of this interface do not
+   * hold any data; they're used only to identify a collection of rows
+   * of interest in a query or update.
    */
-  public interface Table { }
+  public interface Table {
+    /**
+     * Returns the primary key specified when this table was defined.
+     */
+    public Index primaryKey();
+
+    /**
+     * Returns the ID specified when this table was defined.
+     */
+    public String id();
+  }
 
   /**
    * Opaque type representing an immutable database revision.
@@ -384,8 +422,13 @@ public interface DBMS {
    * The type specified here will be used for dynamic type checking
    * whenever a value is inserted or updated in this column of a
    * table; only values which are instances of the specified class
-   * will be accepted.
+   * will be accepted.<p>
+   *
+   * Instances of Column are considered equal if and only if their IDs
+   * and types are equal.
    */
+  public Column column(String id, Class type);
+
   public Column column(Class type);
 
   /**
@@ -398,9 +441,14 @@ public interface DBMS {
 
   /**
    * Defines a table using the specified list of columns as the
-   * primary key.
+   * primary key.<p>
+   *
+   * Instances of Table are considered equal if and only if their IDs
+   * and primary keys are equal.
    */
-  public Table table(List<Column> primaryKey);
+  public Table table(String id, List<Column> primaryKeyColumns);
+
+  public Table table(List<Column> primaryKeyColumns);
 
   /**
    * Defines an empty database revision.
@@ -511,6 +559,14 @@ public interface DBMS {
   public DiffResult diff(Revision base,
                          Revision fork);
 
+  public Object query(Revision revision,
+                      Object ... path);
+
+  public Object query(Revision revision,
+                      Object[] path,
+                      int pathOffset,
+                      int pathLength);
+
   /**
    * Defines a patch template (AKA prepared statement) which
    * represents an insert operation on the specified table.  The
@@ -602,13 +658,18 @@ public interface DBMS {
                      int pathLength);
 
   /**
-   * Adds the specified index to the specified patch context.
+   * Adds the specified index to the specified patch context.  This
+   * has no effect if the index is already present.
    */
   public void add(PatchContext context,
                   Index index);
 
   /**
    * Removes the specified index from the specified patch context.
+   * This has no effect if the index is not found.
+   *
+   * @throws IllegalArgumentException if the specified index is a
+   * primary key.
    */
   public void remove(PatchContext context,
                      Index index);

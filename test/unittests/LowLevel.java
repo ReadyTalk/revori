@@ -263,13 +263,11 @@ public class LowLevel {
     final int MaxDepth = 16;
     Object[] path = new Object[MaxDepth];
     int depth = 0;
-    boolean done = false;
-    while (! done) {
+    while (true) {
       DiffResultType type = result.next();
       switch (type) {
       case End:
-        done = true;
-        break;
+        return;
 
       case Descend:
         ++ depth;

@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class MyDBMS implements DBMS {
   private static final boolean Debug = true;
@@ -61,8 +60,6 @@ public class MyDBMS implements DBMS {
 
   private static final Unknown UnknownInterval = new Unknown();
 
-  private static final AtomicInteger nextId = new AtomicInteger();
-
   private static final Node NullNode = new Node(new Object(), null);
 
   private static final MyRevision EmptyRevision
@@ -72,14 +69,16 @@ public class MyDBMS implements DBMS {
 
   private static final Constant TrueConstant = new Constant(true);
 
-  private static final MyColumn TableColumn = new MyColumn(MyTable.class);
-  private static final MyColumn IndexKeyColumn
-    = new MyColumn(IndexKey.class);
+  private static final MyColumn TableColumn
+    = new MyColumn("MyDBMS.TableColumn", MyTable.class);
+
   private static final MyColumn IndexColumn
-    = new MyColumn(MyIndex.class);
+    = new MyColumn("MyDBMS.IndexColumn", MyIndex.class);
 
   private static final MyTable IndexTable
-    = new MyTable(list(TableColumn, IndexKeyColumn, IndexColumn));
+    = new MyTable("MyDBMS.IndexTable", list(TableColumn, IndexColumn));
+
+  private static int nextID;
 
   static {
     NullNode.left = NullNode;
@@ -93,8 +92,8 @@ public class MyDBMS implements DBMS {
     }
   }
 
-  private static int nextId() {
-    return nextId.getAndIncrement();
+  private static synchronized String makeID() {
+    return "MyDBMS." + (nextID++);
   }
 
   private enum BoundType {
@@ -223,93 +222,104 @@ public class MyDBMS implements DBMS {
   }
 
   private static class MyColumn implements Column, Comparable<MyColumn> {
+    public final String id;
     public final Class type;
-    public final int id;
 
-    public MyColumn(Class type) {
+    public MyColumn(String id, Class type) {
+      this.id = id;
       this.type = type;
-      this.id = nextId();
+      if (type == null) {
+        throw new NullPointerException();
+      }
+    }
+
+    public Class type() {
+      return type;
+    }
+
+    public String id() {
+      return id;
     }
 
     public int compareTo(MyColumn o) {
-      return id - o.id;
-    }
-      
-    public String toString() {
-      return "column[" + id + "]";
-    }
-  }
-
-  private static class IndexKey implements Comparable<IndexKey> {
-    public final MyIndex index;
-
-    public IndexKey(MyIndex index) {
-      this.index = index;
-    }
-
-    public int compareTo(IndexKey o) {
-      if (this == o) {
-        return 0;
-      }
-
-      int d = index.table.compareTo(o.index.table);
+      int d = id.compareTo(o.id);
       if (d != 0) {
         return d;
       }
 
-      d = index.columns.size() - o.index.columns.size();
-      if (d != 0) {
-        return d;
-      }
-
-      Iterator<MyColumn> mine = index.columns.iterator();
-      Iterator<MyColumn> other = o.index.columns.iterator();
-      while (mine.hasNext()) {
-        d = mine.next().compareTo(other.next());
-        if (d != 0) {
-          return d;
-        }
-      }
-      return 0;
+      return type.getName().compareTo(o.type.getName());
     }
 
-    public boolean equal(Object o) {
-      return o instanceof IndexKey && compareTo((IndexKey) o) == 0;
-    }
-
-    public int hashCode() {
-      int h = index.table.hashCode();
-      for (MyColumn c: index.columns) {
-        h ^= c.hashCode();
-      }
-      return h;
+    public boolean equals(Object o) {
+      return o instanceof MyColumn && compareTo((MyColumn) o) == 0;
     }
       
     public String toString() {
-      return "indexKey[" + index.table + " " + index.columns + "]";
+      return "column[" + id + " " + type.getName() + "]";
     }
   }
 
   private static class MyIndex implements Index, Comparable<MyIndex> {
     public final MyTable table;
     public final List<MyColumn> columns;
-    public final IndexKey key = new IndexKey(this);    
-    public final int id;
 
     public MyIndex(MyTable table,
                    List<MyColumn> columns)
     {
       this.table = table;
-      this.columns = columns;
-      this.id = nextId();
+      this.columns = Collections.unmodifiableList(columns);
+    }
+
+    public Table table() {
+      return table;
+    }
+
+    public List<Column> columns() {
+      return (List) columns;
+    }
+
+    private int compareColumns(MyIndex o) {
+      int d = columns.size() - o.columns.size();
+      if (d != 0) {
+        return d;
+      }
+
+      Iterator<MyColumn> ti = columns.iterator();
+      Iterator<MyColumn> oi = o.columns.iterator();
+      while (ti.hasNext()) {
+        d = ti.next().compareTo(oi.next());
+        if (d != 0) {
+          return d;
+        }
+      }
+
+      return 0;
+
     }
 
     public int compareTo(MyIndex o) {
-      return id - o.id;
+      int d = table.compareTo(o.table);
+      if (d != 0) {
+        return d;
+      }
+
+      return compareColumns(o);
+    }
+
+    public int hashCode() {
+      int h = table.hashCode();
+      for (MyColumn c: columns) {
+        h ^= c.hashCode();
+      }
+      return h;
+    }
+
+    public boolean equals(Object o) {
+      return o instanceof MyIndex && compareTo((MyIndex) o) == 0;
     }
       
     public String toString() {
-      return "index[" + id + " " + table + " " + columns + "]";
+      return "index[" + table + " " + columns + "]";
     }
   }
 
@@ -322,7 +332,7 @@ public class MyDBMS implements DBMS {
        TrueConstant, new ExpressionContext(null), false);
 
     context.setKey(TableDataDepth, index.table);
-    context.setKey(IndexDataDepth, index.key);
+    context.setKey(IndexDataDepth, index);
 
     List<MyColumn> keyColumns = index.columns;
 
@@ -358,25 +368,27 @@ public class MyDBMS implements DBMS {
   private static void addIndex(MyPatchContext context,
                                MyIndex index)
   {
-    if ((! index.key.equals(index.table.primaryKey.key))
-        && pathFind(context.result.root, IndexTable, IndexTable.primaryKey.key,
-                    index.table, index.key)
-        == NullNode)
+    if (index.equals(index.table.primaryKey)
+        || pathFind(context.result.root, IndexTable, IndexTable.primaryKey,
+                    index.table, index) != NullNode)
     {
-      // flush any changes out to the existing indexes, since we don't
-      // want to get confused later when some indexes are up-to-date
-      // and some aren't:
-      updateIndexes(context);
-
-      buildIndexTree(context, index);
+      // the specified index is already present -- ignore
+      return;
     }
+
+    // flush any changes out to the existing indexes, since we don't
+    // want to get confused later when some indexes are up-to-date and
+    // some aren't:
+    updateIndexes(context);
+
+    buildIndexTree(context, index);
     
     context.setKey(TableDataDepth, IndexTable);
-    context.setKey(IndexDataDepth, IndexTable.primaryKey.key);
+    context.setKey(IndexDataDepth, IndexTable.primaryKey);
 
     Node tree = NullNode;
     BlazeResult result = new BlazeResult();
-    Comparable[] values = new Comparable[] { index.table, index.key, index };
+    Comparable[] values = new Comparable[] { index.table, index };
     List<MyColumn> columns = IndexTable.primaryKey.columns;
     for (int i = 0; i < columns.size(); ++i) {
       tree = blaze
@@ -394,44 +406,51 @@ public class MyDBMS implements DBMS {
   private static void removeIndex(MyPatchContext context,
                                   MyIndex index)
   {
+    if (index.equals(index.table.primaryKey)) {
+      throw new IllegalArgumentException("cannot remove primary key");
+    }
+
     context.setKey(TableDataDepth, IndexTable);
-    context.setKey(IndexDataDepth, IndexTable.primaryKey.key);
+    context.setKey(IndexDataDepth, IndexTable.primaryKey);
+    context.setKey(IndexDataBodyDepth, index.table);
+    context.delete(IndexDataBodyDepth + 1, index);
 
-    Comparable[] values = new Comparable[] { index.table, index.key, index };
-    List<MyColumn> columns = IndexTable.primaryKey.columns;
-    for (int i = 0; i < columns.size(); ++i) {
-      if (i == columns.size() - 1) {
-        context.delete(IndexDataBodyDepth + i, values[i]);
-      } else {
-        context.setKey(IndexDataBodyDepth + i, values[i]);
-      }
-    }
-
-    if ((! index.key.equals(index.table.primaryKey.key))
-        && pathFind(context.result.root, IndexTable, IndexTable.primaryKey.key,
-                    index.table, index.key)
-        == NullNode)
-    {
-      context.setKey(TableDataDepth, index.table);
-      context.delete(IndexDataDepth, index.key);
-    }
+    context.setKey(TableDataDepth, index.table);
+    context.delete(IndexDataDepth, index);
   }
 
   private static class MyTable implements Table, Comparable<MyTable> {
+    public final String id;
     public final MyIndex primaryKey;
-    public final int id;
 
-    public MyTable(List<MyColumn> primaryKey) {
+    public MyTable(String id, List<MyColumn> primaryKey) {
+      this.id = id;
       this.primaryKey = new MyIndex(this, primaryKey);
-      this.id = nextId();
+    }
+
+    public Index primaryKey() {
+      return primaryKey;
+    }
+
+    public String id() {
+      return id;
     }
 
     public int compareTo(MyTable o) {
-      return id - o.id;
+      int d = id.compareTo(o.id);
+      if (d != 0) {
+        return d;
+      }
+
+      return primaryKey.compareColumns(o.primaryKey);
+    }
+
+    public boolean equals(Object o) {
+      return o instanceof MyTable && compareTo((MyTable) o) == 0;
     }
       
     public String toString() {
-      return "table[" + id + "]";
+      return "table[" + id + " " + primaryKey.columns + "]";
     }
   }
 
@@ -1306,20 +1325,16 @@ public class MyDBMS implements DBMS {
       this.base = base;
       this.left = left;
       this.right = right;
-      
-      if (leftRoot == NullNode) {
-        throw new NullPointerException();
-      }
-
-      if (rightRoot == NullNode) {
-        throw new NullPointerException();
-      }
 
       if (baseRoot != NullNode) {
         push(base, baseRoot);
       }
-      push(left, leftRoot);
-      push(right, rightRoot);
+      if (leftRoot != NullNode) {
+        push(left, leftRoot);
+      }
+      if (rightRoot != NullNode) {
+        push(right, rightRoot);
+      }
 
       expect(base.top != NullNode
              && left.top != NullNode
@@ -1400,8 +1415,8 @@ public class MyDBMS implements DBMS {
             if (left.top == right.top && left.top == base.top) {
               // no need to go any deeper -- there aren't any changes
               break;
-            } else if (left.top.left == NullNode
-                       && right.top.left == NullNode
+            } else if ((left.top == null || left.top.left == NullNode)
+                       && (right.top == null || right.top.left == NullNode)
                        && (base.top == null || base.top.left == NullNode))
             {
               break;
@@ -1653,10 +1668,10 @@ public class MyDBMS implements DBMS {
       (null, tableReference.table.primaryKey, test, tableReference);
 
     DiffIterator indexIterator = new DiffIterator
-      (pathFind(base.root, IndexTable, IndexTable.primaryKey.key,
+      (pathFind(base.root, IndexTable, IndexTable.primaryKey,
                 tableReference.table),
        baseStack = new NodeStack(baseStack),
-       pathFind(fork.root, IndexTable, IndexTable.primaryKey.key,
+       pathFind(fork.root, IndexTable, IndexTable.primaryKey,
                 tableReference.table),
        forkStack = new NodeStack(forkStack),
        list(UnboundedEvaluatedInterval).iterator(),
@@ -1674,11 +1689,11 @@ public class MyDBMS implements DBMS {
         continue;
       }
 
-      IndexKey indexKey = (IndexKey)
+      MyIndex index = (MyIndex)
         (pair.base == null ? pair.fork.key : pair.base.key);
 
-      if (! indexKey.equals(tableReference.table.primaryKey.key)) {
-        best = improvePlan(best, indexKey.index, test, tableReference);
+      if (! index.equals(tableReference.table.primaryKey)) {
+        best = improvePlan(best, index, test, tableReference);
       }
     }
 
@@ -1761,9 +1776,9 @@ public class MyDBMS implements DBMS {
         this.plan = plan;
 
         plan.iterators[0] = new DiffIterator
-          (pathFind(this.base, plan.index.key),
+          (pathFind(this.base, plan.index),
            this.baseStack = new NodeStack(baseStack),
-           pathFind(this.fork, plan.index.key),
+           pathFind(this.fork, plan.index),
            this.forkStack = new NodeStack(forkStack),
            plan.scans[0].evaluate().iterator(),
            visitUnchanged);
@@ -2920,11 +2935,11 @@ public class MyDBMS implements DBMS {
               table = (MyTable)
                 (pair.base == null ? pair.fork.key : pair.base.key);
             } else if (depth == IndexDataDepth) {
-              IndexKey indexKey = (IndexKey)
+              MyIndex index = (MyIndex)
                 (pair.base == null ? pair.fork.key : pair.base.key);
 
-              if (equal(indexKey, table.primaryKey.key)) {
-                bottom = indexKey.index.columns.size() + IndexDataBodyDepth;
+              if (equal(index, table.primaryKey)) {
+                bottom = index.columns.size() + IndexDataBodyDepth;
                 descend();
               }
               break;
@@ -3172,22 +3187,22 @@ public class MyDBMS implements DBMS {
   }
 
   private static void updateIndexTree(MyPatchContext context,
-                                      IndexKey indexKey,
+                                      MyIndex index,
                                       MyRevision base,
                                       NodeStack baseStack,
                                       NodeStack forkStack)
   {
-    expect(indexKey != indexKey.index.table.primaryKey.key);
+    expect(! index.equals(index.table.primaryKey));
 
-    List<MyColumn> keyColumns = indexKey.index.columns;
+    List<MyColumn> keyColumns = index.columns;
 
     MyTableReference.MySourceIterator iterator
-      = new MyTableReference(indexKey.index.table).iterator
+      = new MyTableReference(index.table).iterator
       (base, baseStack, context.result, forkStack, TrueConstant,
        new ExpressionContext(null), false);
 
-    context.setKey(TableDataDepth, indexKey.index.table);
-    context.setKey(IndexDataDepth, indexKey);
+    context.setKey(TableDataDepth, index.table);
+    context.setKey(IndexDataDepth, index);
 
     boolean done = false;
     while (! done) {
@@ -3253,14 +3268,14 @@ public class MyDBMS implements DBMS {
 
       while (iterator.next(pair)) {
         if (pair.fork != null) {
-          for (NodeIterator indexKeys = new NodeIterator
+          for (NodeIterator indexes = new NodeIterator
                  (context.indexUpdateBaseStack, pathFind
-                  (context.result.root, IndexTable, IndexTable.primaryKey.key,
+                  (context.result.root, IndexTable, IndexTable.primaryKey,
                    (MyTable) pair.fork.key));
-               indexKeys.hasNext();)
+               indexes.hasNext();)
           {
             updateIndexTree
-              (context, (IndexKey) indexKeys.next().key, context.indexBase,
+              (context, (MyIndex) indexes.next().key, context.indexBase,
                context.indexUpdateBaseStack, context.indexUpdateForkStack);
           }
         }
@@ -3274,7 +3289,7 @@ public class MyDBMS implements DBMS {
   private static void updateIndex(MyPatchContext context,
                                   MyIndex index)
   {
-    if (! equal(index.table.primaryKey.key, index.key)) {
+    if (! equal(index.table.primaryKey, index)) {
       updateIndexes(context);
     }
   }
@@ -3286,7 +3301,7 @@ public class MyDBMS implements DBMS {
     // freeze a copy of the last revision which contained up-to-date
     // indexes so we can do a diff later and use it to update them
 
-    if (pathFind(context.result.root, IndexTable, IndexTable.primaryKey.key,
+    if (pathFind(context.result.root, IndexTable, IndexTable.primaryKey,
                  table) != NullNode)
     {
       context.dirtyIndexes = true;
@@ -3315,7 +3330,7 @@ public class MyDBMS implements DBMS {
     prepareForUpdate(context, table);
 
     context.setKey(TableDataDepth, table);
-    context.setKey(IndexDataDepth, table.primaryKey.key);
+    context.setKey(IndexDataDepth, table.primaryKey);
 
     int i = 1;
     for (; i < keys.length - 1; ++i) {
@@ -3335,7 +3350,7 @@ public class MyDBMS implements DBMS {
     prepareForUpdate(context, table);
 
     context.setKey(TableDataDepth, table);
-    context.setKey(IndexDataDepth, table.primaryKey.key);
+    context.setKey(IndexDataDepth, table.primaryKey);
 
     for (int i = 0; i < path.length; ++i) {
       context.setKey(i + IndexDataBodyDepth, path[i]);
@@ -3418,12 +3433,12 @@ public class MyDBMS implements DBMS {
 
       prepareForUpdate(context, table);
 
-      IndexKey indexKey = table.primaryKey.key;
+      MyIndex index = table.primaryKey;
 
       context.setKey(TableDataDepth, table);
-      context.setKey(IndexDataDepth, indexKey);
+      context.setKey(IndexDataDepth, index);
 
-      List<MyColumn> columns = indexKey.index.columns;
+      List<MyColumn> columns = index.columns;
       int i;
       for (i = 0; i < columns.size() - 1; ++i) {
         context.setKey
@@ -3502,15 +3517,15 @@ public class MyDBMS implements DBMS {
       int count = 0;
       MyRevision revision = context.result;
 
-      IndexKey indexKey = table.primaryKey.key;
+      MyIndex index = table.primaryKey;
 
-      context.setKey(IndexDataDepth, indexKey);
+      context.setKey(IndexDataDepth, index);
 
       MyTableReference.MySourceIterator iterator = tableReference.iterator
         (EmptyRevision, NullNodeStack, revision, new NodeStack(), liveTest,
          expressionContext, plan, false);
                                                                             
-      List<MyColumn> keyColumns = indexKey.index.columns;
+      List<MyColumn> keyColumns = index.columns;
 
       int[] keyColumnsUpdated;
       { List<MyColumn> columnList = new ArrayList();
@@ -3533,8 +3548,7 @@ public class MyDBMS implements DBMS {
         }
       }
         
-      Object deleteToken = indexKey.equals(plan.index.key)
-        ? null : context.token;
+      Object deleteToken = index.equals(plan.index) ? null : context.token;
 
       count = 0;
       boolean done = false;
@@ -3669,18 +3683,17 @@ public class MyDBMS implements DBMS {
       int count = 0;
       MyRevision revision = context.result;
       MyTable table = tableReference.table;
-      IndexKey indexKey = table.primaryKey.key;
+      MyIndex index = table.primaryKey;
 
-      context.setKey(IndexDataDepth, indexKey);
+      context.setKey(IndexDataDepth, index);
 
       MyTableReference.MySourceIterator iterator = tableReference.iterator
         (EmptyRevision, NullNodeStack, revision, new NodeStack(), liveTest,
          expressionContext, plan, false);
 
-      List<MyColumn> keyColumns = indexKey.index.columns;
+      List<MyColumn> keyColumns = index.columns;
 
-      Object deleteToken = indexKey.equals(plan.index.key)
-        ? null : context.token;
+      Object deleteToken = index.equals(plan.index) ? null : context.token;
 
       count = 0;
       boolean done = false;
@@ -3769,8 +3782,12 @@ public class MyDBMS implements DBMS {
     }
   }
 
+  public Column column(String id, Class type) {
+    return new MyColumn(id, type);
+  }
+
   public Column column(Class type) {
-    return new MyColumn(type);
+    return column(makeID(), type);
   }
 
   public Index index(Table table, List<Column> columns) {
@@ -3807,7 +3824,7 @@ public class MyDBMS implements DBMS {
     return new MyIndex(myTable, copyOfColumns);
   }
 
-  public Table table(List<Column> primaryKey) {
+  public Table table(String id, List<Column> primaryKey) {
     List copyOfPrimaryKey = new ArrayList(primaryKey);
 
     for (Object c: copyOfPrimaryKey) {
@@ -3817,7 +3834,11 @@ public class MyDBMS implements DBMS {
       }
     }
 
-    return new MyTable(copyOfPrimaryKey);
+    return new MyTable(id, copyOfPrimaryKey);
+  }
+
+  public Table table(List<Column> primaryKey) {
+    return table(makeID(), primaryKey);
   }
 
   public Revision revision() {
@@ -4016,6 +4037,68 @@ public class MyDBMS implements DBMS {
     }
 
     return new MyDiffResult(myBase, new NodeStack(), myFork, new NodeStack());
+  }
+
+  public Object query(Revision revision,
+                      Object[] path,
+                      int pathOffset,
+                      int pathLength)
+  {
+    MyRevision myRevision;
+    try {
+      myRevision = (MyRevision) revision;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("revision not created by this implementation");        
+    }
+
+    MyIndex myIndex;
+    try {
+      myIndex = (MyIndex) path[pathOffset];
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("index not created by this implementation");        
+    }
+
+    List<MyColumn> columns = myIndex.columns;
+
+    if (pathLength != columns.size() + 2) {
+      throw new IllegalArgumentException
+        ("wrong number of parameters for specified index");
+    }
+
+    MyColumn myColumn;
+    try {
+      myColumn = (MyColumn) path[pathOffset + columns.size() + 1];
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("column not created by this implementation");        
+    }
+
+    Comparable[] myPath = new Comparable[columns.size() + 2];
+    myPath[0] = myIndex.table;
+    myPath[1] = myIndex;
+    for (int i = 0; i < columns.size(); ++i) {
+      Comparable c = (Comparable) path[pathOffset + i + 1];
+      if (columns.get(i) == myColumn) {
+        throw new IllegalArgumentException
+          ("cannot use insert to update a primary key column");        
+      }
+      myPath[i + 2] = c;
+    }
+
+    Node n = find(pathFind(myRevision.root, myPath), myColumn);
+    if (n == NullNode) {
+      return null;
+    } else {
+      return n.value;
+    }
+  }
+
+  public Object query(Revision revision,
+                      Object ... path)
+  {
+    return query(revision, path, 0, path.length);
   }
 
   public PatchTemplate insertTemplate
@@ -4428,8 +4511,8 @@ public class MyDBMS implements DBMS {
     MyPatchContext context = new MyPatchContext
       (new Object(), left, new NodeStack());
 
-    List<IndexKey> indexKeys = new ArrayList();
-    List<IndexKey> newIndexKeys = new ArrayList();
+    List<MyIndex> indexes = new ArrayList();
+    List<MyIndex> newIndexes = new ArrayList();
 
     NodeStack baseStack = new NodeStack();
     NodeStack leftStack = new NodeStack();
@@ -4526,11 +4609,11 @@ public class MyDBMS implements DBMS {
 
               if (table != IndexTable) {
                 DiffIterator indexIterator = new DiffIterator
-                  (pathFind(left.root, IndexTable, IndexTable.primaryKey.key,
+                  (pathFind(left.root, IndexTable, IndexTable.primaryKey,
                             table),
                    baseStack = new NodeStack(baseStack),
                    pathFind(context.result.root, IndexTable,
-                            IndexTable.primaryKey.key, table),
+                            IndexTable.primaryKey, table),
                    leftStack = new NodeStack(leftStack),
                    list(UnboundedEvaluatedInterval).iterator(),
                    true);
@@ -4539,18 +4622,18 @@ public class MyDBMS implements DBMS {
                 while (indexIterator.next(pair)) {
                   if (pair.base != null) {
                     if (pair.fork != null) {
-                      IndexKey indexKey = (IndexKey) pair.base.key;
-                      if (! indexKey.equals(table.primaryKey.key)) {
-                        indexKeys.add(indexKey);
+                      MyIndex index = (MyIndex) pair.base.key;
+                      if (! index.equals(table.primaryKey)) {
+                        indexes.add(index);
                       }
                     } else {
                       context.setKey(TableDataDepth, table);
-                      context.delete(IndexDataDepth, (IndexKey) pair.base.key);
+                      context.delete(IndexDataDepth, (MyIndex) pair.base.key);
                     }
                   } else if (pair.fork != null) {
-                    IndexKey indexKey = (IndexKey) pair.fork.key;
-                    if (! indexKey.equals(table.primaryKey.key)) {
-                      newIndexKeys.add(indexKey);
+                    MyIndex index = (MyIndex) pair.fork.key;
+                    if (! index.equals(table.primaryKey)) {
+                      newIndexes.add(index);
                     }
                   }
                 }
@@ -4559,9 +4642,9 @@ public class MyDBMS implements DBMS {
                 popStack(leftStack);
               }
             } else if (depth == IndexDataDepth) {
-              IndexKey indexKey = (IndexKey) triple.left.key;
-              if (equal(indexKey, table.primaryKey.key)) {
-                bottom = indexKey.index.columns.size() + IndexDataBodyDepth;
+              MyIndex index = (MyIndex) triple.left.key;
+              if (equal(index, table.primaryKey)) {
+                bottom = index.columns.size() + IndexDataBodyDepth;
               } else {
                 // skip non-primary-key index data trees -- we'll handle
                 // those later
@@ -4596,14 +4679,24 @@ public class MyDBMS implements DBMS {
     }
 
     // Update non-primary-key data trees
-    for (IndexKey indexKey: indexKeys) {
-      updateIndexTree(context, indexKey, left, leftStack, baseStack);
+    for (MyIndex index: indexes) {
+      updateIndexTree(context, index, left, leftStack, baseStack);
     }
 
     // build data trees for any new index keys
-    for (IndexKey indexKey: newIndexKeys) {
-      buildIndexTree(context, indexKey.index);
+    for (MyIndex index: newIndexes) {
+      buildIndexTree(context, index);
     }
+
+//     System.out.println("merge base");
+//     dump(base.root, System.out, 1);
+//     System.out.println("merge left");
+//     dump(left.root, System.out, 1);
+//     System.out.println("merge right");
+//     dump(right.root, System.out, 1);
+//     System.out.println("merge result");
+//     dump(context.result.root, System.out, 1);
+//     System.out.println();
 
     return context.result;
   }
