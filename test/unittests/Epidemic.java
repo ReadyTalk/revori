@@ -31,7 +31,9 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 
-public class Epidemic {
+import junit.framework.TestCase;
+
+public class Epidemic extends TestCase{
   private static void expectEqual(Object actual, Object expected) {
     assertEquals(expected, actual);
   }

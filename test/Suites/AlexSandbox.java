@@ -1,14 +1,19 @@
-package unittests;
+package Suites;
 
 import junit.framework.TestCase;
 
 import org.junit.Test;
 
 import static com.readytalk.oss.dbms.imp.Util.list;
+import static org.junit.Assert.*;
 
 import com.readytalk.oss.dbms.DBMS;
 import com.readytalk.oss.dbms.DBMS.BinaryOperationType;
 import com.readytalk.oss.dbms.DBMS.Column;
+import com.readytalk.oss.dbms.DBMS.Expression;
+import com.readytalk.oss.dbms.DBMS.QueryResult;
+import com.readytalk.oss.dbms.DBMS.QueryTemplate;
+import com.readytalk.oss.dbms.DBMS.ResultType;
 import com.readytalk.oss.dbms.DBMS.Table;
 import com.readytalk.oss.dbms.DBMS.Revision;
 import com.readytalk.oss.dbms.DBMS.PatchContext;
@@ -18,7 +23,7 @@ import com.readytalk.oss.dbms.DBMS.DuplicateKeyResolution;
 import com.readytalk.oss.dbms.imp.MyDBMS;
 
 
-public class ColumnTypeTest extends TestCase{
+public class AlexSandbox extends TestCase{
    @Test
    public void testColumnTypes(){
 	   DBMS dbms = new MyDBMS();
@@ -67,4 +72,28 @@ public class ColumnTypeTest extends TestCase{
 	      throw new RuntimeException();
 	    } catch (ClassCastException e) { }
    }
+   
+   @Test (expected=IllegalArgumentException.class)
+   public void testNotEnoughColumnsForPrimaryKeyQuery(){
+       DBMS dbms = new MyDBMS();
+       
+       Column key = dbms.column(Integer.class);
+       Column firstName = dbms.column(String.class);
+       Column lastName = dbms.column(String.class);
+       Column city = dbms.column(String.class);
+       Table names = dbms.table(list(key, city));
+       Revision tail = dbms.revision();
+       
+       PatchContext context = dbms.patchContext(tail);
+       try{
+       PatchTemplate insert = dbms.insertTemplate
+        (names,
+                list(key, firstName, lastName),
+                list(dbms.parameter(),
+                        dbms.parameter(),
+                        dbms.parameter()), DuplicateKeyResolution.Throw);
+       fail("Expecting IllegalArgumentException...");
+       }catch(IllegalArgumentException expected){}
+      
+       }
 }

@@ -1,5 +1,7 @@
 package unittests;
 
+import junit.framework.TestCase;
+
 import org.junit.Test;
 
 import static com.readytalk.oss.dbms.imp.Util.list;
@@ -23,7 +25,7 @@ import com.readytalk.oss.dbms.DBMS.DuplicateKeyResolution;
 import com.readytalk.oss.dbms.imp.MyDBMS;
 
 
-public class MultipleIndex{
+public class MultipleIndex extends TestCase{
     @Test
     public void testMultipleIndexInserts(){
     	DBMS dbms = new MyDBMS();

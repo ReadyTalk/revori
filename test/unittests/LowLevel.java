@@ -1,5 +1,7 @@
 package unittests;
 
+import junit.framework.TestCase;
+
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
@@ -16,7 +18,7 @@ import com.readytalk.oss.dbms.DBMS.DiffResult;
 import com.readytalk.oss.dbms.DBMS.DiffResultType;
 import com.readytalk.oss.dbms.imp.MyDBMS;
 
-public class LowLevel {
+public class LowLevel extends TestCase{
   private static void expectEqual(Object actual, Object expected) {
     assertEquals(expected, actual);
   }
