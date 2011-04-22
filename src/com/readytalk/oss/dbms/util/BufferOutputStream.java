@@ -1,4 +1,4 @@
-package com.readytalk.oss.dbms.imp;
+package com.readytalk.oss.dbms.util;
 
 import java.io.ByteArrayOutputStream;
 

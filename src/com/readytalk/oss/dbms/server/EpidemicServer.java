@@ -1,15 +1,14 @@
 package com.readytalk.oss.dbms.server;
 
 import com.readytalk.oss.dbms.DBMS;
-import com.readytalk.oss.dbms.DBMS.Table;
-import com.readytalk.oss.dbms.DBMS.Column;
-import com.readytalk.oss.dbms.DBMS.PatchContext;
-import com.readytalk.oss.dbms.DBMS.Revision;
-import com.readytalk.oss.dbms.DBMS.ConflictResolver;
-import com.readytalk.oss.dbms.DBMS.DiffResult;
-import com.readytalk.oss.dbms.DBMS.DiffResultType;
-import com.readytalk.oss.dbms.DBMS.DuplicateKeyResolution;
-import com.readytalk.oss.dbms.imp.BufferOutputStream;
+import com.readytalk.oss.dbms.Table;
+import com.readytalk.oss.dbms.Column;
+import com.readytalk.oss.dbms.RevisionBuilder;
+import com.readytalk.oss.dbms.Revision;
+import com.readytalk.oss.dbms.ConflictResolver;
+import com.readytalk.oss.dbms.DiffResult;
+import com.readytalk.oss.dbms.DuplicateKeyResolution;
+import com.readytalk.oss.dbms.util.BufferOutputStream;
 
 import java.lang.ref.WeakReference;
 import java.io.InputStream;
@@ -98,8 +97,8 @@ public class EpidemicServer {
     serializers.put(Table.class, new Serializer() {
       public void writeTo(WriteContext context, Object v) throws IOException {
         Table t = (Table) v;
-        write(context, t.id());
-        List<Column> columns = t.primaryKey().columns();
+        write(context, t.id);
+        List<Column> columns = t.primaryKey.columns;
         writeInteger(context.out, columns.size());
         for (Column c: columns) {
           write(context, c);
@@ -115,22 +114,21 @@ public class EpidemicServer {
         for (int i = 0; i < columnCount; ++i) {
           columns.add((Column) read(context));
         }
-        return context.server.dbms.table(id, columns);
+        return new Table(columns, id);
       }
     });
 
     serializers.put(Column.class, new Serializer() {
       public void writeTo(WriteContext context, Object v) throws IOException {
         Column c = (Column) v;
-        write(context, c.id());
-        write(context, c.type());
+        write(context, c.id);
+        write(context, c.type);
       }
     });
 
     deserializers.put(Column.class, new Deserializer() {
       public Object readFrom(ReadContext context, Class c) throws IOException {
-        return context.server.dbms.column
-          ((String) read(context), (Class) read(context));
+        return new Column((Class) read(context), (String) read(context));
       }
     });
   }
@@ -827,7 +825,7 @@ public class EpidemicServer {
       DiffResult result = dbms.diff(base, fork);
       WriteContext writeContext = new WriteContext(out, server);
       while (true) {
-        DiffResultType type = result.next();
+        DiffResult.Type type = result.next();
         switch (type) {
         case End:
           out.write(End);
@@ -882,7 +880,7 @@ public class EpidemicServer {
 
     public Revision apply(EpidemicServer server, Revision base) {
       DBMS dbms = server.dbms;
-      PatchContext patchContext = dbms.patchContext(base);
+      RevisionBuilder builder = dbms.builder(base);
       final int MaxDepth = 16;
       Object[] path = new Object[MaxDepth];
       int depth = 0;
@@ -895,7 +893,7 @@ public class EpidemicServer {
           int flag = in.read();
           switch (flag) {
           case End:
-            return dbms.commit(patchContext);
+            return builder.commit();
 
           case Descend:
             ++ depth;
@@ -911,13 +909,13 @@ public class EpidemicServer {
 
           case Delete:
             path[depth] = read(readContext);
-            dbms.delete(patchContext, path, 0, depth + 1);
+            builder.delete(path, 0, depth + 1);
             break;
 
           case Insert:
             path[depth + 1] = read(readContext);
-            dbms.insert(patchContext, DuplicateKeyResolution.Overwrite,
-                        path, 0, depth + 2);
+            builder.insert(DuplicateKeyResolution.Overwrite,
+                           path, 0, depth + 2);
             break;
 
           default:

@@ -1,25 +1,34 @@
 package com.readytalk.oss.dbms.server;
 
-import static com.readytalk.oss.dbms.imp.Util.list;
-import static com.readytalk.oss.dbms.imp.Util.set;
+import static com.readytalk.oss.dbms.util.Util.list;
+import static com.readytalk.oss.dbms.util.Util.set;
 
-import com.readytalk.oss.dbms.imp.Util;
+import com.readytalk.oss.dbms.util.Util;
 import com.readytalk.oss.dbms.imp.MyDBMS;
 import com.readytalk.oss.dbms.DBMS;
-import com.readytalk.oss.dbms.DBMS.Index;
-import com.readytalk.oss.dbms.DBMS.ColumnReference;
-import com.readytalk.oss.dbms.DBMS.Source;
-import com.readytalk.oss.dbms.DBMS.Expression;
-import com.readytalk.oss.dbms.DBMS.QueryTemplate;
-import com.readytalk.oss.dbms.DBMS.PatchTemplate;
-import com.readytalk.oss.dbms.DBMS.PatchContext;
-import com.readytalk.oss.dbms.DBMS.QueryResult;
-import com.readytalk.oss.dbms.DBMS.ResultType;
-import com.readytalk.oss.dbms.DBMS.ConflictResolver;
-import com.readytalk.oss.dbms.DBMS.Revision;
-import com.readytalk.oss.dbms.DBMS.JoinType;
-import com.readytalk.oss.dbms.DBMS.BinaryOperationType;
-import com.readytalk.oss.dbms.DBMS.UnaryOperationType;
+import com.readytalk.oss.dbms.Table;
+import com.readytalk.oss.dbms.TableReference;
+import com.readytalk.oss.dbms.Column;
+import com.readytalk.oss.dbms.Index;
+import com.readytalk.oss.dbms.ColumnReference;
+import com.readytalk.oss.dbms.Source;
+import com.readytalk.oss.dbms.Expression;
+import com.readytalk.oss.dbms.QueryTemplate;
+import com.readytalk.oss.dbms.PatchTemplate;
+import com.readytalk.oss.dbms.RevisionBuilder;
+import com.readytalk.oss.dbms.QueryResult;
+import com.readytalk.oss.dbms.ConflictResolver;
+import com.readytalk.oss.dbms.Revision;
+import com.readytalk.oss.dbms.Join;
+import com.readytalk.oss.dbms.BinaryOperation;
+import com.readytalk.oss.dbms.UnaryOperation;
+import com.readytalk.oss.dbms.Parameter;
+import com.readytalk.oss.dbms.Constant;
+import com.readytalk.oss.dbms.DuplicateKeyResolution;
+import com.readytalk.oss.dbms.InsertTemplate;
+import com.readytalk.oss.dbms.QueryTemplate;
+import com.readytalk.oss.dbms.DeleteTemplate;
+import com.readytalk.oss.dbms.UpdateTemplate;
 
 import java.util.Collection;
 import java.util.List;
@@ -68,6 +77,12 @@ public class SQLServer {
 
   private static final Tree Nothing = new Leaf();
 
+  private static int nextId = 1;
+
+  private synchronized static String makeId() {
+    return SQLServer.class.getName() + ".name" + (nextId++);
+  }
+
   private static class Server {
     public final DBMS dbms;
 
@@ -84,10 +99,10 @@ public class SQLServer {
     public final PatchTemplate deleteDatabaseTables;
     public final PatchTemplate deleteTable;
 
-    public final DBMS.Column tagsDatabase;
-    public final DBMS.Column tagsName;
-    public final DBMS.Column tagsTag;
-    public final DBMS.Table tags;
+    public final Column tagsDatabase;
+    public final Column tagsName;
+    public final Column tagsTag;
+    public final Table tags;
 
     public final PatchTemplate insertOrUpdateTag;
     public final QueryTemplate listTags;
@@ -96,15 +111,15 @@ public class SQLServer {
     public final PatchTemplate deleteTag;
 
     public final AtomicReference<Revision> dbHead;
-    public final Map<String, BinaryOperationType> binaryOperationTypes
+    public final Map<String, BinaryOperation.Type> binaryOperationTypes
       = new HashMap();
-    public final Map<String, UnaryOperationType> unaryOperationTypes
+    public final Map<String, UnaryOperation.Type> unaryOperationTypes
       = new HashMap();
     public final Map<String, Class> columnTypes = new HashMap();
     public final ConflictResolver rightPreferenceConflictResolver
       = new ConflictResolver() {
-          public Object resolveConflict(DBMS.Table table,
-                                        DBMS.Column column,
+          public Object resolveConflict(Table table,
+                                        Column column,
                                         Object[] primaryKeyValues,
                                         Object baseValue,
                                         Object leftValue,
@@ -114,8 +129,8 @@ public class SQLServer {
           }
         };
     public final ConflictResolver conflictResolver = new ConflictResolver() {
-        public Object resolveConflict(DBMS.Table table,
-                                      DBMS.Column column,
+        public Object resolveConflict(Table table,
+                                      Column column,
                                       Object[] primaryKeyValues,
                                       Object baseValue,
                                       Object leftValue,
@@ -140,156 +155,156 @@ public class SQLServer {
     public Server(DBMS dbms) {
       this.dbms = dbms;
 
-      DBMS.Column databasesName = dbms.column(String.class);
-      DBMS.Column databasesDatabase = dbms.column(Object.class);
-      DBMS.Table databases = dbms.table(list(databasesName));
-      DBMS.TableReference databasesReference = dbms.tableReference(databases);
+      Column databasesName = new Column(String.class, makeId());
+      Column databasesDatabase = new Column(Object.class, makeId());
+      Table databases = new Table(list(databasesName), makeId());
+      TableReference databasesReference = new TableReference(databases);
 
-      this.insertOrUpdateDatabase = dbms.insertTemplate
+      this.insertOrUpdateDatabase = new InsertTemplate
         (databases, list(databasesName, databasesDatabase),
-         list(dbms.parameter(), dbms.parameter()),
-         DBMS.DuplicateKeyResolution.Overwrite);
+         list((Expression) new Parameter(), new Parameter()),
+         DuplicateKeyResolution.Overwrite);
 
-      this.listDatabases = dbms.queryTemplate
-        (list((Expression) dbms.columnReference
+      this.listDatabases = new QueryTemplate
+        (list((Expression) new ColumnReference
               (databasesReference, databasesDatabase)),
          databasesReference,
-         dbms.constant(true));
+         new Constant(true));
 
-      this.findDatabase = dbms.queryTemplate
-        (list((Expression) dbms.columnReference
+      this.findDatabase = new QueryTemplate
+        (list((Expression) new ColumnReference
               (databasesReference, databasesDatabase)),
          databasesReference,
-         dbms.operation
-         (BinaryOperationType.Equal,
-          dbms.columnReference(databasesReference, databasesName),
-          dbms.parameter()));
+         new BinaryOperation
+         (BinaryOperation.Type.Equal,
+          new ColumnReference(databasesReference, databasesName),
+          new Parameter()));
 
-      this.deleteDatabase = dbms.deleteTemplate
+      this.deleteDatabase = new DeleteTemplate
         (databasesReference,
-         dbms.operation
-         (BinaryOperationType.Equal,
-          dbms.columnReference(databasesReference, databasesName),
-          dbms.parameter()));
+         new BinaryOperation
+         (BinaryOperation.Type.Equal,
+          new ColumnReference(databasesReference, databasesName),
+          new Parameter()));
 
-      DBMS.Column tablesDatabase = dbms.column(String.class);
-      DBMS.Column tablesName = dbms.column(String.class);
-      DBMS.Column tablesTable = dbms.column(Object.class);
-      DBMS.Table tables = dbms.table(list(tablesDatabase, tablesName));
-      DBMS.TableReference tablesReference = dbms.tableReference(tables);
+      Column tablesDatabase = new Column(String.class, makeId());
+      Column tablesName = new Column(String.class, makeId());
+      Column tablesTable = new Column(Object.class, makeId());
+      Table tables = new Table(list(tablesDatabase, tablesName), makeId());
+      TableReference tablesReference = new TableReference(tables);
 
-      this.insertOrUpdateTable = dbms.insertTemplate
+      this.insertOrUpdateTable = new InsertTemplate
         (tables, list(tablesDatabase, tablesName, tablesTable),
-         list(dbms.parameter(), dbms.parameter(), dbms.parameter()),
-         DBMS.DuplicateKeyResolution.Overwrite);
+         list((Expression) new Parameter(), new Parameter(), new Parameter()),
+         DuplicateKeyResolution.Overwrite);
 
-      this.listTables = dbms.queryTemplate
-        (list((Expression) dbms.columnReference(tablesReference, tablesTable)),
+      this.listTables = new QueryTemplate
+        (list((Expression) new ColumnReference(tablesReference, tablesTable)),
          tablesReference,
-         dbms.operation
-         (BinaryOperationType.Equal,
-          dbms.columnReference(tablesReference, tablesDatabase),
-          dbms.parameter()));
+         new BinaryOperation
+         (BinaryOperation.Type.Equal,
+          new ColumnReference(tablesReference, tablesDatabase),
+          new Parameter()));
 
-      this.findTable = dbms.queryTemplate
-        (list((Expression) dbms.columnReference(tablesReference, tablesTable)),
+      this.findTable = new QueryTemplate
+        (list((Expression) new ColumnReference(tablesReference, tablesTable)),
          tablesReference,
-         dbms.operation
-         (BinaryOperationType.And,
-          dbms.operation
-          (BinaryOperationType.Equal,
-           dbms.columnReference(tablesReference, tablesDatabase),
-           dbms.parameter()),
-          dbms.operation
-          (BinaryOperationType.Equal,
-           dbms.columnReference(tablesReference, tablesName),
-           dbms.parameter())));
+         new BinaryOperation
+         (BinaryOperation.Type.And,
+          new BinaryOperation
+          (BinaryOperation.Type.Equal,
+           new ColumnReference(tablesReference, tablesDatabase),
+           new Parameter()),
+          new BinaryOperation
+          (BinaryOperation.Type.Equal,
+           new ColumnReference(tablesReference, tablesName),
+           new Parameter())));
 
-      this.deleteDatabaseTables = dbms.deleteTemplate
+      this.deleteDatabaseTables = new DeleteTemplate
         (tablesReference,
-         dbms.operation
-         (BinaryOperationType.Equal,
-          dbms.columnReference(tablesReference, tablesDatabase),
-          dbms.parameter()));
+         new BinaryOperation
+         (BinaryOperation.Type.Equal,
+          new ColumnReference(tablesReference, tablesDatabase),
+          new Parameter()));
 
-      this.deleteTable = dbms.deleteTemplate
+      this.deleteTable = new DeleteTemplate
         (tablesReference,
-         dbms.operation
-         (BinaryOperationType.And,
-          dbms.operation
-          (BinaryOperationType.Equal,
-           dbms.columnReference(tablesReference, tablesDatabase),
-           dbms.parameter()),
-          dbms.operation
-          (BinaryOperationType.Equal,
-           dbms.columnReference(tablesReference, tablesName),
-           dbms.parameter())));
+         new BinaryOperation
+         (BinaryOperation.Type.And,
+          new BinaryOperation
+          (BinaryOperation.Type.Equal,
+           new ColumnReference(tablesReference, tablesDatabase),
+           new Parameter()),
+          new BinaryOperation
+          (BinaryOperation.Type.Equal,
+           new ColumnReference(tablesReference, tablesName),
+           new Parameter())));
 
-      this.tagsDatabase = dbms.column(String.class);
-      this.tagsName = dbms.column(String.class);
-      this.tagsTag = dbms.column(Object.class);
-      this.tags = dbms.table(list(tagsDatabase, tagsName));
-      DBMS.TableReference tagsReference = dbms.tableReference(tags);
+      this.tagsDatabase = new Column(String.class, makeId());
+      this.tagsName = new Column(String.class, makeId());
+      this.tagsTag = new Column(Object.class, makeId());
+      this.tags = new Table(list(tagsDatabase, tagsName), makeId());
+      TableReference tagsReference = new TableReference(tags);
 
-      this.insertOrUpdateTag = dbms.insertTemplate
+      this.insertOrUpdateTag = new InsertTemplate
         (tags, list(tagsDatabase, tagsName, tagsTag),
-         list(dbms.parameter(), dbms.parameter(), dbms.parameter()),
-         DBMS.DuplicateKeyResolution.Overwrite);
+         list((Expression) new Parameter(), new Parameter(), new Parameter()),
+         DuplicateKeyResolution.Overwrite);
 
-      this.listTags = dbms.queryTemplate
-        (list((Expression) dbms.columnReference(tagsReference, tagsTag)),
+      this.listTags = new QueryTemplate
+        (list((Expression) new ColumnReference(tagsReference, tagsTag)),
          tagsReference,
-         dbms.operation
-         (BinaryOperationType.Equal,
-          dbms.columnReference(tagsReference, tagsDatabase),
-          dbms.parameter()));
+         new BinaryOperation
+         (BinaryOperation.Type.Equal,
+          new ColumnReference(tagsReference, tagsDatabase),
+          new Parameter()));
 
-      this.findTag = dbms.queryTemplate
-        (list((Expression) dbms.columnReference(tagsReference, tagsTag)),
+      this.findTag = new QueryTemplate
+        (list((Expression) new ColumnReference(tagsReference, tagsTag)),
          tagsReference,
-         dbms.operation
-         (BinaryOperationType.And,
-          dbms.operation
-          (BinaryOperationType.Equal,
-           dbms.columnReference(tagsReference, tagsDatabase),
-           dbms.parameter()),
-          dbms.operation
-          (BinaryOperationType.Equal,
-           dbms.columnReference(tagsReference, tagsName),
-           dbms.parameter())));
+         new BinaryOperation
+         (BinaryOperation.Type.And,
+          new BinaryOperation
+          (BinaryOperation.Type.Equal,
+           new ColumnReference(tagsReference, tagsDatabase),
+           new Parameter()),
+          new BinaryOperation
+          (BinaryOperation.Type.Equal,
+           new ColumnReference(tagsReference, tagsName),
+           new Parameter())));
 
-      this.deleteDatabaseTags = dbms.deleteTemplate
+      this.deleteDatabaseTags = new DeleteTemplate
         (tagsReference,
-         dbms.operation
-         (BinaryOperationType.Equal,
-          dbms.columnReference(tagsReference, tagsDatabase),
-          dbms.parameter()));
+         new BinaryOperation
+         (BinaryOperation.Type.Equal,
+          new ColumnReference(tagsReference, tagsDatabase),
+          new Parameter()));
 
-      this.deleteTag = dbms.deleteTemplate
+      this.deleteTag = new DeleteTemplate
         (tagsReference,
-         dbms.operation
-         (BinaryOperationType.And,
-          dbms.operation
-          (BinaryOperationType.Equal,
-           dbms.columnReference(tagsReference, tagsDatabase),
-           dbms.parameter()),
-          dbms.operation
-          (BinaryOperationType.Equal,
-           dbms.columnReference(tagsReference, tagsName),
-           dbms.parameter())));
+         new BinaryOperation
+         (BinaryOperation.Type.And,
+          new BinaryOperation
+          (BinaryOperation.Type.Equal,
+           new ColumnReference(tagsReference, tagsDatabase),
+           new Parameter()),
+          new BinaryOperation
+          (BinaryOperation.Type.Equal,
+           new ColumnReference(tagsReference, tagsName),
+           new Parameter())));
 
       this.dbHead = new AtomicReference(dbms.revision());
 
-      binaryOperationTypes.put("and", BinaryOperationType.And);
-      binaryOperationTypes.put("or", BinaryOperationType.Or);
-      binaryOperationTypes.put("=", BinaryOperationType.Equal);
-      binaryOperationTypes.put("<>", BinaryOperationType.NotEqual);
-      binaryOperationTypes.put(">", BinaryOperationType.GreaterThan);
-      binaryOperationTypes.put(">=", BinaryOperationType.GreaterThanOrEqual);
-      binaryOperationTypes.put("<", BinaryOperationType.LessThan);
-      binaryOperationTypes.put("<=", BinaryOperationType.LessThanOrEqual);
+      binaryOperationTypes.put("and", BinaryOperation.Type.And);
+      binaryOperationTypes.put("or", BinaryOperation.Type.Or);
+      binaryOperationTypes.put("=", BinaryOperation.Type.Equal);
+      binaryOperationTypes.put("<>", BinaryOperation.Type.NotEqual);
+      binaryOperationTypes.put(">", BinaryOperation.Type.GreaterThan);
+      binaryOperationTypes.put(">=", BinaryOperation.Type.GreaterThanOrEqual);
+      binaryOperationTypes.put("<", BinaryOperation.Type.LessThan);
+      binaryOperationTypes.put("<=", BinaryOperation.Type.LessThanOrEqual);
 
-      unaryOperationTypes.put("not", UnaryOperationType.Not);
+      unaryOperationTypes.put("not", UnaryOperation.Type.Not);
 
       columnTypes.put("int32", Integer.class);
       columnTypes.put("int64", Long.class);
@@ -314,8 +329,8 @@ public class SQLServer {
   {
     public int conflictCount;
 
-    public Object resolveConflict(DBMS.Table table,
-                                  DBMS.Column column,
+    public Object resolveConflict(Table table,
+                                  Column column,
                                   Object[] primaryKeyValues,
                                   Object baseValue,
                                   Object leftValue,
@@ -341,7 +356,7 @@ public class SQLServer {
   }
 
   private static class CopyContext {
-    public final PatchContext context;
+    public final RevisionBuilder builder;
     public final PatchTemplate template;
     public final List<Class> columnTypes;
     public final StringBuilder stringBuilder = new StringBuilder();
@@ -349,11 +364,11 @@ public class SQLServer {
     public int count;
     public boolean trouble;
 
-    public CopyContext(PatchContext context,
+    public CopyContext(RevisionBuilder builder,
                        PatchTemplate template,
                        List<Class> columnTypes)
     {
-      this.context = context;
+      this.builder = builder;
       this.template = template;
       this.columnTypes = columnTypes;
       this.parameters = new Object[columnTypes.size()];
@@ -407,13 +422,13 @@ public class SQLServer {
     }
   }
 
-  private static class Column {
+  private static class MyColumn {
     public final String name;
-    public final DBMS.Column column;
+    public final Column column;
     public final Class type;
     
-    public Column(String name,
-                  DBMS.Column column,
+    public MyColumn(String name,
+                  Column column,
                   Class type)
     {
       this.name = name;
@@ -422,18 +437,18 @@ public class SQLServer {
     }
   }
 
-  private static class Table {
+  private static class MyTable {
     public final String name;
-    public final List<Column> columnList;
-    public final Map<String, Column> columnMap;
-    public final List<Column> primaryKeyColumns;
-    public final DBMS.Table table;
+    public final List<MyColumn> columnList;
+    public final Map<String, MyColumn> columnMap;
+    public final List<MyColumn> primaryKeyColumns;
+    public final Table table;
 
-    public Table(String name,
-                 List<Column> columnList,
-                 Map<String, Column> columnMap,
-                 List<Column> primaryKeyColumns,
-                 DBMS.Table table)
+    public MyTable(String name,
+                 List<MyColumn> columnList,
+                 Map<String, MyColumn> columnMap,
+                 List<MyColumn> primaryKeyColumns,
+                 Table table)
     {
       this.name = name;
       this.columnList = columnList;
@@ -455,12 +470,12 @@ public class SQLServer {
     }
   }
   
-  private static class TableReference {
-    public final Table table;
-    public final DBMS.TableReference reference;
+  private static class MyTableReference {
+    public final MyTable table;
+    public final TableReference reference;
 
-    public TableReference(Table table,
-                          DBMS.TableReference reference)
+    public MyTableReference(MyTable table,
+                            TableReference reference)
     {
       this.table = table;
       this.reference = reference;
@@ -630,7 +645,7 @@ public class SQLServer {
     QueryResult result = dbms.diff
       (dbms.revision(), dbHead(client), server.findDatabase, name);
 
-    if (result.nextRow() == ResultType.Inserted) {
+    if (result.nextRow() == QueryResult.Type.Inserted) {
       return (Database) result.nextItem();
     } else {
       throw new RuntimeException("no such database: " + name);
@@ -651,7 +666,7 @@ public class SQLServer {
       (dbms.revision(), dbHead(client), server.findTag, database(client).name,
        name);
 
-    if (result.nextRow() == ResultType.Inserted) {
+    if (result.nextRow() == QueryResult.Type.Inserted) {
       return (Tag) result.nextItem();
     } else if ("head".equals(name)) {
       return new Tag(name, dbms.revision());
@@ -672,16 +687,16 @@ public class SQLServer {
     }
   }
 
-  private static Table findTable(Client client,
-                                 String name)
+  private static MyTable findTable(Client client,
+                                   String name)
   {
     DBMS dbms = client.server.dbms;
     QueryResult result = dbms.diff
       (dbms.revision(), dbHead(client), client.server.findTable,
        database(client).name, name);
 
-    if (result.nextRow() == ResultType.Inserted) {
-      return (Table) result.nextItem();
+    if (result.nextRow() == QueryResult.Type.Inserted) {
+      return (MyTable) result.nextItem();
     } else {
       throw new RuntimeException("no such table: " + name);
     }
@@ -689,21 +704,20 @@ public class SQLServer {
 
   private static Source makeSource(Client client,
                                    Tree tree,
-                                   List<TableReference> tableReferences,
+                                   List<MyTableReference> tableReferences,
                                    List<Expression> tests)
   {
     if (tree instanceof Name) {
-      Table table = findTable(client, ((Name) tree).value);
-      DBMS.TableReference reference = client.server.dbms.tableReference
-        (table.table);
-      tableReferences.add(new TableReference(table, reference));
+      MyTable table = findTable(client, ((Name) tree).value);
+      TableReference reference = new TableReference(table.table);
+      tableReferences.add(new MyTableReference(table, reference));
       return reference;
     } else if (tree.get(0) instanceof Terminal) {
       return makeSource(client, tree.get(1), tableReferences, tests);
     } else {
-      Source result = client.server.dbms.join
+      Source result = new Join
         ("left".equals(((Terminal) tree.get(1).get(0)).value)
-         ? JoinType.LeftOuter : JoinType.Inner,
+         ? Join.Type.LeftOuter : Join.Type.Inner,
          makeSource(client, tree.get(0), tableReferences, tests),
          makeSource(client, tree.get(2), tableReferences, tests));
 
@@ -715,15 +729,15 @@ public class SQLServer {
 
   private static ColumnReference makeColumnReference
     (DBMS dbms,
-     List<TableReference> tableReferences,
+     List<MyTableReference> tableReferences,
      String tableName,
      String columnName)
   {
-    DBMS.TableReference reference = null;
-    DBMS.Column column = null;
-    for (TableReference r: tableReferences) {
+    TableReference reference = null;
+    Column column = null;
+    for (MyTableReference r: tableReferences) {
       if (tableName == null || tableName.equals(r.table.name)) {
-        Column c = r.table.columnMap.get(columnName);
+        MyColumn c = r.table.columnMap.get(columnName);
         if (c != null) {
           if (column != null) {
             throw new RuntimeException("ambiguous column name: " + columnName);
@@ -745,16 +759,16 @@ public class SQLServer {
          + columnName);
     }
 
-    return dbms.columnReference(reference, column);
+    return new ColumnReference(reference, column);
   }
 
-  private static UnaryOperationType findUnaryOperationType(Server server,
+  private static UnaryOperation.Type findUnaryOperationType(Server server,
                                                            String name)
   {
     return server.unaryOperationTypes.get(name);
   }
 
-  private static BinaryOperationType findBinaryOperationType(Server server,
+  private static BinaryOperation.Type findBinaryOperationType(Server server,
                                                              String name)
   {
     return server.binaryOperationTypes.get(name);
@@ -763,17 +777,17 @@ public class SQLServer {
   private static Expression makeExpression
     (Server server,
      Tree tree,
-     List<TableReference> tableReferences)
+     List<MyTableReference> tableReferences)
   {
     if (tree instanceof Name) {
       return makeColumnReference
         (server.dbms, tableReferences, null, ((Name) tree).value);
     } else if (tree instanceof StringLiteral) {
-      return server.dbms.constant(((StringLiteral) tree).value);
+      return new Constant(((StringLiteral) tree).value);
     } else if (tree instanceof NumberLiteral) {
-      return server.dbms.constant(((NumberLiteral) tree).value);
+      return new Constant(((NumberLiteral) tree).value);
     } else if (tree instanceof BooleanLiteral) {
-      return server.dbms.constant(((BooleanLiteral) tree).value);
+      return new Constant(((BooleanLiteral) tree).value);
     } if (tree.length() == 3) {
       if (tree.get(0) instanceof Name
           && ".".equals(((Terminal) tree.get(1)).value))
@@ -784,7 +798,7 @@ public class SQLServer {
            ((Name) tree.get(0)).value,
            ((Name) tree.get(2)).value);
       }
-      return server.dbms.operation
+      return new BinaryOperation
         (findBinaryOperationType(server, ((Terminal) tree.get(1)).value),
          makeExpression(server, tree.get(0), tableReferences),
          makeExpression(server, tree.get(2), tableReferences));      
@@ -793,7 +807,7 @@ public class SQLServer {
       if ("(".equals(value)) {
         return makeExpression(server, tree.get(1), tableReferences);
       } else {
-        return server.dbms.operation
+        return new UnaryOperation
           (findUnaryOperationType(server, value), makeExpression
            (server, tree.get(1), tableReferences));
       }
@@ -803,15 +817,14 @@ public class SQLServer {
   private static List<Expression> makeExpressionList
     (Server server,
      Tree tree,
-     List<TableReference> tableReferences)
+     List<MyTableReference> tableReferences)
   {
     List<Expression> expressions = new ArrayList();
     if (tree instanceof Terminal) {
-      DBMS dbms = server.dbms;
-      for (TableReference tableReference: tableReferences) {
-        for (Column column: tableReference.table.columnList) {
+      for (MyTableReference tableReference: tableReferences) {
+        for (MyColumn column: tableReference.table.columnList) {
           expressions.add
-            (dbms.columnReference(tableReference.reference, column.column));
+            (new ColumnReference(tableReference.reference, column.column));
         }
       }
     } else {
@@ -826,10 +839,10 @@ public class SQLServer {
   private static Expression makeExpressionFromWhere
     (Server server,
      Tree tree,
-     List<TableReference> tableReferences)
+     List<MyTableReference> tableReferences)
   {
     if (tree == Nothing) {
-      return server.dbms.constant(true);
+      return new Constant(true);
     } else {
       return makeExpression(server, tree.get(1), tableReferences);
     }
@@ -840,7 +853,8 @@ public class SQLServer {
                                            List<Expression> expressions)
   {
     for (Expression e: expressions) {
-      expression = dbms.operation(BinaryOperationType.And, expression, e);
+      expression = new BinaryOperation
+        (BinaryOperation.Type.And, expression, e);
     }
     return expression;
   }
@@ -849,7 +863,7 @@ public class SQLServer {
                                                  Tree tree,
                                                  int[] expressionCount)
   {
-    List<TableReference> tableReferences = new ArrayList();
+    List<MyTableReference> tableReferences = new ArrayList();
     List<Expression> tests = new ArrayList();
     Source source = makeSource
       (client, tree.get(3), tableReferences, tests);
@@ -859,16 +873,16 @@ public class SQLServer {
 
     expressionCount[0] = expressions.size();
 
-    return client.server.dbms.queryTemplate
+    return new QueryTemplate
       (expressions, source, andExpressions
        (client.server.dbms, makeExpressionFromWhere
         (client.server, tree.get(4), tableReferences), tests));
   }
 
-  private static Column findColumn(Table table,
+  private static MyColumn findColumn(MyTable table,
                                    String name)
   {
-    Column c = table.columnMap.get(name);
+    MyColumn c = table.columnMap.get(name);
     if (c == null) {
       throw new RuntimeException("no such column: " + name);
     } else {
@@ -876,22 +890,22 @@ public class SQLServer {
     }
   }
 
-  private static List<DBMS.Column> makeColumnList(Table table,
+  private static List<Column> makeColumnList(MyTable table,
                                                   Tree tree)
   {
-    List<DBMS.Column> columns = new ArrayList(tree.length());
+    List<Column> columns = new ArrayList(tree.length());
     for (int i = 0; i < tree.length(); ++i) {
       columns.add(findColumn(table, ((Name) tree.get(i)).value).column);
     }
     return columns;
   }
 
-  private static List<DBMS.Column> makeOptionalColumnList(Table table,
+  private static List<Column> makeOptionalColumnList(MyTable table,
                                                           Tree tree)
   {
     if (tree == Nothing) {
-      List<DBMS.Column> columns = new ArrayList(table.columnList.size());
-      for (Column c: table.columnList) {
+      List<Column> columns = new ArrayList(table.columnList.size());
+      for (MyColumn c: table.columnList) {
         columns.add(c.column);
       }
       return columns;
@@ -903,24 +917,24 @@ public class SQLServer {
   private static PatchTemplate makeInsertTemplate(Client client,
                                                   Tree tree)
   {
-    Table table = findTable(client, ((Name) tree.get(2)).value);
+    MyTable table = findTable(client, ((Name) tree.get(2)).value);
 
-    return client.server.dbms.insertTemplate
+    return new InsertTemplate
       (table.table, makeOptionalColumnList(table, tree.get(3)),
        makeExpressionList(client.server, tree.get(6), null),
-       DBMS.DuplicateKeyResolution.Throw);
+       DuplicateKeyResolution.Throw);
   }
 
   private static PatchTemplate makeUpdateTemplate(Client client,
                                                   Tree tree)
   {
-    Table table = findTable(client, ((Name) tree.get(1)).value);
-    TableReference tableReference = new TableReference
-      (table, client.server.dbms.tableReference(table.table));
-    List<TableReference> tableReferences = list(tableReference);
+    MyTable table = findTable(client, ((Name) tree.get(1)).value);
+    MyTableReference tableReference = new MyTableReference
+      (table, new TableReference(table.table));
+    List<MyTableReference> tableReferences = list(tableReference);
 
     Tree operations = tree.get(3);
-    List<DBMS.Column> columns = new ArrayList();
+    List<Column> columns = new ArrayList();
     List<Expression> values = new ArrayList();
     for (int i = 0; i < operations.length(); ++i) {
       Tree operation = operations.get(i);
@@ -929,7 +943,7 @@ public class SQLServer {
         (makeExpression(client.server, operation.get(2), tableReferences));
     }
 
-    return client.server.dbms.updateTemplate
+    return new UpdateTemplate
       (tableReference.reference, makeExpressionFromWhere
        (client.server, tree.get(4), tableReferences), columns, values);
   }
@@ -937,18 +951,18 @@ public class SQLServer {
   private static PatchTemplate makeDeleteTemplate(Client client,
                                                   Tree tree)
   {
-    Table table = findTable(client, ((Name) tree.get(2)).value);
-    TableReference tableReference = new TableReference
-      (table, client.server.dbms.tableReference(table.table));
-    List<TableReference> tableReferences = list(tableReference);
+    MyTable table = findTable(client, ((Name) tree.get(2)).value);
+    MyTableReference tableReference = new MyTableReference
+      (table, new TableReference(table.table));
+    List<MyTableReference> tableReferences = list(tableReference);
 
-    return client.server.dbms.deleteTemplate
+    return new DeleteTemplate
       (tableReference.reference, makeExpressionFromWhere
        (client.server, tree.get(3), tableReferences));
   }
 
-  private static Column findColumn(Table table, DBMS.Column column) {
-    for (Column c: table.columnList) {
+  private static MyColumn findColumn(MyTable table, Column column) {
+    for (MyColumn c: table.columnList) {
       if (c.column == column) {
         return c;
       }
@@ -960,18 +974,18 @@ public class SQLServer {
                                                 Tree tree,
                                                 List<Class> columnTypes)
   {
-    Table table = findTable(client, ((Name) tree.get(1)).value);
+    MyTable table = findTable(client, ((Name) tree.get(1)).value);
 
-    List<DBMS.Column> columns = makeOptionalColumnList(table, tree.get(2));
+    List<Column> columns = makeOptionalColumnList(table, tree.get(2));
     List<Expression> values = new ArrayList(columns.size());
     DBMS dbms = client.server.dbms;
-    for (DBMS.Column c: columns) {
-      values.add(dbms.parameter());
+    for (Column c: columns) {
+      values.add(new Parameter());
       columnTypes.add(findColumn(table, c).type);
     }
 
-    return dbms.insertTemplate
-      (table.table, columns, values, DBMS.DuplicateKeyResolution.Throw);
+    return new InsertTemplate
+      (table.table, columns, values, DuplicateKeyResolution.Throw);
   }
 
   private static Class findColumnType(Server server,
@@ -985,7 +999,7 @@ public class SQLServer {
     }
   }
 
-  private static Table makeTable(Server server,
+  private static MyTable makeTable(Server server,
                                  Tree tree)
   {
     Tree body = tree.get(4);
@@ -1009,23 +1023,26 @@ public class SQLServer {
     }
 
     DBMS dbms = server.dbms;
-    List<Column> columnList = new ArrayList(columns.size());
-    Map<String, Column> columnMap = new HashMap(columns.size());
+    List<MyColumn> columnList = new ArrayList(columns.size());
+    Map<String, MyColumn> columnMap = new HashMap(columns.size());
     for (Tree column: columns) {
       Class type = findColumnType(server, ((Terminal) column.get(1)).value);
-      DBMS.Column dbmsColumn = dbms.column(type);
+      Column dbmsColumn = new Column(type, makeId());
   
-      Column myColumn = new Column
+      MyColumn myColumn = new MyColumn
         (((Name) column.get(0)).value, dbmsColumn, type);
       columnList.add(myColumn);
       columnMap.put(myColumn.name, myColumn);
     }
 
-    List<Column> myPrimaryKeyColumns = new ArrayList(primaryKeyTree.length());
-    List<DBMS.Column> dbmsPrimaryKeyColumns = new ArrayList
+    List<MyColumn> myPrimaryKeyColumns
+      = new ArrayList(primaryKeyTree.length());
+
+    List<Column> dbmsPrimaryKeyColumns = new ArrayList
       (primaryKeyTree.length());
+
     for (int i = 0; i < primaryKeyTree.length(); ++i) {
-      Column c = columnMap.get(((Name) primaryKeyTree.get(i)).value);
+      MyColumn c = columnMap.get(((Name) primaryKeyTree.get(i)).value);
       if (c == null) {
         throw new RuntimeException
           ("primary key refers to non-exisitant column "
@@ -1036,9 +1053,9 @@ public class SQLServer {
       }
     }
 
-    return new Table
+    return new MyTable
       (((Name) tree.get(2)).value, columnList, columnMap, myPrimaryKeyColumns,
-       dbms.table(dbmsPrimaryKeyColumns));
+       new Table(dbmsPrimaryKeyColumns, makeId()));
   }
 
   private static void writeInteger(OutputStream out, int v)
@@ -1091,7 +1108,7 @@ public class SQLServer {
         QueryResult result = dbms.diff
           (dbms.revision(), dbHead(client), client.server.listDatabases);
 
-        while (result.nextRow() == ResultType.Inserted) {
+        while (result.nextRow() == QueryResult.Type.Inserted) {
           sb.append("\n");
           sb.append(((Database) result.nextItem()).name);
         }
@@ -1100,16 +1117,16 @@ public class SQLServer {
           (dbms.revision(), dbHead(client), client.server.listTables,
            database(client).name);
 
-        while (result.nextRow() == ResultType.Inserted) {
+        while (result.nextRow() == QueryResult.Type.Inserted) {
           sb.append("\n");
-          sb.append(((Table) result.nextItem()).name);
+          sb.append(((MyTable) result.nextItem()).name);
         }
       } else if (type == "tags") {
         QueryResult result = dbms.diff
           (dbms.revision(), dbHead(client), client.server.listTags,
            database(client).name);
 
-        while (result.nextRow() == ResultType.Inserted) {
+        while (result.nextRow() == QueryResult.Type.Inserted) {
           String name = ((Tag) result.nextItem()).name;
           if (! "head".equals(name)) {
             sb.append("\n");
@@ -1121,7 +1138,7 @@ public class SQLServer {
         throw new RuntimeException("unexpected terminal: " + type);
       }
     } else {
-      for (Column c: findTable
+      for (MyColumn c: findTable
              (client, ((Name) tree.get(2)).value).columnList)
       {
         sb.append("\n");
@@ -1161,7 +1178,7 @@ public class SQLServer {
     out.write(Response.RowSet.ordinal());
 
     while (true) {
-      ResultType resultType = result.nextRow();
+      QueryResult.Type resultType = result.nextRow();
       switch (resultType) {
       case Inserted:
         out.write(RowSetFlag.InsertedRow.ordinal());
@@ -1194,9 +1211,9 @@ public class SQLServer {
                            Object ... parameters)
   {
     DBMS dbms = client.server.dbms;
-    PatchContext context = dbms.patchContext(client.transaction.dbHead);
-    int count = dbms.apply(context, template, parameters);
-    client.transaction.dbHead = dbms.commit(context);
+    RevisionBuilder builder = dbms.builder(client.transaction.dbHead);
+    int count = builder.apply(template, parameters);
+    client.transaction.dbHead = builder.commit();
     return count;
   }
 
@@ -1205,7 +1222,7 @@ public class SQLServer {
           database);
   }
 
-  private static void setTable(Client client, Table table) {
+  private static void setTable(Client client, MyTable table) {
     apply(client, client.server.insertOrUpdateTable, database(client).name,
           table.name, table);
   }
@@ -1230,7 +1247,7 @@ public class SQLServer {
       Revision myTail = client.transaction.dbTail;
       Revision myHead = client.transaction.dbHead;
       DBMS dbms = client.server.dbms;
-      DBMS.ConflictResolver conflictResolver = client.server.conflictResolver;
+      ConflictResolver conflictResolver = client.server.conflictResolver;
       if (myTail != myHead) {
         AtomicReference<Revision> dbHead = client.server.dbHead;
         while (! dbHead.compareAndSet(myTail, myHead)) {
@@ -1257,9 +1274,9 @@ public class SQLServer {
     pushTransaction(client);
     try {
       DBMS dbms = client.server.dbms;
-      PatchContext context = dbms.patchContext(head(client));
-      int count = dbms.apply(context, template);
-      setTag(client, new Tag("head", dbms.commit(context)));
+      RevisionBuilder builder = dbms.builder(head(client));
+      int count = builder.apply(template);
+      setTag(client, new Tag("head", builder.commit()));
       commitTransaction(client);
       return count;
     } finally {
@@ -1282,7 +1299,7 @@ public class SQLServer {
   }
 
   private static void copy(DBMS dbms,
-                           PatchContext context,
+                           RevisionBuilder builder,
                            PatchTemplate template,
                            List<Class> columnTypes,
                            StringBuilder sb,
@@ -1331,7 +1348,7 @@ public class SQLServer {
 
     parameters[index] = convert(columnTypes.get(index), sb.toString());
     sb.setLength(0);
-    dbms.apply(context, template, parameters);
+    builder.apply(template, parameters);
   }
 
   private static void applyCopy(Client client,
@@ -1341,7 +1358,7 @@ public class SQLServer {
   {
     CopyContext c = client.copyContext;
     if ("\\.".equals(line)) {
-      setTag(client, new Tag("head", client.server.dbms.commit(c.context)));
+      setTag(client, new Tag("head", c.builder.commit()));
       commitTransaction(client);
       popTransaction(client);
       out.write(Response.Success.ordinal());
@@ -1349,7 +1366,7 @@ public class SQLServer {
       client.copyContext = null;
     } else if (! c.trouble) {
       try {
-        copy(client.server.dbms, c.context, c.template, c.columnTypes,
+        copy(client.server.dbms, c.builder, c.template, c.columnTypes,
              c.stringBuilder, c.parameters, line);
         ++ c.count;
       } catch (Exception e) {
@@ -1384,7 +1401,7 @@ public class SQLServer {
         (dbms.revision(), dbHead(client), client.server.listDatabases);
 
       Set<String> set = new HashSet();
-      while (result.nextRow() == ResultType.Inserted) {
+      while (result.nextRow() == QueryResult.Type.Inserted) {
         String name = ((Database) result.nextItem()).name;
         if (name.startsWith(start)) {
           set.add(name);
@@ -1400,8 +1417,8 @@ public class SQLServer {
            client.database.name);
 
         Set<String> set = new HashSet();
-        while (result.nextRow() == ResultType.Inserted) {
-          String name = ((Table) result.nextItem()).name;
+        while (result.nextRow() == QueryResult.Type.Inserted) {
+          String name = ((MyTable) result.nextItem()).name;
           if (name.startsWith(start)) {
             set.add(name);
           }
@@ -1420,7 +1437,7 @@ public class SQLServer {
            client.database.name);
 
         Set<String> set = new HashSet();
-        while (result.nextRow() == ResultType.Inserted) {
+        while (result.nextRow() == QueryResult.Type.Inserted) {
           String name = ((Tag) result.nextItem()).name;
           if (name.startsWith(start)) {
             set.add(name);
@@ -1457,8 +1474,8 @@ public class SQLServer {
                 (tail, head, context.client.server.findTable,
                  context.client.database.name, tableName);
 
-              if (result.nextRow() == ResultType.Inserted) {
-                for (Column c: ((Table) result.nextItem()).columnList) {
+              if (result.nextRow() == QueryResult.Type.Inserted) {
+                for (MyColumn c: ((MyTable) result.nextItem()).columnList) {
                   if (c.name.startsWith(start)) {
                     columns.add(c.name);
                   }
@@ -2015,7 +2032,7 @@ public class SQLServer {
            {
              List<Class> columnTypes = new ArrayList();
              client.copyContext = new CopyContext
-               (client.server.dbms.patchContext(head(client)), makeCopyTemplate
+               (client.server.dbms.builder(head(client)), makeCopyTemplate
                 (client, tree, columnTypes), columnTypes);
 
              pushTransaction(client);
@@ -2196,24 +2213,24 @@ public class SQLServer {
              pushTransaction(client);
              try {
                DBMS dbms = client.server.dbms;
-               PatchContext context = dbms.patchContext
+               RevisionBuilder builder = dbms.builder
                  (client.transaction.dbHead);
 
                if ("database".equals(type)) {
-                 dbms.apply(context, client.server.deleteDatabase, name);
-                 dbms.apply(context, client.server.deleteDatabaseTables, name);
-                 dbms.apply(context, client.server.deleteDatabaseTags, name);
+                 builder.apply(client.server.deleteDatabase, name);
+                 builder.apply(client.server.deleteDatabaseTables, name);
+                 builder.apply(client.server.deleteDatabaseTags, name);
                } else if ("table".equals(type)) {
-                 dbms.apply(context, client.server.deleteTable,
+                 builder.apply(client.server.deleteTable,
                             database(client).name, name);
                } else if ("tag".equals(type)) {
-                 dbms.apply(context, client.server.deleteTag,
+                 builder.apply(client.server.deleteTag,
                             database(client).name, name);
                } else {
                  throw new RuntimeException();
                }
 
-               client.transaction.dbHead = dbms.commit(context);
+               client.transaction.dbHead = builder.commit();
 
                commitTransaction(client);
              } finally {
