@@ -58,8 +58,8 @@ public interface DBMS {
    * any parameter expressions found using the values of the specified
    * parameter array.  The expression trees nodes are visited
    * left-to-right in the order they were specified in
-   * {@link #queryTemplate(List, Source, Expression)
-   * queryTemplate(List, Source, Expression)}.<p>
+   * <code>QueryTemplate.QueryTemplate(List, Source,
+   * Expression)</code>.<p>
    *
    * The result is two sets of tuples satisfying the query
    * constraints, including<p>
@@ -77,8 +77,8 @@ public interface DBMS {
    *
    * The items of each row in the result are visited in the same order
    * as the expressions were specified in
-   * {@link #queryTemplate(List, Source, Expression)
-   * queryTemplate(List, Source, Expression)}.
+   * <code>QueryTemplate.QueryTemplate(List, Source,
+   * Expression)</code>.
    */
   public QueryResult diff(Revision base,
                           Revision fork,
