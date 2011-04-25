@@ -121,8 +121,8 @@ public class EpidemicServer {
     serializers.put(Column.class, new Serializer() {
       public void writeTo(WriteContext context, Object v) throws IOException {
         Column c = (Column) v;
-        write(context, c.id);
         write(context, c.type);
+        write(context, c.id);
       }
     });
 

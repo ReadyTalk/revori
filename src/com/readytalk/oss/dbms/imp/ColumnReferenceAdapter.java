@@ -21,7 +21,7 @@ class ColumnReferenceAdapter implements ExpressionAdapter {
   }
 
   public Object evaluate(boolean convertDummyToNull) {
-    return convertDummyToNull && value == Compare.Dummy ? null : value ;
+    return convertDummyToNull && value == Compare.Dummy ? null : value;
   }
 
   public Scan makeScan(ColumnReferenceAdapter reference) {

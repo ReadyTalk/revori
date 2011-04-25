@@ -4,22 +4,26 @@ import junit.framework.TestCase;
 
 import org.junit.Test;
 
-import static com.readytalk.oss.dbms.imp.Util.list;
+import static com.readytalk.oss.dbms.util.Util.list;
 import static org.junit.Assert.*;
 
 import com.readytalk.oss.dbms.DBMS;
-import com.readytalk.oss.dbms.DBMS.BinaryOperationType;
-import com.readytalk.oss.dbms.DBMS.Column;
-import com.readytalk.oss.dbms.DBMS.Table;
-import com.readytalk.oss.dbms.DBMS.Expression;
-import com.readytalk.oss.dbms.DBMS.Revision;
-import com.readytalk.oss.dbms.DBMS.PatchContext;
-import com.readytalk.oss.dbms.DBMS.PatchTemplate;
-import com.readytalk.oss.dbms.DBMS.TableReference;
-import com.readytalk.oss.dbms.DBMS.QueryTemplate;
-import com.readytalk.oss.dbms.DBMS.QueryResult;
-import com.readytalk.oss.dbms.DBMS.ResultType;
-import com.readytalk.oss.dbms.DBMS.DuplicateKeyResolution;
+import com.readytalk.oss.dbms.BinaryOperation;
+import com.readytalk.oss.dbms.Column;
+import com.readytalk.oss.dbms.Table;
+import com.readytalk.oss.dbms.Expression;
+import com.readytalk.oss.dbms.Revision;
+import com.readytalk.oss.dbms.RevisionBuilder;
+import com.readytalk.oss.dbms.Parameter;
+import com.readytalk.oss.dbms.ColumnReference;
+import com.readytalk.oss.dbms.PatchTemplate;
+import com.readytalk.oss.dbms.InsertTemplate;
+import com.readytalk.oss.dbms.UpdateTemplate;
+import com.readytalk.oss.dbms.DeleteTemplate;
+import com.readytalk.oss.dbms.TableReference;
+import com.readytalk.oss.dbms.QueryTemplate;
+import com.readytalk.oss.dbms.QueryResult;
+import com.readytalk.oss.dbms.DuplicateKeyResolution;
 import com.readytalk.oss.dbms.imp.MyDBMS;
 
 public class PartialIndexTest extends TestCase{
@@ -27,141 +31,141 @@ public class PartialIndexTest extends TestCase{
     public void testUpdateOnPartialIndex(){
     	DBMS dbms = new MyDBMS();
 
-        Column number = dbms.column(Integer.class);
-        Column color = dbms.column(String.class);
-        Column shape = dbms.column(String.class);
-        Table numbers = dbms.table(list(number, color));
+        Column number = new Column(Integer.class);
+        Column color = new Column(String.class);
+        Column shape = new Column(String.class);
+        Table numbers = new Table(list(number, color));
 
         Revision tail = dbms.revision();
 
-        PatchTemplate insert = dbms.insertTemplate
+        PatchTemplate insert = new InsertTemplate
           (numbers,
            list(number, color, shape),
-           list(dbms.parameter(),
-                dbms.parameter(),
-                dbms.parameter()), DuplicateKeyResolution.Throw);
+           list((Expression) new Parameter(),
+                new Parameter(),
+                new Parameter()), DuplicateKeyResolution.Throw);
 
-        PatchContext context = dbms.patchContext(tail);
+        RevisionBuilder builder = dbms.builder(tail);
 
-        dbms.apply(context, insert, 1, "red", "triangle");
-        dbms.apply(context, insert, 1, "green", "circle");
-        dbms.apply(context, insert, 2, "yellow", "circle");
-        dbms.apply(context, insert, 3, "blue", "square");
-        dbms.apply(context, insert, 3, "orange", "square");
+        builder.apply(insert, 1, "red", "triangle");
+        builder.apply(insert, 1, "green", "circle");
+        builder.apply(insert, 2, "yellow", "circle");
+        builder.apply(insert, 3, "blue", "square");
+        builder.apply(insert, 3, "orange", "square");
 
-        Revision first = dbms.commit(context);
+        Revision first = builder.commit();
 
-        TableReference numbersReference = dbms.tableReference(numbers);
+        TableReference numbersReference = new TableReference(numbers);
 
-        QueryTemplate numberEqual = dbms.queryTemplate
-          (list((Expression) dbms.columnReference(numbersReference, color),
-                (Expression) dbms.columnReference(numbersReference, shape)),
+        QueryTemplate numberEqual = new QueryTemplate
+          (list((Expression) new ColumnReference(numbersReference, color),
+                (Expression) new ColumnReference(numbersReference, shape)),
            numbersReference,
-           dbms.operation
-           (BinaryOperationType.Equal,
-            dbms.columnReference(numbersReference, number),
-            dbms.parameter()));
+           new BinaryOperation
+           (BinaryOperation.Type.Equal,
+            new ColumnReference(numbersReference, number),
+            new Parameter()));
 
         QueryResult result = dbms.diff(tail, first, numberEqual, 1);
 
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "green");
         assertEquals(result.nextItem(), "circle");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "red");
         assertEquals(result.nextItem(), "triangle");
-        assertEquals(result.nextRow(), ResultType.End);
+        assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        PatchTemplate updateShapeWhereNumberEqual = dbms.updateTemplate
+        PatchTemplate updateShapeWhereNumberEqual = new UpdateTemplate
           (numbersReference,
-           dbms.operation
-           (BinaryOperationType.Equal,
-            dbms.columnReference(numbersReference, number),
-            dbms.parameter()),
+           new BinaryOperation
+           (BinaryOperation.Type.Equal,
+            new ColumnReference(numbersReference, number),
+            new Parameter()),
            list(shape),
-           list(dbms.parameter()));
+           list((Expression) new Parameter()));
 
-        context = dbms.patchContext(first);
+        builder = dbms.builder(first);
 
-        dbms.apply(context, updateShapeWhereNumberEqual, 1, "pentagon");
+        builder.apply(updateShapeWhereNumberEqual, 1, "pentagon");
 
-        Revision second = dbms.commit(context);
+        Revision second = builder.commit();
 
         result = dbms.diff(tail, second, numberEqual, 1);
 
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "green");
         assertEquals(result.nextItem(), "pentagon");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "red");
         assertEquals(result.nextItem(), "pentagon");
-        assertEquals(result.nextRow(), ResultType.End);
+        assertEquals(result.nextRow(), QueryResult.Type.End);
     }
 
     @Test
     public void testDeleteOnPartialIndex(){
     	DBMS dbms = new MyDBMS();
 
-        Column number = dbms.column(Integer.class);
-        Column color = dbms.column(String.class);
-        Column shape = dbms.column(String.class);
-        Table numbers = dbms.table(list(number, color));
+        Column number = new Column(Integer.class);
+        Column color = new Column(String.class);
+        Column shape = new Column(String.class);
+        Table numbers = new Table(list(number, color));
 
         Revision tail = dbms.revision();
 
-        PatchTemplate insert = dbms.insertTemplate
+        PatchTemplate insert = new InsertTemplate
           (numbers,
            list(number, color, shape),
-           list(dbms.parameter(),
-                dbms.parameter(),
-                dbms.parameter()), DuplicateKeyResolution.Throw);
+           list((Expression) new Parameter(),
+                new Parameter(),
+                new Parameter()), DuplicateKeyResolution.Throw);
 
-        PatchContext context = dbms.patchContext(tail);
+        RevisionBuilder builder = dbms.builder(tail);
 
-        dbms.apply(context, insert, 1, "red", "triangle");
-        dbms.apply(context, insert, 1, "green", "circle");
-        dbms.apply(context, insert, 2, "yellow", "circle");
-        dbms.apply(context, insert, 3, "blue", "square");
-        dbms.apply(context, insert, 3, "orange", "square");
+        builder.apply(insert, 1, "red", "triangle");
+        builder.apply(insert, 1, "green", "circle");
+        builder.apply(insert, 2, "yellow", "circle");
+        builder.apply(insert, 3, "blue", "square");
+        builder.apply(insert, 3, "orange", "square");
 
-        Revision first = dbms.commit(context);
+        Revision first = builder.commit();
 
-        TableReference numbersReference = dbms.tableReference(numbers);
+        TableReference numbersReference = new TableReference(numbers);
 
-        QueryTemplate numberEqual = dbms.queryTemplate
-          (list((Expression) dbms.columnReference(numbersReference, color),
-                (Expression) dbms.columnReference(numbersReference, shape)),
+        QueryTemplate numberEqual = new QueryTemplate
+          (list((Expression) new ColumnReference(numbersReference, color),
+                (Expression) new ColumnReference(numbersReference, shape)),
            numbersReference,
-           dbms.operation
-           (BinaryOperationType.Equal,
-            dbms.columnReference(numbersReference, number),
-            dbms.parameter()));
+           new BinaryOperation
+           (BinaryOperation.Type.Equal,
+            new ColumnReference(numbersReference, number),
+            new Parameter()));
 
         QueryResult result = dbms.diff(tail, first, numberEqual, 1);
 
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "green");
         assertEquals(result.nextItem(), "circle");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "red");
         assertEquals(result.nextItem(), "triangle");
-        assertEquals(result.nextRow(), ResultType.End);
+        assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        PatchTemplate deleteWhereNumberEqual = dbms.deleteTemplate
+        PatchTemplate deleteWhereNumberEqual = new DeleteTemplate
           (numbersReference,
-           dbms.operation
-           (BinaryOperationType.Equal,
-            dbms.columnReference(numbersReference, number),
-            dbms.parameter()));
+           new BinaryOperation
+           (BinaryOperation.Type.Equal,
+            new ColumnReference(numbersReference, number),
+            new Parameter()));
 
-        context = dbms.patchContext(first);
+        builder = dbms.builder(first);
 
-        dbms.apply(context, deleteWhereNumberEqual, 1);
+        builder.apply(deleteWhereNumberEqual, 1);
 
-        Revision second = dbms.commit(context);
+        Revision second = builder.commit();
 
         result = dbms.diff(tail, second, numberEqual, 1);
 
-        assertEquals(result.nextRow(), ResultType.End);
+        assertEquals(result.nextRow(), QueryResult.Type.End);
     }
 }

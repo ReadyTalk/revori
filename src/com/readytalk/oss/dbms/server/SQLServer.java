@@ -77,12 +77,6 @@ public class SQLServer {
 
   private static final Tree Nothing = new Leaf();
 
-  private static int nextId = 1;
-
-  private synchronized static String makeId() {
-    return SQLServer.class.getName() + ".name" + (nextId++);
-  }
-
   private static class Server {
     public final DBMS dbms;
 
@@ -155,9 +149,9 @@ public class SQLServer {
     public Server(DBMS dbms) {
       this.dbms = dbms;
 
-      Column databasesName = new Column(String.class, makeId());
-      Column databasesDatabase = new Column(Object.class, makeId());
-      Table databases = new Table(list(databasesName), makeId());
+      Column databasesName = new Column(String.class);
+      Column databasesDatabase = new Column(Object.class);
+      Table databases = new Table(list(databasesName));
       TableReference databasesReference = new TableReference(databases);
 
       this.insertOrUpdateDatabase = new InsertTemplate
@@ -187,10 +181,10 @@ public class SQLServer {
           new ColumnReference(databasesReference, databasesName),
           new Parameter()));
 
-      Column tablesDatabase = new Column(String.class, makeId());
-      Column tablesName = new Column(String.class, makeId());
-      Column tablesTable = new Column(Object.class, makeId());
-      Table tables = new Table(list(tablesDatabase, tablesName), makeId());
+      Column tablesDatabase = new Column(String.class);
+      Column tablesName = new Column(String.class);
+      Column tablesTable = new Column(Object.class);
+      Table tables = new Table(list(tablesDatabase, tablesName));
       TableReference tablesReference = new TableReference(tables);
 
       this.insertOrUpdateTable = new InsertTemplate
@@ -240,10 +234,10 @@ public class SQLServer {
            new ColumnReference(tablesReference, tablesName),
            new Parameter())));
 
-      this.tagsDatabase = new Column(String.class, makeId());
-      this.tagsName = new Column(String.class, makeId());
-      this.tagsTag = new Column(Object.class, makeId());
-      this.tags = new Table(list(tagsDatabase, tagsName), makeId());
+      this.tagsDatabase = new Column(String.class);
+      this.tagsName = new Column(String.class);
+      this.tagsTag = new Column(Object.class);
+      this.tags = new Table(list(tagsDatabase, tagsName));
       TableReference tagsReference = new TableReference(tags);
 
       this.insertOrUpdateTag = new InsertTemplate
@@ -1027,7 +1021,7 @@ public class SQLServer {
     Map<String, MyColumn> columnMap = new HashMap(columns.size());
     for (Tree column: columns) {
       Class type = findColumnType(server, ((Terminal) column.get(1)).value);
-      Column dbmsColumn = new Column(type, makeId());
+      Column dbmsColumn = new Column(type);
   
       MyColumn myColumn = new MyColumn
         (((Name) column.get(0)).value, dbmsColumn, type);
@@ -1055,7 +1049,7 @@ public class SQLServer {
 
     return new MyTable
       (((Name) tree.get(2)).value, columnList, columnMap, myPrimaryKeyColumns,
-       new Table(dbmsPrimaryKeyColumns, makeId()));
+       new Table(dbmsPrimaryKeyColumns));
   }
 
   private static void writeInteger(OutputStream out, int v)

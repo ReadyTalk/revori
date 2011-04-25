@@ -4,23 +4,28 @@ import junit.framework.TestCase;
 
 import org.junit.Test;
 
-import static com.readytalk.oss.dbms.imp.Util.list;
+import static com.readytalk.oss.dbms.util.Util.list;
 import static org.junit.Assert.*;
 
 import com.readytalk.oss.dbms.DBMS;
-import com.readytalk.oss.dbms.DBMS.BinaryOperationType;
-import com.readytalk.oss.dbms.DBMS.Column;
-import com.readytalk.oss.dbms.DBMS.ConflictResolver;
-import com.readytalk.oss.dbms.DBMS.Table;
-import com.readytalk.oss.dbms.DBMS.Expression;
-import com.readytalk.oss.dbms.DBMS.Revision;
-import com.readytalk.oss.dbms.DBMS.PatchContext;
-import com.readytalk.oss.dbms.DBMS.PatchTemplate;
-import com.readytalk.oss.dbms.DBMS.TableReference;
-import com.readytalk.oss.dbms.DBMS.QueryTemplate;
-import com.readytalk.oss.dbms.DBMS.QueryResult;
-import com.readytalk.oss.dbms.DBMS.ResultType;
-import com.readytalk.oss.dbms.DBMS.DuplicateKeyResolution;
+import com.readytalk.oss.dbms.BinaryOperation;
+import com.readytalk.oss.dbms.Column;
+import com.readytalk.oss.dbms.ConflictResolver;
+import com.readytalk.oss.dbms.Table;
+import com.readytalk.oss.dbms.Expression;
+import com.readytalk.oss.dbms.Revision;
+import com.readytalk.oss.dbms.RevisionBuilder;
+import com.readytalk.oss.dbms.PatchTemplate;
+import com.readytalk.oss.dbms.InsertTemplate;
+import com.readytalk.oss.dbms.UpdateTemplate;
+import com.readytalk.oss.dbms.DeleteTemplate;
+import com.readytalk.oss.dbms.TableReference;
+import com.readytalk.oss.dbms.Parameter;
+import com.readytalk.oss.dbms.Constant;
+import com.readytalk.oss.dbms.ColumnReference;
+import com.readytalk.oss.dbms.QueryTemplate;
+import com.readytalk.oss.dbms.QueryResult;
+import com.readytalk.oss.dbms.DuplicateKeyResolution;
 import com.readytalk.oss.dbms.imp.MyDBMS;
 
 public class MergeTest extends TestCase{
@@ -29,141 +34,141 @@ public class MergeTest extends TestCase{
     public void testMerges(){
     	DBMS dbms = new MyDBMS();
 
-        final Column number = dbms.column(Integer.class);
-        final Column name = dbms.column(String.class);
-        final Table numbers = dbms.table(list(number));
+        final Column number = new Column(Integer.class);
+        final Column name = new Column(String.class);
+        final Table numbers = new Table(list(number));
 
         Revision tail = dbms.revision();
 
-        PatchTemplate insert = dbms.insertTemplate
+        PatchTemplate insert = new InsertTemplate
           (numbers,
            list(number, name),
-           list(dbms.parameter(),
-                dbms.parameter()), DuplicateKeyResolution.Throw);
+           list((Expression) new Parameter(), new Parameter()),
+           DuplicateKeyResolution.Throw);
 
-        PatchContext context = dbms.patchContext(tail);
+        RevisionBuilder builder = dbms.builder(tail);
 
-        dbms.apply(context, insert,  1, "one");
-        dbms.apply(context, insert,  2, "two");
-        dbms.apply(context, insert,  6, "six");
-        dbms.apply(context, insert,  7, "seven");
-        dbms.apply(context, insert,  8, "eight");
-        dbms.apply(context, insert,  9, "nine");
-        dbms.apply(context, insert, 13, "thirteen");
+        builder.apply(insert,  1, "one");
+        builder.apply(insert,  2, "two");
+        builder.apply(insert,  6, "six");
+        builder.apply(insert,  7, "seven");
+        builder.apply(insert,  8, "eight");
+        builder.apply(insert,  9, "nine");
+        builder.apply(insert, 13, "thirteen");
 
-        Revision base = dbms.commit(context);
+        Revision base = builder.commit();
 
-        context = dbms.patchContext(base);
+        builder = dbms.builder(base);
 
-        dbms.apply(context, insert, 4, "four");
+        builder.apply(insert, 4, "four");
 
-        Revision left = dbms.commit(context);
+        Revision left = builder.commit();
 
-        TableReference numbersReference = dbms.tableReference(numbers);
+        TableReference numbersReference = new TableReference(numbers);
 
-        PatchTemplate update = dbms.updateTemplate
+        PatchTemplate update = new UpdateTemplate
           (numbersReference,
-           dbms.operation
-           (BinaryOperationType.Equal,
-            dbms.columnReference(numbersReference, number),
-            dbms.parameter()),
+           new BinaryOperation
+           (BinaryOperation.Type.Equal,
+            new ColumnReference(numbersReference, number),
+            new Parameter()),
            list(name),
-           list(dbms.parameter()));
+           list((Expression) new Parameter()));
 
-        context = dbms.patchContext(base);
+        builder = dbms.builder(base);
 
-        dbms.apply(context, update,  6, "roku");
-        dbms.apply(context, insert, 42, "forty two");
+        builder.apply(update,  6, "roku");
+        builder.apply(insert, 42, "forty two");
 
-        Revision right = dbms.commit(context);
+        Revision right = builder.commit();
 
         Revision merge = dbms.merge(base, left, right, null);
 
-        QueryTemplate any = dbms.queryTemplate
-          (list((Expression) dbms.columnReference(numbersReference, name)),
+        QueryTemplate any = new QueryTemplate
+          (list((Expression) new ColumnReference(numbersReference, name)),
            numbersReference,
-           dbms.constant(true));
+           new Constant(true));
 
         QueryResult result = dbms.diff(tail, merge, any);
 
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "one");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "two");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "four");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "roku");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "seven");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "eight");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "nine");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "thirteen");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "forty two");
-        assertEquals(result.nextRow(), ResultType.End);
+        assertEquals(result.nextRow(), QueryResult.Type.End);
         
-        context = dbms.patchContext(base);
+        builder = dbms.builder(base);
 
-        dbms.apply(context, insert, 4, "four");
+        builder.apply(insert, 4, "four");
 
-        left = dbms.commit(context);
+        left = builder.commit();
 
-        context = dbms.patchContext(base);
+        builder = dbms.builder(base);
 
-        dbms.apply(context, insert, 4, "four");
+        builder.apply(insert, 4, "four");
 
-        right = dbms.commit(context);
+        right = builder.commit();
 
         merge = dbms.merge(base, left, right, null);
 
         result = dbms.diff(base, merge, any);
 
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "four");
-        assertEquals(result.nextRow(), ResultType.End);
+        assertEquals(result.nextRow(), QueryResult.Type.End);
         
-        PatchTemplate delete = dbms.deleteTemplate
+        PatchTemplate delete = new DeleteTemplate
           (numbersReference,
-           dbms.operation
-           (BinaryOperationType.Equal,
-            dbms.columnReference(numbersReference, number),
-            dbms.parameter()));
+           new BinaryOperation
+           (BinaryOperation.Type.Equal,
+            new ColumnReference(numbersReference, number),
+            new Parameter()));
 
-        context = dbms.patchContext(base);
+        builder = dbms.builder(base);
 
-        dbms.apply(context, delete, 8);
+        builder.apply(delete, 8);
 
-        left = dbms.commit(context);
+        left = builder.commit();
 
-        context = dbms.patchContext(base);
+        builder = dbms.builder(base);
 
-        dbms.apply(context, update, 8, "hachi");
+        builder.apply(update, 8, "hachi");
 
-        right = dbms.commit(context);
+        right = builder.commit();
 
         merge = dbms.merge(base, left, right, null);
 
         result = dbms.diff(base, merge, any);
 
-        assertEquals(result.nextRow(), ResultType.Deleted);
+        assertEquals(result.nextRow(), QueryResult.Type.Deleted);
         assertEquals(result.nextItem(), "eight");
-        assertEquals(result.nextRow(), ResultType.End);
+        assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        context = dbms.patchContext(base);
+        builder = dbms.builder(base);
 
-        dbms.apply(context, insert, 4, "four");
+        builder.apply(insert, 4, "four");
 
-        left = dbms.commit(context);
+        left = builder.commit();
 
-        context = dbms.patchContext(base);
+        builder = dbms.builder(base);
 
-        dbms.apply(context, insert, 4, "shi");
+        builder.apply(insert, 4, "shi");
 
-        right = dbms.commit(context);
+        right = builder.commit();
 
         merge = dbms.merge(base, left, right, new ConflictResolver() {
             public Object resolveConflict(Table table,
@@ -187,21 +192,21 @@ public class MergeTest extends TestCase{
 
         result = dbms.diff(base, merge, any);
 
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "quatro");
-        assertEquals(result.nextRow(), ResultType.End);
+        assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        context = dbms.patchContext(base);
+        builder = dbms.builder(base);
 
-        dbms.apply(context, update, 1, "ichi");
+        builder.apply(update, 1, "ichi");
 
-        left = dbms.commit(context);
+        left = builder.commit();
 
-        context = dbms.patchContext(base);
+        builder = dbms.builder(base);
 
-        dbms.apply(context, update, 1, "uno");
+        builder.apply(update, 1, "uno");
 
-        right = dbms.commit(context);
+        right = builder.commit();
 
         merge = dbms.merge(base, left, right, new ConflictResolver() {
             public Object resolveConflict(Table table,
@@ -225,23 +230,23 @@ public class MergeTest extends TestCase{
 
         result = dbms.diff(base, merge, any);
 
-        assertEquals(result.nextRow(), ResultType.Deleted);
+        assertEquals(result.nextRow(), QueryResult.Type.Deleted);
         assertEquals(result.nextItem(), "one");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "unit");
-        assertEquals(result.nextRow(), ResultType.End);
+        assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        context = dbms.patchContext(tail);
+        builder = dbms.builder(tail);
 
-        dbms.apply(context, insert, 1, "one");
+        builder.apply(insert, 1, "one");
 
-        Revision t1 = dbms.commit(context);
+        Revision t1 = builder.commit();
 
-        context = dbms.patchContext(tail);
+        builder = dbms.builder(tail);
 
-        dbms.apply(context, insert, 1, "uno");
+        builder.apply(insert, 1, "uno");
 
-        Revision t2 = dbms.commit(context);
+        Revision t2 = builder.commit();
 
         merge = dbms.merge(tail, t1, t2, new ConflictResolver() {
             public Object resolveConflict(Table table,
@@ -265,23 +270,23 @@ public class MergeTest extends TestCase{
 
         result = dbms.diff(tail, merge, any);
 
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "unit");
-        assertEquals(result.nextRow(), ResultType.End);
+        assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        context = dbms.patchContext(tail);
+        builder = dbms.builder(tail);
 
-        dbms.apply(context, insert, 1, "one");
-        dbms.apply(context, insert, 2, "two");
+        builder.apply(insert, 1, "one");
+        builder.apply(insert, 2, "two");
 
-        t1 = dbms.commit(context);
+        t1 = builder.commit();
 
-        context = dbms.patchContext(tail);
+        builder = dbms.builder(tail);
 
-        dbms.apply(context, insert, 1, "uno");
-        dbms.apply(context, insert, 3, "tres");
+        builder.apply(insert, 1, "uno");
+        builder.apply(insert, 3, "tres");
 
-        t2 = dbms.commit(context);
+        t2 = builder.commit();
 
         merge = dbms.merge(tail, t1, t2, new ConflictResolver() {
             public Object resolveConflict(Table table,
@@ -305,12 +310,12 @@ public class MergeTest extends TestCase{
 
         result = dbms.diff(tail, merge, any);
 
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "unit");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "two");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tres");
-        assertEquals(result.nextRow(), ResultType.End);
+        assertEquals(result.nextRow(), QueryResult.Type.End);
     }
 }

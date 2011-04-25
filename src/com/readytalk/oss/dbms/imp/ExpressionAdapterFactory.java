@@ -3,6 +3,7 @@ package com.readytalk.oss.dbms.imp;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.Constant;
 import com.readytalk.oss.dbms.Parameter;
+import com.readytalk.oss.dbms.ColumnReference;
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.UnaryOperation;
 
@@ -33,6 +34,24 @@ class ExpressionAdapterFactory {
         }
 
         return adapter;
+      }
+    });
+
+    factories.put(ColumnReference.class, new Factory() {
+      public ExpressionAdapter make(ExpressionContext context,
+                                    Expression expression)
+      {
+        ColumnReference reference = (ColumnReference) expression;
+        ExpressionAdapter adapter = context.adapters.get(reference);
+        if (adapter == null) {
+          ColumnReferenceAdapter cra = new ColumnReferenceAdapter
+            (reference.tableReference, reference.column);
+          context.adapters.put(reference, cra);
+          context.columnReferences.add(cra);
+          return cra;
+        } else {
+          return adapter;
+        }
       }
     });
 
@@ -80,7 +99,13 @@ class ExpressionAdapterFactory {
   public static ExpressionAdapter makeAdapter(ExpressionContext context,
                                               Expression expression)
   {
-    return factories.get(expression.getClass()).make(context, expression);
+    Factory factory = factories.get(expression.getClass());
+    if (factory == null) {
+      throw new RuntimeException
+        ("no factory found for " + expression.getClass());
+    } else {
+      return factory.make(context, expression);
+    }
   }
 
   private interface Factory {

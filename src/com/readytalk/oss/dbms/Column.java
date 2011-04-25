@@ -5,6 +5,12 @@ package com.readytalk.oss.dbms;
  * of interest in a query or update.
  */
 public final class Column implements Comparable<Column> {
+  private static long nextId = 1;
+
+  private synchronized static String makeId() {
+    return (nextId++) + "." + Column.class.getName() + ".id";
+  }
+
   /**
    * The type which values stored to this column must be instances of.
    */
@@ -16,15 +22,26 @@ public final class Column implements Comparable<Column> {
   public final String id;
 
   /**
-   * Defines a column which is associated with the specified type.
-   * The type specified here will be used for dynamic type checking
-   * whenever a value is inserted or updated in this column of a
-   * table; only values which are instances of the specified class
-   * will be accepted.<p>
+   * Defines a column which is associated with the specified type and
+   * ID.  The type specified here will be used for dynamic type
+   * checking whenever a value is inserted or updated in this column
+   * of a table; only values which are instances of the specified
+   * class will be accepted.<p>
    */
   public Column(Class type, String id) {
     this.type = type;
     this.id = id;
+
+    if (type == null) throw new NullPointerException();
+    if (id == null) throw new NullPointerException();
+  }
+
+  /**
+   * Defines a column which is associated with the specified type and
+   * an automatically generated ID.<p>
+   */
+  public Column(Class type) {
+    this(type, makeId());
   }
 
   public int compareTo(Column o) {

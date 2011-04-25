@@ -37,10 +37,12 @@ public final class Index implements Comparable<Index> {
 
     List<Column> copy = new ArrayList(columns);
 
-    // pad index with primary key columns to make it unique
-    for (Column c: table.primaryKey.columns) {
-      if (! copy.contains(c)) {
-        copy.add(c);
+    if (table.primaryKey != null) {
+      // pad index with primary key columns to make it unique
+      for (Column c: table.primaryKey.columns) {
+        if (! copy.contains(c)) {
+          copy.add(c);
+        }
       }
     }
 

@@ -4,23 +4,25 @@ import junit.framework.TestCase;
 
 import org.junit.Test;
 
-import static com.readytalk.oss.dbms.imp.Util.list;
+import static com.readytalk.oss.dbms.util.Util.list;
 import static org.junit.Assert.*;
 
 import com.readytalk.oss.dbms.DBMS;
-import com.readytalk.oss.dbms.DBMS.BinaryOperationType;
-import com.readytalk.oss.dbms.DBMS.Column;
-import com.readytalk.oss.dbms.DBMS.JoinType;
-import com.readytalk.oss.dbms.DBMS.Table;
-import com.readytalk.oss.dbms.DBMS.Expression;
-import com.readytalk.oss.dbms.DBMS.Revision;
-import com.readytalk.oss.dbms.DBMS.PatchContext;
-import com.readytalk.oss.dbms.DBMS.PatchTemplate;
-import com.readytalk.oss.dbms.DBMS.TableReference;
-import com.readytalk.oss.dbms.DBMS.QueryTemplate;
-import com.readytalk.oss.dbms.DBMS.QueryResult;
-import com.readytalk.oss.dbms.DBMS.ResultType;
-import com.readytalk.oss.dbms.DBMS.DuplicateKeyResolution;
+import com.readytalk.oss.dbms.BinaryOperation;
+import com.readytalk.oss.dbms.Column;
+import com.readytalk.oss.dbms.Join;
+import com.readytalk.oss.dbms.Table;
+import com.readytalk.oss.dbms.Expression;
+import com.readytalk.oss.dbms.Revision;
+import com.readytalk.oss.dbms.RevisionBuilder;
+import com.readytalk.oss.dbms.PatchTemplate;
+import com.readytalk.oss.dbms.InsertTemplate;
+import com.readytalk.oss.dbms.TableReference;
+import com.readytalk.oss.dbms.QueryTemplate;
+import com.readytalk.oss.dbms.QueryResult;
+import com.readytalk.oss.dbms.Parameter;
+import com.readytalk.oss.dbms.ColumnReference;
+import com.readytalk.oss.dbms.DuplicateKeyResolution;
 import com.readytalk.oss.dbms.imp.MyDBMS;
 
 public class JoinTest extends TestCase{
@@ -30,162 +32,162 @@ public class JoinTest extends TestCase{
     	
         DBMS dbms = new MyDBMS();
 
-        Column id = dbms.column(Integer.class);
-        Column name = dbms.column(String.class);
-        Table names = dbms.table(list(id));
+        Column id = new Column(Integer.class);
+        Column name = new Column(String.class);
+        Table names = new Table(list(id));
 
-        Column nickname = dbms.column(String.class);
-        Table nicknames = dbms.table(list(id, nickname));
+        Column nickname = new Column(String.class);
+        Table nicknames = new Table(list(id, nickname));
 
         Revision tail = dbms.revision();
 
-        PatchTemplate nameInsert = dbms.insertTemplate
+        PatchTemplate nameInsert = new InsertTemplate
           (names,
            list(id, name),
-           list(dbms.parameter(),
-                dbms.parameter()), DuplicateKeyResolution.Throw);
+           list((Expression) new Parameter(), new Parameter()),
+           DuplicateKeyResolution.Throw);
 
-        PatchTemplate nicknameInsert = dbms.insertTemplate
+        PatchTemplate nicknameInsert = new InsertTemplate
           (nicknames,
            list(id, nickname),
-           list(dbms.parameter(),
-                dbms.parameter()), DuplicateKeyResolution.Throw);
+           list((Expression) new Parameter(), new Parameter()),
+           DuplicateKeyResolution.Throw);
 
-        PatchContext context = dbms.patchContext(tail);
+        RevisionBuilder builder = dbms.builder(tail);
 
-        dbms.apply(context, nameInsert, 1, "tom");
-        dbms.apply(context, nameInsert, 2, "ted");
-        dbms.apply(context, nameInsert, 3, "tim");
-        dbms.apply(context, nameInsert, 4, "tod");
-        dbms.apply(context, nameInsert, 5, "tes");
+        builder.apply(nameInsert, 1, "tom");
+        builder.apply(nameInsert, 2, "ted");
+        builder.apply(nameInsert, 3, "tim");
+        builder.apply(nameInsert, 4, "tod");
+        builder.apply(nameInsert, 5, "tes");
 
-        dbms.apply(context, nicknameInsert, 1, "moneybags");
-        dbms.apply(context, nicknameInsert, 3, "eight ball");
-        dbms.apply(context, nicknameInsert, 4, "baldy");
-        dbms.apply(context, nicknameInsert, 5, "knuckles");
-        dbms.apply(context, nicknameInsert, 6, "no name");
+        builder.apply(nicknameInsert, 1, "moneybags");
+        builder.apply(nicknameInsert, 3, "eight ball");
+        builder.apply(nicknameInsert, 4, "baldy");
+        builder.apply(nicknameInsert, 5, "knuckles");
+        builder.apply(nicknameInsert, 6, "no name");
 
-        Revision first = dbms.commit(context);
+        Revision first = builder.commit();
        
-        TableReference namesReference = dbms.tableReference(names);
-        TableReference nicknamesReference = dbms.tableReference(nicknames);
+        TableReference namesReference = new TableReference(names);
+        TableReference nicknamesReference = new TableReference(nicknames);
 
-        QueryTemplate namesInnerNicknames = dbms.queryTemplate
-          (list((Expression) dbms.columnReference(namesReference, name),
-                (Expression) dbms.columnReference(nicknamesReference, nickname)),
-           dbms.join
-           (JoinType.Inner,
+        QueryTemplate namesInnerNicknames = new QueryTemplate
+          (list((Expression) new ColumnReference(namesReference, name),
+                (Expression) new ColumnReference(nicknamesReference, nickname)),
+           new Join
+           (Join.Type.Inner,
             namesReference,
             nicknamesReference),
-           dbms.operation
-           (BinaryOperationType.Equal,
-            dbms.columnReference(namesReference, id),
-            dbms.columnReference(nicknamesReference, id)));
+           new BinaryOperation
+           (BinaryOperation.Type.Equal,
+            new ColumnReference(namesReference, id),
+            new ColumnReference(nicknamesReference, id)));
         
         QueryResult result = dbms.diff(tail, first, namesInnerNicknames);
 
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tom");
         assertEquals(result.nextItem(), "moneybags");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tim");
         assertEquals(result.nextItem(), "eight ball");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tod");
         assertEquals(result.nextItem(), "baldy");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tes");
         assertEquals(result.nextItem(), "knuckles");
-        assertEquals(result.nextRow(), ResultType.End);
+        assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        QueryTemplate namesLeftNicknames = dbms.queryTemplate
-          (list((Expression) dbms.columnReference(namesReference, name),
-                (Expression) dbms.columnReference(nicknamesReference, nickname)),
-           dbms.join
-           (JoinType.LeftOuter,
+        QueryTemplate namesLeftNicknames = new QueryTemplate
+          (list((Expression) new ColumnReference(namesReference, name),
+                (Expression) new ColumnReference(nicknamesReference, nickname)),
+           new Join
+           (Join.Type.LeftOuter,
             namesReference,
             nicknamesReference),
-           dbms.operation
-           (BinaryOperationType.Equal,
-            dbms.columnReference(namesReference, id),
-            dbms.columnReference(nicknamesReference, id)));
+           new BinaryOperation
+           (BinaryOperation.Type.Equal,
+            new ColumnReference(namesReference, id),
+            new ColumnReference(nicknamesReference, id)));
         
         result = dbms.diff(tail, first, namesLeftNicknames);
 
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tom");
         assertEquals(result.nextItem(), "moneybags");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "ted");
         assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tim");
         assertEquals(result.nextItem(), "eight ball");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tod");
         assertEquals(result.nextItem(), "baldy");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tes");
         assertEquals(result.nextItem(), "knuckles");
-        assertEquals(result.nextRow(), ResultType.End);
+        assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        context = dbms.patchContext(first);
+        builder = dbms.builder(first);
 
-        dbms.apply(context, nameInsert, 6, "rapunzel");
-        dbms.apply(context, nameInsert, 7, "carlos");
-        dbms.apply(context, nameInsert, 8, "benjamin");
+        builder.apply(nameInsert, 6, "rapunzel");
+        builder.apply(nameInsert, 7, "carlos");
+        builder.apply(nameInsert, 8, "benjamin");
 
-        dbms.apply(context, nicknameInsert, 1, "big bucks");
-        dbms.apply(context, nicknameInsert, 8, "jellybean");
+        builder.apply(nicknameInsert, 1, "big bucks");
+        builder.apply(nicknameInsert, 8, "jellybean");
 
-        Revision second = dbms.commit(context);
+        Revision second = builder.commit();
 
         result = dbms.diff(first, second, namesLeftNicknames);
 
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tom");
         assertEquals(result.nextItem(), "big bucks");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "rapunzel");
         assertEquals(result.nextItem(), "no name");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "carlos");
         assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "benjamin");
         assertEquals(result.nextItem(), "jellybean");
-        assertEquals(result.nextRow(), ResultType.End);
+        assertEquals(result.nextRow(), QueryResult.Type.End);
 
         result = dbms.diff(tail, second, namesLeftNicknames);
 
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tom");
         assertEquals(result.nextItem(), "big bucks");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tom");
         assertEquals(result.nextItem(), "moneybags");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "ted");
         assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tim");
         assertEquals(result.nextItem(), "eight ball");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tod");
         assertEquals(result.nextItem(), "baldy");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tes");
         assertEquals(result.nextItem(), "knuckles");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "rapunzel");
         assertEquals(result.nextItem(), "no name");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "carlos");
         assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "benjamin");
         assertEquals(result.nextItem(), "jellybean");
-        assertEquals(result.nextRow(), ResultType.End);
+        assertEquals(result.nextRow(), QueryResult.Type.End);
     	
     }
     
@@ -194,256 +196,256 @@ public class JoinTest extends TestCase{
     	
         DBMS dbms = new MyDBMS();
 
-        Column id = dbms.column(Integer.class);
-        Column name = dbms.column(String.class);
-        Table names = dbms.table(list(id));
+        Column id = new Column(Integer.class);
+        Column name = new Column(String.class);
+        Table names = new Table(list(id));
 
-        Column nickname = dbms.column(String.class);
-        Table nicknames = dbms.table(list(id, nickname));
+        Column nickname = new Column(String.class);
+        Table nicknames = new Table(list(id, nickname));
 
-        Column lastname = dbms.column(String.class);
-        Table lastnames = dbms.table(list(name));
+        Column lastname = new Column(String.class);
+        Table lastnames = new Table(list(name));
 
-        Column string = dbms.column(String.class);
-        Column color = dbms.column(String.class);
-        Table colors = dbms.table(list(string));
+        Column string = new Column(String.class);
+        Column color = new Column(String.class);
+        Table colors = new Table(list(string));
 
         Revision tail = dbms.revision();
 
-        PatchTemplate nameInsert = dbms.insertTemplate
+        PatchTemplate nameInsert = new InsertTemplate
           (names,
            list(id, name),
-           list(dbms.parameter(),
-                dbms.parameter()), DuplicateKeyResolution.Throw);
+           list((Expression) new Parameter(), new Parameter()),
+           DuplicateKeyResolution.Throw);
 
-        PatchTemplate nicknameInsert = dbms.insertTemplate
+        PatchTemplate nicknameInsert = new InsertTemplate
           (nicknames,
            list(id, nickname),
-           list(dbms.parameter(),
-                dbms.parameter()), DuplicateKeyResolution.Throw);
+           list((Expression) new Parameter(), new Parameter()),
+           DuplicateKeyResolution.Throw);
 
-        PatchTemplate lastnameInsert = dbms.insertTemplate
+        PatchTemplate lastnameInsert = new InsertTemplate
           (lastnames,
            list(name, lastname),
-           list(dbms.parameter(),
-                dbms.parameter()), DuplicateKeyResolution.Throw);
+           list((Expression) new Parameter(), new Parameter()),
+           DuplicateKeyResolution.Throw);
 
-        PatchTemplate colorInsert = dbms.insertTemplate
+        PatchTemplate colorInsert = new InsertTemplate
           (colors,
            list(string, color),
-           list(dbms.parameter(),
-                dbms.parameter()), DuplicateKeyResolution.Throw);
+           list((Expression) new Parameter(), new Parameter()),
+           DuplicateKeyResolution.Throw);
 
-        PatchContext context = dbms.patchContext(tail);
+        RevisionBuilder builder = dbms.builder(tail);
 
-        dbms.apply(context, nameInsert, 1, "tom");
-        dbms.apply(context, nameInsert, 2, "ted");
-        dbms.apply(context, nameInsert, 3, "tim");
-        dbms.apply(context, nameInsert, 4, "tod");
-        dbms.apply(context, nameInsert, 5, "tes");
+        builder.apply(nameInsert, 1, "tom");
+        builder.apply(nameInsert, 2, "ted");
+        builder.apply(nameInsert, 3, "tim");
+        builder.apply(nameInsert, 4, "tod");
+        builder.apply(nameInsert, 5, "tes");
 
-        dbms.apply(context, nicknameInsert, 1, "moneybags");
-        dbms.apply(context, nicknameInsert, 1, "big bucks");
-        dbms.apply(context, nicknameInsert, 3, "eight ball");
-        dbms.apply(context, nicknameInsert, 4, "baldy");
-        dbms.apply(context, nicknameInsert, 5, "knuckles");
-        dbms.apply(context, nicknameInsert, 6, "no name");
+        builder.apply(nicknameInsert, 1, "moneybags");
+        builder.apply(nicknameInsert, 1, "big bucks");
+        builder.apply(nicknameInsert, 3, "eight ball");
+        builder.apply(nicknameInsert, 4, "baldy");
+        builder.apply(nicknameInsert, 5, "knuckles");
+        builder.apply(nicknameInsert, 6, "no name");
 
-        dbms.apply(context, lastnameInsert, "tom", "thumb");
-        dbms.apply(context, lastnameInsert, "ted", "thomson");
-        dbms.apply(context, lastnameInsert, "tes", "teasdale");
+        builder.apply(lastnameInsert, "tom", "thumb");
+        builder.apply(lastnameInsert, "ted", "thomson");
+        builder.apply(lastnameInsert, "tes", "teasdale");
 
-        dbms.apply(context, colorInsert, "big bucks", "red");
-        dbms.apply(context, colorInsert, "baldy", "green");
-        dbms.apply(context, colorInsert, "no name", "pink");
-        dbms.apply(context, colorInsert, "eight ball", "sky blue");
+        builder.apply(colorInsert, "big bucks", "red");
+        builder.apply(colorInsert, "baldy", "green");
+        builder.apply(colorInsert, "no name", "pink");
+        builder.apply(colorInsert, "eight ball", "sky blue");
 
-        Revision first = dbms.commit(context);
+        Revision first = builder.commit();
        
-        TableReference namesReference = dbms.tableReference(names);
-        TableReference nicknamesReference = dbms.tableReference(nicknames);
-        TableReference lastnamesReference = dbms.tableReference(lastnames);
-        TableReference colorsReference = dbms.tableReference(colors);
+        TableReference namesReference = new TableReference(names);
+        TableReference nicknamesReference = new TableReference(nicknames);
+        TableReference lastnamesReference = new TableReference(lastnames);
+        TableReference colorsReference = new TableReference(colors);
 
-        QueryTemplate namesInnerNicknamesInnerColors = dbms.queryTemplate
-          (list((Expression) dbms.columnReference(namesReference, name),
-                (Expression) dbms.columnReference(nicknamesReference, nickname),
-                (Expression) dbms.columnReference(colorsReference, color)),
-           dbms.join
-           (JoinType.Inner,
-            dbms.join
-            (JoinType.Inner,
+        QueryTemplate namesInnerNicknamesInnerColors = new QueryTemplate
+          (list((Expression) new ColumnReference(namesReference, name),
+                (Expression) new ColumnReference(nicknamesReference, nickname),
+                (Expression) new ColumnReference(colorsReference, color)),
+           new Join
+           (Join.Type.Inner,
+            new Join
+            (Join.Type.Inner,
              namesReference,
              nicknamesReference),
             colorsReference),
-           dbms.operation
-           (BinaryOperationType.And,
-            dbms.operation
-            (BinaryOperationType.Equal,
-             dbms.columnReference(namesReference, id),
-             dbms.columnReference(nicknamesReference, id)),
-            dbms.operation
-            (BinaryOperationType.Equal,
-             dbms.columnReference(colorsReference, string),
-             dbms.columnReference(nicknamesReference, nickname))));
+           new BinaryOperation
+           (BinaryOperation.Type.And,
+            new BinaryOperation
+            (BinaryOperation.Type.Equal,
+             new ColumnReference(namesReference, id),
+             new ColumnReference(nicknamesReference, id)),
+            new BinaryOperation
+            (BinaryOperation.Type.Equal,
+             new ColumnReference(colorsReference, string),
+             new ColumnReference(nicknamesReference, nickname))));
         
         QueryResult result = dbms.diff
           (tail, first, namesInnerNicknamesInnerColors);
 
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tom");
         assertEquals(result.nextItem(), "big bucks");
         assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tim");
         assertEquals(result.nextItem(), "eight ball");
         assertEquals(result.nextItem(), "sky blue");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tod");
         assertEquals(result.nextItem(), "baldy");
         assertEquals(result.nextItem(), "green");
-        assertEquals(result.nextRow(), ResultType.End);
+        assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        QueryTemplate namesLeftNicknamesInnerColors = dbms.queryTemplate
-          (list((Expression) dbms.columnReference(namesReference, name),
-                (Expression) dbms.columnReference(nicknamesReference, nickname),
-                (Expression) dbms.columnReference(colorsReference, color)),
-           dbms.join
-           (JoinType.Inner,
-            dbms.join
-            (JoinType.LeftOuter,
+        QueryTemplate namesLeftNicknamesInnerColors = new QueryTemplate
+          (list((Expression) new ColumnReference(namesReference, name),
+                (Expression) new ColumnReference(nicknamesReference, nickname),
+                (Expression) new ColumnReference(colorsReference, color)),
+           new Join
+           (Join.Type.Inner,
+            new Join
+            (Join.Type.LeftOuter,
              namesReference,
              nicknamesReference),
             colorsReference),
-           dbms.operation
-           (BinaryOperationType.And,
-            dbms.operation
-            (BinaryOperationType.Equal,
-             dbms.columnReference(namesReference, id),
-             dbms.columnReference(nicknamesReference, id)),
-            dbms.operation
-            (BinaryOperationType.Equal,
-             dbms.columnReference(colorsReference, string),
-             dbms.columnReference(nicknamesReference, nickname))));
+           new BinaryOperation
+           (BinaryOperation.Type.And,
+            new BinaryOperation
+            (BinaryOperation.Type.Equal,
+             new ColumnReference(namesReference, id),
+             new ColumnReference(nicknamesReference, id)),
+            new BinaryOperation
+            (BinaryOperation.Type.Equal,
+             new ColumnReference(colorsReference, string),
+             new ColumnReference(nicknamesReference, nickname))));
         
         result = dbms.diff(tail, first, namesLeftNicknamesInnerColors);
 
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tom");
         assertEquals(result.nextItem(), "big bucks");
         assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tim");
         assertEquals(result.nextItem(), "eight ball");
         assertEquals(result.nextItem(), "sky blue");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tod");
         assertEquals(result.nextItem(), "baldy");
         assertEquals(result.nextItem(), "green");
-        assertEquals(result.nextRow(), ResultType.End);
+        assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        QueryTemplate namesInnerNicknamesLeftColors = dbms.queryTemplate
-          (list((Expression) dbms.columnReference(namesReference, name),
-                (Expression) dbms.columnReference(nicknamesReference, nickname),
-                (Expression) dbms.columnReference(colorsReference, color)),
-           dbms.join
-           (JoinType.LeftOuter,
-            dbms.join
-            (JoinType.Inner,
+        QueryTemplate namesInnerNicknamesLeftColors = new QueryTemplate
+          (list((Expression) new ColumnReference(namesReference, name),
+                (Expression) new ColumnReference(nicknamesReference, nickname),
+                (Expression) new ColumnReference(colorsReference, color)),
+           new Join
+           (Join.Type.LeftOuter,
+            new Join
+            (Join.Type.Inner,
              namesReference,
              nicknamesReference),
             colorsReference),
-           dbms.operation
-           (BinaryOperationType.And,
-            dbms.operation
-            (BinaryOperationType.Equal,
-             dbms.columnReference(namesReference, id),
-             dbms.columnReference(nicknamesReference, id)),
-            dbms.operation
-            (BinaryOperationType.Equal,
-             dbms.columnReference(colorsReference, string),
-             dbms.columnReference(nicknamesReference, nickname))));
+           new BinaryOperation
+           (BinaryOperation.Type.And,
+            new BinaryOperation
+            (BinaryOperation.Type.Equal,
+             new ColumnReference(namesReference, id),
+             new ColumnReference(nicknamesReference, id)),
+            new BinaryOperation
+            (BinaryOperation.Type.Equal,
+             new ColumnReference(colorsReference, string),
+             new ColumnReference(nicknamesReference, nickname))));
         
         result = dbms.diff(tail, first, namesInnerNicknamesLeftColors);
 
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tom");
         assertEquals(result.nextItem(), "big bucks");
         assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tom");
         assertEquals(result.nextItem(), "moneybags");
         assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tim");
         assertEquals(result.nextItem(), "eight ball");
         assertEquals(result.nextItem(), "sky blue");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tod");
         assertEquals(result.nextItem(), "baldy");
         assertEquals(result.nextItem(), "green");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tes");
         assertEquals(result.nextItem(), "knuckles");
         assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), ResultType.End);
+        assertEquals(result.nextRow(), QueryResult.Type.End);
 
         QueryTemplate namesInnerLastnamesLeftNicknamesLeftColors
-          = dbms.queryTemplate
-          (list((Expression) dbms.columnReference(namesReference, name),
-                (Expression) dbms.columnReference(lastnamesReference, lastname),
-                (Expression) dbms.columnReference(nicknamesReference, nickname),
-                (Expression) dbms.columnReference(colorsReference, color)),
-           dbms.join
-           (JoinType.LeftOuter,
-            dbms.join
-            (JoinType.Inner,
+          = new QueryTemplate
+          (list((Expression) new ColumnReference(namesReference, name),
+                (Expression) new ColumnReference(lastnamesReference, lastname),
+                (Expression) new ColumnReference(nicknamesReference, nickname),
+                (Expression) new ColumnReference(colorsReference, color)),
+           new Join
+           (Join.Type.LeftOuter,
+            new Join
+            (Join.Type.Inner,
              namesReference,
              lastnamesReference),
-            dbms.join
-            (JoinType.LeftOuter,
+            new Join
+            (Join.Type.LeftOuter,
              nicknamesReference,
              colorsReference)),
-           dbms.operation
-           (BinaryOperationType.And,
-            dbms.operation
-            (BinaryOperationType.Equal,
-             dbms.columnReference(namesReference, name),
-             dbms.columnReference(lastnamesReference, name)),
-            dbms.operation
-            (BinaryOperationType.And,
-             dbms.operation
-             (BinaryOperationType.Equal,
-              dbms.columnReference(namesReference, id),
-              dbms.columnReference(nicknamesReference, id)),
-             dbms.operation
-             (BinaryOperationType.Equal,
-              dbms.columnReference(colorsReference, string),
-              dbms.columnReference(nicknamesReference, nickname)))));
+           new BinaryOperation
+           (BinaryOperation.Type.And,
+            new BinaryOperation
+            (BinaryOperation.Type.Equal,
+             new ColumnReference(namesReference, name),
+             new ColumnReference(lastnamesReference, name)),
+            new BinaryOperation
+            (BinaryOperation.Type.And,
+             new BinaryOperation
+             (BinaryOperation.Type.Equal,
+              new ColumnReference(namesReference, id),
+              new ColumnReference(nicknamesReference, id)),
+             new BinaryOperation
+             (BinaryOperation.Type.Equal,
+              new ColumnReference(colorsReference, string),
+              new ColumnReference(nicknamesReference, nickname)))));
         
         result = dbms.diff
           (tail, first, namesInnerLastnamesLeftNicknamesLeftColors);
 
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tom");
         assertEquals(result.nextItem(), "thumb");
         assertEquals(result.nextItem(), "big bucks");
         assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tom");
         assertEquals(result.nextItem(), "thumb");
         assertEquals(result.nextItem(), "moneybags");
         assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "ted");
         assertEquals(result.nextItem(), "thomson");
         assertEquals(result.nextItem(), null);
         assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), ResultType.Inserted);
+        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tes");
         assertEquals(result.nextItem(), "teasdale");
         assertEquals(result.nextItem(), "knuckles");
         assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), ResultType.End);	
+        assertEquals(result.nextRow(), QueryResult.Type.End);	
     }
 }

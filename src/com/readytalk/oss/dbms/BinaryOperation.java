@@ -102,7 +102,7 @@ public class BinaryOperation implements Expression {
    */
   public void visit(ExpressionVisitor visitor) {
     visitor.visit(this);
-    visitor.visit(leftOperand);
-    visitor.visit(rightOperand);
+    leftOperand.visit(visitor);
+    rightOperand.visit(visitor);
   }
 }

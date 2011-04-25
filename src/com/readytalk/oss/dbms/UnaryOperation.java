@@ -54,6 +54,6 @@ public class UnaryOperation implements Expression {
    */
   public void visit(ExpressionVisitor visitor) {
     visitor.visit(this);
-    visitor.visit(operand);
+    operand.visit(visitor);
   }
 }

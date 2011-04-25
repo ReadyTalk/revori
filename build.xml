@@ -60,7 +60,7 @@
     </javadoc>
   </target>
 
-  <property name="junit" value="/usr/share/java/junit4-4.3.1.jar"/>
+  <property name="junit" value="/usr/share/java/junit4.jar"/>
 
   <target name="compile-test" depends="compile">
     <mkdir dir="${basedir}/build/test"/>

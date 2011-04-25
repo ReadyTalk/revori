@@ -3,18 +3,18 @@ package unittests;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
-import static com.readytalk.oss.dbms.imp.Util.list;
-import static com.readytalk.oss.dbms.imp.Util.set;
-import static com.readytalk.oss.dbms.DBMS.DuplicateKeyResolution.Throw;
+import static com.readytalk.oss.dbms.util.Util.list;
+import static com.readytalk.oss.dbms.util.Util.set;
+import static com.readytalk.oss.dbms.DuplicateKeyResolution.Throw;
 
 import com.readytalk.oss.dbms.DBMS;
-import com.readytalk.oss.dbms.DBMS.Table;
-import com.readytalk.oss.dbms.DBMS.Index;
-import com.readytalk.oss.dbms.DBMS.Column;
-import com.readytalk.oss.dbms.DBMS.Revision;
-import com.readytalk.oss.dbms.DBMS.PatchContext;
+import com.readytalk.oss.dbms.Table;
+import com.readytalk.oss.dbms.Index;
+import com.readytalk.oss.dbms.Column;
+import com.readytalk.oss.dbms.Revision;
+import com.readytalk.oss.dbms.RevisionBuilder;
 import com.readytalk.oss.dbms.imp.MyDBMS;
-import com.readytalk.oss.dbms.imp.BufferOutputStream;
+import com.readytalk.oss.dbms.util.BufferOutputStream;
 import com.readytalk.oss.dbms.server.EpidemicServer;
 import com.readytalk.oss.dbms.server.EpidemicServer.Writable;
 import com.readytalk.oss.dbms.server.EpidemicServer.Readable;
@@ -50,34 +50,34 @@ public class Epidemic extends TestCase{
     n1.server.updateView(set(n2.id));
     n2.server.updateView(set(n1.id));
 
-    Column number = dbms.column(Integer.class);
-    Column name = dbms.column(String.class);
-    Table numbers = dbms.table(list(number));
+    Column number = new Column(Integer.class);
+    Column name = new Column(String.class);
+    Table numbers = new Table(list(number));
 
     Revision base = n1.server.head();
-    PatchContext context = dbms.patchContext(base);
+    RevisionBuilder builder = dbms.builder(base);
     
-    dbms.insert(context, Throw, numbers, 1, name, "one");
+    builder.insert(Throw, numbers, 1, name, "one");
 
-    n1.server.merge(base, dbms.commit(context));
+    n1.server.merge(base, builder.commit());
 
-    Index numbersKey = numbers.primaryKey();
+    Index numbersKey = numbers.primaryKey;
 
-    expectEqual(dbms.query(n1.server.head(), numbersKey, 1, name), "one");
+    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
 
     base = n2.server.head();
-    context = dbms.patchContext(base);
+    builder = dbms.builder(base);
     
-    dbms.insert(context, Throw, numbers, 1, name, "uno");
+    builder.insert(Throw, numbers, 1, name, "uno");
 
-    n2.server.merge(base, dbms.commit(context));
+    n2.server.merge(base, builder.commit());
 
-    expectEqual(dbms.query(n2.server.head(), numbersKey, 1, name), "uno");
+    expectEqual(n2.server.head().query(numbersKey, 1, name), "uno");
 
     flush(network);
 
-    expectEqual(dbms.query(n1.server.head(), numbersKey, 1, name), "one");
-    expectEqual(dbms.query(n2.server.head(), numbersKey, 1, name), "one");
+    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
+    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
   }
 
   private static void flush(NodeNetwork network) {

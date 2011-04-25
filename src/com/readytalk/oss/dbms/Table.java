@@ -8,6 +8,12 @@ import java.util.List;
  * interest in a query or update.
  */
 public final class Table implements Comparable<Table> {
+  private static long nextId = 1;
+
+  private synchronized static String makeId() {
+    return (nextId++) + "." + Table.class.getName() + ".id";
+  }
+
   /**
    * The primary key specified when this table was defined.
    */
@@ -28,6 +34,16 @@ public final class Table implements Comparable<Table> {
   public Table(List<Column> primaryKey, String id) {
     this.primaryKey = new Index(this, primaryKey);
     this.id = id;
+
+    if (id == null) throw new NullPointerException();
+  }
+
+  /**
+   * Defines a table using the specified primary key and an
+   * automatically generated ID.<p>
+   */
+  public Table(List<Column> primaryKey) {
+    this(primaryKey, makeId());
   }
 
   public int compareTo(Table o) {
