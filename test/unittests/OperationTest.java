@@ -5,6 +5,17 @@ import junit.framework.TestCase;
 import org.junit.Test;
 
 import static com.readytalk.oss.dbms.util.Util.list;
+import static com.readytalk.oss.dbms.ExpressionFactory.parameter;
+import static com.readytalk.oss.dbms.ExpressionFactory.reference;
+import static com.readytalk.oss.dbms.ExpressionFactory.and;
+import static com.readytalk.oss.dbms.ExpressionFactory.or;
+import static com.readytalk.oss.dbms.ExpressionFactory.equal;
+import static com.readytalk.oss.dbms.ExpressionFactory.notEqual;
+import static com.readytalk.oss.dbms.ExpressionFactory.lessThan;
+import static com.readytalk.oss.dbms.ExpressionFactory.lessThanOrEqual;
+import static com.readytalk.oss.dbms.ExpressionFactory.greaterThan;
+import static com.readytalk.oss.dbms.ExpressionFactory.greaterThanOrEqual;
+import static com.readytalk.oss.dbms.ExpressionFactory.not;
 import static org.junit.Assert.*;
 
 import com.readytalk.oss.dbms.DBMS;
@@ -41,7 +52,7 @@ public class OperationTest extends TestCase{
         PatchTemplate insert = new InsertTemplate
           (numbers,
            list(number, name),
-           list((Expression) new Parameter(), new Parameter()),
+           list(parameter(), parameter()),
            DuplicateKeyResolution.Throw);
 
         RevisionBuilder builder = dbms.builder(tail);
@@ -65,12 +76,10 @@ public class OperationTest extends TestCase{
         TableReference numbersReference = new TableReference(numbers);
 
         QueryTemplate lessThan = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, name)),
            numbersReference,
-           new BinaryOperation
-           (BinaryOperation.Type.LessThan,
-            new ColumnReference(numbersReference, number),
-            new Parameter()));
+           lessThan(reference(numbersReference, number),
+                    parameter()));
 
         QueryResult result = dbms.diff(tail, first, lessThan, 1);
 
@@ -127,12 +136,9 @@ public class OperationTest extends TestCase{
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
         QueryTemplate greaterThan = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, name)),
            numbersReference,
-           new BinaryOperation
-           (BinaryOperation.Type.GreaterThan,
-            new ColumnReference(numbersReference, number),
-            new Parameter()));
+           greaterThan(reference(numbersReference, number), parameter()));
 
         result = dbms.diff(tail, first, greaterThan, 13);
 
@@ -153,12 +159,9 @@ public class OperationTest extends TestCase{
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
         QueryTemplate lessThanOrEqual = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, name)),
            numbersReference,
-           new BinaryOperation
-           (BinaryOperation.Type.LessThanOrEqual,
-            new ColumnReference(numbersReference, number),
-            new Parameter()));
+           lessThanOrEqual(reference(numbersReference, number), parameter()));
 
         result = dbms.diff(tail, first, lessThanOrEqual, 0);
 
@@ -179,12 +182,10 @@ public class OperationTest extends TestCase{
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
         QueryTemplate greaterThanOrEqual = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, name)),
            numbersReference,
-           new BinaryOperation
-           (BinaryOperation.Type.GreaterThanOrEqual,
-            new ColumnReference(numbersReference, number),
-            new Parameter()));
+           greaterThanOrEqual(reference(numbersReference, number),
+                              parameter()));
 
         result = dbms.diff(tail, first, greaterThanOrEqual, 14);
 
@@ -205,12 +206,9 @@ public class OperationTest extends TestCase{
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
         QueryTemplate notEqual = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, name)),
            numbersReference,
-           new BinaryOperation
-           (BinaryOperation.Type.NotEqual,
-            new ColumnReference(numbersReference, number),
-            new Parameter()));
+           notEqual(reference(numbersReference, number), parameter()));
 
         result = dbms.diff(tail, first, notEqual, 4);
 
@@ -254,7 +252,7 @@ public class OperationTest extends TestCase{
         PatchTemplate insert = new InsertTemplate
           (numbers,
            list(number, name),
-           list((Expression) new Parameter(), new Parameter()),
+           list(parameter(), parameter()),
            DuplicateKeyResolution.Throw);
 
         RevisionBuilder builder = dbms.builder(tail);
@@ -278,20 +276,13 @@ public class OperationTest extends TestCase{
         TableReference numbersReference = new TableReference(numbers);
 
         QueryTemplate greaterThanAndLessThan = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, name)),
            numbersReference,
-           new BinaryOperation
-           (BinaryOperation.Type.And,
-            new BinaryOperation
-            (BinaryOperation.Type.GreaterThan,
-             new ColumnReference(numbersReference, number),
-             new Parameter()),
-            new BinaryOperation
-            (BinaryOperation.Type.LessThan,
-             new ColumnReference(numbersReference, number),
-             new Parameter())));
+           and(greaterThan(reference(numbersReference, number), parameter()),
+               lessThan(reference(numbersReference, number), parameter())));
 
-        QueryResult result = dbms.diff(tail, first, greaterThanAndLessThan, 8, 12);
+        QueryResult result = dbms.diff
+          (tail, first, greaterThanAndLessThan, 8, 12);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "nine");
@@ -310,18 +301,10 @@ public class OperationTest extends TestCase{
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
         QueryTemplate lessThanOrGreaterThan = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, name)),
            numbersReference,
-           new BinaryOperation
-           (BinaryOperation.Type.Or,
-            new BinaryOperation
-            (BinaryOperation.Type.LessThan,
-             new ColumnReference(numbersReference, number),
-             new Parameter()),
-            new BinaryOperation
-            (BinaryOperation.Type.GreaterThan,
-             new ColumnReference(numbersReference, number),
-             new Parameter())));
+           or(lessThan(reference(numbersReference, number), parameter()),
+              greaterThan(reference(numbersReference, number), parameter())));
 
         result = dbms.diff(tail, first, lessThanOrGreaterThan, 8, 12);
 
@@ -402,14 +385,9 @@ public class OperationTest extends TestCase{
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
         QueryTemplate notEqual = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, name)),
            numbersReference,
-           new UnaryOperation
-           (UnaryOperation.Type.Not,
-            new BinaryOperation
-            (BinaryOperation.Type.Equal,
-             new ColumnReference(numbersReference, number),
-             new Parameter())));
+           not(equal(reference(numbersReference, number), parameter())));
 
         result = dbms.diff(tail, first, notEqual, 2);
 
@@ -441,26 +419,14 @@ public class OperationTest extends TestCase{
 
         QueryTemplate greaterThanAndLessThanOrNotLessThanOrEqual
           = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, name)),
            numbersReference,
-           new BinaryOperation
-           (BinaryOperation.Type.Or,
-            new BinaryOperation
-            (BinaryOperation.Type.And,
-             new BinaryOperation
-             (BinaryOperation.Type.GreaterThan,
-              new ColumnReference(numbersReference, number),
-              new Parameter()),
-             new BinaryOperation
-             (BinaryOperation.Type.LessThan,
-              new ColumnReference(numbersReference, number),
-              new Parameter())),
-            new UnaryOperation
-            (UnaryOperation.Type.Not,
-             new BinaryOperation
-             (BinaryOperation.Type.LessThanOrEqual,
-              new ColumnReference(numbersReference, number),
-              new Parameter()))));
+           or(and(greaterThan(reference(numbersReference, number),
+                              parameter()),
+                  lessThan(reference(numbersReference, number),
+                           parameter())),
+              not(lessThanOrEqual(reference(numbersReference, number),
+                                  parameter()))));
 
         result = dbms.diff
           (tail, first, greaterThanAndLessThanOrNotLessThanOrEqual, 3, 7, 10);
