@@ -4,10 +4,23 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.List;
 
+/**
+ * This is an expression visitor to count the number of unique
+ * parameter instances in a set of expressions and their
+ * subexpressions.
+ */
 public class ParameterCounter implements ExpressionVisitor {
-  public final Set<Parameter> parameters = new HashSet();
-  public int count;
+  private final Set<Parameter> parameters = new HashSet();
+  private int count;
 
+  /**
+   * Visit the specified expression, incrementing the count of
+   * parameters seen if the expression is an instance of Parameter and
+   * has not been visited already.
+   *
+   * @throws IllegalArgumentException if the specified expression is a
+   * parameter which has already been visited by this ParameterCounter.
+   */
   public void visit(Expression e) {
     if (e instanceof Parameter) {
       Parameter pe = (Parameter) e;
@@ -21,6 +34,17 @@ public class ParameterCounter implements ExpressionVisitor {
     }
   }
 
+  /**
+   * Returns the current count of unique parameters visited.
+   */
+  public int count() {
+    return count;
+  }
+
+  /**
+   * Returns the number of unique parameter instances in the specified
+   * list of expressions and their subexpressions.
+   */
   public static int countParameters(List<Expression> expressions) {
     ParameterCounter counter = new ParameterCounter();
     for (Expression e: expressions) {
