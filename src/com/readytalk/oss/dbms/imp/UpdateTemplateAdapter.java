@@ -139,12 +139,7 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
 
         for (int i = 0; i < update.columns.size(); ++i) {
           Column column = update.columns.get(i);
-          Object value = values[i];
-
-          if (value != null && ! column.type.isInstance(value)) {
-            throw new ClassCastException
-              (value.getClass() + " cannot be cast to " + column.type);
-          }
+          Object value = Compare.coerce(values[i], column.type);
 
           if (value == null) {
             tree = Node.delete(builder.token, builder.stack, tree, column);

@@ -21,11 +21,6 @@ class ComparisonAdapter implements ExpressionAdapter {
     if (type.operationClass() != OperationClass.Comparison) {
       throw new IllegalArgumentException();
     }
-
-    if (! Compare.comparable(left.type(), right.type())) {
-      throw new ClassCastException
-        ("types not comparable: " + left.type() + " and " + right.type());
-    }
   }
 
   public void visit(ExpressionAdapterVisitor visitor) {

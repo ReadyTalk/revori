@@ -5,6 +5,7 @@ import static com.readytalk.oss.dbms.util.Util.set;
 
 import com.readytalk.oss.dbms.util.Util;
 import com.readytalk.oss.dbms.imp.MyDBMS;
+import com.readytalk.oss.dbms.Coerceable;
 import com.readytalk.oss.dbms.DBMS;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.TableReference;
@@ -300,9 +301,78 @@ public class SQLServer {
 
       unaryOperationTypes.put("not", UnaryOperation.Type.Not);
 
-      columnTypes.put("int32", Integer.class);
-      columnTypes.put("int64", Long.class);
+      columnTypes.put("int32", Int32.class);
+      columnTypes.put("int64", Int64.class);
       columnTypes.put("string", String.class);
+    }
+  }
+
+  private static class Int32 implements Coerceable {
+    private final int value;
+
+    public Int32(int value) {
+      this.value = value;
+    }
+
+    public Object asType(Class type) {
+      if (type == Int32.class) {
+        return this;
+      } else if (type == Int64.class) {
+        return new Int64(value);
+      } else {
+        throw new ClassCastException
+          (getClass().getName() + " cannot be coerced to " + type);
+      }
+    }
+
+    public int compareTo(Coerceable o) {
+      return value - ((Int32) o.asType(Int32.class)).value;
+    }
+
+    public boolean equals(Object o) {
+      return o instanceof Coerceable && compareTo((Coerceable) o) == 0;
+    }
+
+    public String toString() {
+      return String.valueOf(value);
+    }
+  }
+
+  private static class Int64 implements Coerceable {
+    private final long value;
+
+    public Int64(long value) {
+      this.value = value;
+    }
+
+    public Object asType(Class type) {
+      if (type == Int32.class) {
+        int v = (int) value;
+        if (v != value) {
+          throw new RuntimeException
+            (value + " cannot be represented as a 32-bit value");
+        }
+        return new Int32(v);
+      } else if (type == Int64.class) {
+        return this;
+      } else {
+        throw new ClassCastException
+          (getClass().getName() + " cannot be coerced to " + type);
+      }
+    }
+
+    public int compareTo(Coerceable o) {
+      Int64 ov = (Int64) o.asType(Int64.class);
+
+      return value > ov.value ? 1 : (value < ov.value ? -1 : 0);
+    }
+
+    public boolean equals(Object o) {
+      return o instanceof Coerceable && compareTo((Coerceable) o) == 0;
+    }
+
+    public String toString() {
+      return String.valueOf(value);
     }
   }
 
@@ -779,7 +849,7 @@ public class SQLServer {
     } else if (tree instanceof StringLiteral) {
       return new Constant(((StringLiteral) tree).value);
     } else if (tree instanceof NumberLiteral) {
-      return new Constant(((NumberLiteral) tree).value);
+      return new Constant(new Int64(((NumberLiteral) tree).value));
     } else if (tree instanceof BooleanLiteral) {
       return new Constant(((BooleanLiteral) tree).value);
     } if (tree.length() == 3) {
@@ -1169,10 +1239,16 @@ public class SQLServer {
   {
     QueryResult result = dbms.diff(base, fork, template);
 
-    out.write(Response.RowSet.ordinal());
+    boolean wroteSentinal = false;
 
     while (true) {
       QueryResult.Type resultType = result.nextRow();
+
+      if (! wroteSentinal) {
+        out.write(Response.RowSet.ordinal());
+        wroteSentinal = true;
+      }
+
       switch (resultType) {
       case Inserted:
         out.write(RowSetFlag.InsertedRow.ordinal());

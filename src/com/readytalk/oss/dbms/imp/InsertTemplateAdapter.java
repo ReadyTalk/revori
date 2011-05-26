@@ -27,16 +27,12 @@ class InsertTemplateAdapter implements PatchTemplateAdapter {
       Iterator<Expression> valueIterator = insert.values.iterator();
       while (columnIterator.hasNext()) {
         Column column = columnIterator.next();
-        Object value = ExpressionAdapterFactory.makeAdapter
-          (expressionContext, valueIterator.next()).evaluate(false);
 
-        if (value == null || column.type.isInstance(value)) {
-          map.put(column, value);
-        } else {
-          throw new ClassCastException
-            (value.getClass() + " cannot be cast to " + column.type
-             + " in column " + index);
-        }
+        map.put
+          (column, Compare.coerce
+           (ExpressionAdapterFactory.makeAdapter
+            (expressionContext, valueIterator.next()).evaluate(false),
+            column.type));
 
         ++ index;
       }
