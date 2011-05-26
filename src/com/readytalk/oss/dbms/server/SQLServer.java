@@ -2445,7 +2445,7 @@ public class SQLServer {
     } catch (Exception e) {
       out.write(Response.Error.ordinal());
       String message = e.getMessage();
-      writeString(out, message == null ? "see server logs" : message); 
+      writeString(out, message == null ? e.getClass().getName() : message); 
       log.log(Level.WARNING, null, e);       
     }
   }
