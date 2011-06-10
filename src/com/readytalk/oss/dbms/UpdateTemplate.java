@@ -14,7 +14,7 @@ public final class UpdateTemplate implements PatchTemplate {
   private final int parameterCount;
 
   /**
-   * The table into which rows are to be inserted.
+   * The table in which rows are to be updated.
    */
   public final TableReference tableReference;
 
@@ -25,13 +25,13 @@ public final class UpdateTemplate implements PatchTemplate {
   public final Expression test;
 
   /**
-   * An immutable list of columns for which values are to be inserted.
+   * An immutable list of columns for which values are to be updated.
    */
   public final List<Column> columns;
 
   /**
    * An immutable list of expressions which, when resolved, yield the
-   * values to be inserted.
+   * values to be updated.
    */
   public final List<Expression> values;
 
