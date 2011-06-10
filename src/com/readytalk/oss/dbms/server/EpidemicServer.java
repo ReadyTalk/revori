@@ -501,7 +501,7 @@ public class EpidemicServer {
     }
   }
 
-  public static void writeString(OutputStream out, String s)
+  private static void writeString(OutputStream out, String s)
     throws IOException
   {
     byte[] bytes = s.getBytes("UTF-8");
