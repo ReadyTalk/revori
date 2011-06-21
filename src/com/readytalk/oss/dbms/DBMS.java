@@ -80,6 +80,7 @@ public interface DBMS {
    * <code>QueryTemplate.QueryTemplate(List, Source,
    * Expression)</code>.
    */
+  @Deprecated
   public QueryResult diff(Revision base,
                           Revision fork,
                           QueryTemplate template,
@@ -91,6 +92,7 @@ public interface DBMS {
    * See the DiffResult documentation for how this diff is
    * represented.
    */
+  @Deprecated
   public DiffResult diff(Revision base,
                          Revision fork);
 
@@ -98,6 +100,7 @@ public interface DBMS {
    * Creates a new builder for use in incrementally defining a new
    * revision based on the specified base revision.
    */
+  @Deprecated
   public RevisionBuilder builder(Revision base);
 
   /**
@@ -129,6 +132,7 @@ public interface DBMS {
    * <li>If a row was updated in one fork but deleted in another,
    * include the delete in the result</li></ul>
    */
+  @Deprecated
   public Revision merge(Revision base,
                         Revision left,
                         Revision right,

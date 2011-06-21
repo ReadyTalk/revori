@@ -1,8 +1,17 @@
 package com.readytalk.oss.dbms.imp;
 
-import com.readytalk.oss.dbms.Revision;
+import static com.readytalk.oss.dbms.util.Util.copy;
+
+
 import com.readytalk.oss.dbms.Index;
 import com.readytalk.oss.dbms.Column;
+import com.readytalk.oss.dbms.DBMS;
+import com.readytalk.oss.dbms.Revision;
+import com.readytalk.oss.dbms.RevisionBuilder;
+import com.readytalk.oss.dbms.QueryTemplate;
+import com.readytalk.oss.dbms.QueryResult;
+import com.readytalk.oss.dbms.DiffResult;
+import com.readytalk.oss.dbms.ConflictResolver;
 
 import java.util.List;
 
@@ -65,4 +74,62 @@ class MyRevision implements Revision {
     return query(path, 0, path.length);
   }
 
+  public QueryResult diff(Revision fork,
+                          QueryTemplate template,
+                          Object ... parameters)
+  {
+    MyRevision myBase = this;
+    MyRevision myFork;
+    try {
+      myFork = (MyRevision) fork;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("revision not created by this implementation");        
+    }
+
+    if (parameters.length != template.parameterCount) {
+      throw new IllegalArgumentException
+        ("wrong number of parameters (expected "
+         + template.parameterCount + "; got "
+         + parameters.length + ")");
+    }
+
+    return new MyQueryResult(myBase, myFork, template, copy(parameters));
+  }
+
+  public DiffResult diff(Revision fork)
+  {
+    MyRevision myBase = this;
+    MyRevision myFork;
+    try {
+      myFork = (MyRevision) fork;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("revision not created by this implementation");        
+    }
+
+    return new MyDiffResult(myBase, new NodeStack(), myFork, new NodeStack());
+  }
+
+  public RevisionBuilder builder() {
+    return new MyRevisionBuilder(new Object(), this, new NodeStack());
+  }
+
+  public Revision merge(Revision left,
+                        Revision right,
+                        ConflictResolver conflictResolver)
+  {
+    MyRevision myBase = this;
+    MyRevision myLeft;
+    MyRevision myRight;
+    try {
+      myLeft = (MyRevision) left;
+      myRight = (MyRevision) right;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException
+        ("revision not created by this implementation");
+    }
+
+    return Merge.mergeRevisions(myBase, myLeft, myRight, conflictResolver);
+  }
 }

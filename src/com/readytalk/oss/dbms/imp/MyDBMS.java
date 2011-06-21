@@ -20,52 +20,17 @@ public class MyDBMS implements DBMS {
                           QueryTemplate template,
                           Object ... parameters)
   {
-    MyRevision myBase;
-    MyRevision myFork;
-    try {
-      myBase = (MyRevision) base;
-      myFork = (MyRevision) fork;
-    } catch (ClassCastException e) {
-      throw new IllegalArgumentException
-        ("revision not created by this implementation");        
-    }
-
-    if (parameters.length != template.parameterCount) {
-      throw new IllegalArgumentException
-        ("wrong number of parameters (expected "
-         + template.parameterCount + "; got "
-         + parameters.length + ")");
-    }
-
-    return new MyQueryResult(myBase, myFork, template, copy(parameters));
+    return base.diff(fork, template, parameters);
   }
 
   public DiffResult diff(Revision base,
                          Revision fork)
   {
-    MyRevision myBase;
-    MyRevision myFork;
-    try {
-      myBase = (MyRevision) base;
-      myFork = (MyRevision) fork;
-    } catch (ClassCastException e) {
-      throw new IllegalArgumentException
-        ("revision not created by this implementation");        
-    }
-
-    return new MyDiffResult(myBase, new NodeStack(), myFork, new NodeStack());
+    return base.diff(fork);
   }
 
   public RevisionBuilder builder(Revision base) {
-    MyRevision myBase;
-    try {
-      myBase = (MyRevision) base;
-    } catch (ClassCastException e) {
-      throw new IllegalArgumentException
-        ("revision not created by this implementation");
-    }
-
-    return new MyRevisionBuilder(new Object(), myBase, new NodeStack());
+    return base.builder();
   }
 
   public Revision merge(Revision base,
@@ -73,18 +38,6 @@ public class MyDBMS implements DBMS {
                         Revision right,
                         ConflictResolver conflictResolver)
   {
-    MyRevision myBase;
-    MyRevision myLeft;
-    MyRevision myRight;
-    try {
-      myBase = (MyRevision) base;
-      myLeft = (MyRevision) left;
-      myRight = (MyRevision) right;
-    } catch (ClassCastException e) {
-      throw new IllegalArgumentException
-        ("revision not created by this implementation");
-    }
-
-    return Merge.mergeRevisions(myBase, myLeft, myRight, conflictResolver);
+    return base.merge(left, right, conflictResolver);
   }
 }
