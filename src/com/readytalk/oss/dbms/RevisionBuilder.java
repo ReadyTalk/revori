@@ -99,6 +99,18 @@ public interface RevisionBuilder {
   public void remove(Index index);
 
   /**
+   * Adds the specified foreign key constraint to this builder.  This
+   * has no effect if the constraint is already present.
+   */
+  public void add(ForeignKey constraint);
+
+  /**
+   * Removes the specified foreign key constraint from this builder.
+   * This has no effect if the constraint is not found.
+   */
+  public void remove(ForeignKey constraint);
+
+  /**
    * Commits the changes accumulated in this builder, producing a
    * revision which reflects the base revision with which was created
    * plus any modifications applied thereafter.  This call invalidates

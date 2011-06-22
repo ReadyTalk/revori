@@ -30,6 +30,8 @@ import com.readytalk.oss.dbms.InsertTemplate;
 import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.DeleteTemplate;
 import com.readytalk.oss.dbms.UpdateTemplate;
+import com.readytalk.oss.dbms.ForeignKey;
+import com.readytalk.oss.dbms.ForeignKeyResolver;
 
 import java.util.Collection;
 import java.util.List;
@@ -61,6 +63,16 @@ public class SQLServer {
   private static final boolean Debug = true;
 
   private static final Logger log = Logger.getLogger("SQLServer");
+
+  private static final ForeignKeyResolver DeleteForeignKeyResolver
+    = new ForeignKeyResolver() {
+        public ForeignKey.Action handleBrokenReference
+          (ForeignKey constraint,
+           Object[] refererRowPrimaryKeyValues)
+        {
+          return ForeignKey.Action.Delete;
+        }
+      };
 
   public enum Request {
     Execute, Complete;
@@ -140,7 +152,8 @@ public class SQLServer {
                 ? dbms.revision() : ((Tag) baseValue).revision,
                 ((Tag) leftValue).revision,
                 ((Tag) rightValue).revision,
-                rightPreferenceConflictResolver));
+                rightPreferenceConflictResolver,
+                DeleteForeignKeyResolver));
           } else {
             return rightValue;
           }
@@ -1322,7 +1335,8 @@ public class SQLServer {
         AtomicReference<Revision> dbHead = client.server.dbHead;
         while (! dbHead.compareAndSet(myTail, myHead)) {
           Revision fork = dbHead.get();
-          myHead = dbms.merge(myTail, fork, myHead, conflictResolver);
+          myHead = dbms.merge
+            (myTail, fork, myHead, conflictResolver, DeleteForeignKeyResolver);
           myTail = fork;
         }
       }
@@ -2222,7 +2236,8 @@ public class SQLServer {
                        (findTag(client, ((Name) tree.get(1)).value).revision,
                         findTag(client, ((Name) tree.get(2)).value).revision,
                         findTag(client, ((Name) tree.get(3)).value).revision,
-                        conflictResolver)));
+                        conflictResolver,
+                        DeleteForeignKeyResolver)));
                commitTransaction(client);
              } finally {
                popTransaction(client);

@@ -8,6 +8,8 @@ import com.readytalk.oss.dbms.Revision;
 import com.readytalk.oss.dbms.ConflictResolver;
 import com.readytalk.oss.dbms.DiffResult;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
+import com.readytalk.oss.dbms.ForeignKey;
+import com.readytalk.oss.dbms.ForeignKeyResolver;
 import com.readytalk.oss.dbms.util.BufferOutputStream;
 
 import java.lang.ref.WeakReference;
@@ -145,6 +147,7 @@ public class EpidemicServer {
 
   private final DBMS dbms;
   private final NodeConflictResolver conflictResolver;
+  private final ForeignKeyResolver foreignKeyResolver;
   private final Network network;
   private final Object lock = new Object();
   private final Map<NodeID, NodeState> states = new HashMap();
@@ -154,11 +157,13 @@ public class EpidemicServer {
 
   public EpidemicServer(DBMS dbms,
                         NodeConflictResolver conflictResolver,
+                        ForeignKeyResolver foreignKeyResolver,
                         Network network,
                         NodeID self)
   {
     this.dbms = dbms;
     this.conflictResolver = conflictResolver;
+    this.foreignKeyResolver = foreignKeyResolver;
     this.network = network;
     this.localNode = state(self);
   }
@@ -203,7 +208,7 @@ public class EpidemicServer {
          nextLocalSequenceNumber++,
          dbms.merge
          (base, localNode.head.revision, fork, new MyConflictResolver
-          (localNode.id, localNode.id, conflictResolver)));
+          (localNode.id, localNode.id, conflictResolver), foreignKeyResolver));
     }
   }
 
@@ -233,6 +238,9 @@ public class EpidemicServer {
 
       for (NodeState s: states.values()) {
         s.pending.put(state.id, state.head);
+        
+        
+
         state.pending.put(s.id, s.head);
       }
     }
@@ -341,13 +349,6 @@ public class EpidemicServer {
     }
   }
 
-  private void readyToReceive(NodeID origin) {
-    NodeState state = state(origin);
-    
-    state.connectionState.readyToReceive = true;
-    sendNext(state);
-  }
-
   private void acceptHello(NodeID origin) {
     NodeState state = state(origin);
     
@@ -446,7 +447,8 @@ public class EpidemicServer {
         insertRevision
           (state, acknowledgerSequenceNumber, dbms.merge
            (base, state.head.revision, record.revision, new MyConflictResolver
-            (acknowledger, diffOrigin, conflictResolver)), record);
+            (acknowledger, diffOrigin, conflictResolver), foreignKeyResolver),
+           record);
 
         state.pending.put(diffOrigin, record);
             

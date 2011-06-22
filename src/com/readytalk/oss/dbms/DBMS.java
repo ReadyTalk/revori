@@ -136,5 +136,6 @@ public interface DBMS {
   public Revision merge(Revision base,
                         Revision left,
                         Revision right,
-                        ConflictResolver conflictResolver);
+                        ConflictResolver conflictResolver,
+                        ForeignKeyResolver foreignKeyResolver);
 }

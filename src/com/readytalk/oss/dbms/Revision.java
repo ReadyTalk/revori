@@ -106,5 +106,6 @@ public interface Revision {
    */
   public Revision merge(Revision left,
                         Revision right,
-                        ConflictResolver conflictResolver);
+                        ConflictResolver conflictResolver,
+                        ForeignKeyResolver foreignKeyResolver);
 }

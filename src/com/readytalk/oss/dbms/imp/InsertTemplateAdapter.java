@@ -45,6 +45,12 @@ class InsertTemplateAdapter implements PatchTemplateAdapter {
       result.node.value = map.get(c);
     }
 
+    for (RefererForeignKeyAdapter adapter:
+           builder.getRefererForeignKeyAdapters(insert.table))
+    {
+      adapter.handleInsert(builder, tree);
+    }
+
     builder.prepareForUpdate(insert.table);
 
     Index index = insert.table.primaryKey;

@@ -20,6 +20,16 @@ class MyDiffResult implements DiffResult {
         return n == null ? null : n.key;
       }
 
+      public Node forkTree(MyDiffResult r) {
+        Node n = r.pairs[r.clientDepth].fork;
+        return n == null ? null : (Node) n.value;
+      }
+
+      public Node baseTree(MyDiffResult r) {
+        Node n = r.pairs[r.clientDepth].base;
+        return n == null ? null : (Node) n.value;
+      }
+
       public void skip(MyDiffResult r) {
         int clientDepth = r.clientDepth;
         while (r.depth > clientDepth) {
@@ -45,6 +55,14 @@ class MyDiffResult implements DiffResult {
     }
 
     public Object base(MyDiffResult r) {
+      throw new IllegalStateException();
+    }
+
+    public Node forkTree(MyDiffResult r) {
+      throw new IllegalStateException();
+    }
+
+    public Node baseTree(MyDiffResult r) {
       throw new IllegalStateException();
     }
 
@@ -183,6 +201,14 @@ class MyDiffResult implements DiffResult {
       } break;
 
       case End:
+        // todo: be defensive to ensure we can safely keep returning
+        // DiffResult.Type.End if the application calls next again
+        // after this.  The popStack calls below should not be called
+        // more than once.
+
+        baseStack.popStack();
+        forkStack.popStack();
+
         return DiffResult.Type.End;
 
       default:
@@ -226,6 +252,14 @@ class MyDiffResult implements DiffResult {
 
   public Object base() {
     return state.base(this);
+  }
+
+  public Node forkTree() {
+    return state.forkTree(this);
+  }
+
+  public Node baseTree() {
+    return state.baseTree(this);
   }
 
   public void skip() {
