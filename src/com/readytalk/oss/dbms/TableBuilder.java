@@ -4,14 +4,13 @@ public interface TableBuilder extends RevisionBuilder {
   
   /**
    * Prepares a RowBuilder to insert or update a row given by the specified 
-   * primary key.  This is equivalent to modify(duplicateKeyResolution,
-   * key, 0, key.length).
+   * primary key.
    *
    * If there is already row with a matching primary key in the table,
-   * this method will act according to the specified
-   * DuplicateKeyResolution.
+   * or there is no previous matching row, this method will act according
+   * to the specified Resolution.
    */
-  public RowBuilder alter(Resolution resolution,
+  public RowBuilder row(Resolution resolution,
                            Object ... key);
 
   public void delete(Object ... key);

@@ -42,10 +42,12 @@ public interface RevisionBuilder {
            DuplicateKeyException,
            ClassCastException;
 
+  
   /**
    * Deletes any rows matching the specified path.  This is equivalent
    * to delete(path, 0, path.length).
    */
+  @Deprecated
   public void delete(Object ... path);
 
   /**
@@ -57,6 +59,7 @@ public interface RevisionBuilder {
    * pathLength primary key values are equal to the elements of the
    * path delimited by pathOffset+1 and pathLength-1.
    */
+  @Deprecated
   public void delete(Object[] path,
                      int pathOffset,
                      int pathLength);
@@ -66,6 +69,7 @@ public interface RevisionBuilder {
    * is equivalent to insert(duplicateKeyResolution, path, 0,
    * path.length).
    */
+  @Deprecated
   public void insert(DuplicateKeyResolution duplicateKeyResolution,
                      Object ... path);
 
@@ -88,12 +92,17 @@ public interface RevisionBuilder {
    * this method will act according to the specified
    * DuplicateKeyResolution.
    */
+  @Deprecated
   public void insert(DuplicateKeyResolution duplicateKeyResolution,
                      Object[] path,
                      int pathOffset,
                      int pathLength);
 
-  public TableBuilder alter(Table table);
+  public PathBuilder path();
+
+  public TableBuilder table(Table table);
+
+  public void drop(Table table);
 
   /**
    * Adds the specified index to this builder.  This has no effect if
