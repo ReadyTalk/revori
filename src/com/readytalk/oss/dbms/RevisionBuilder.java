@@ -33,6 +33,16 @@ public interface RevisionBuilder {
            ClassCastException;
 
   /**
+   * Applies the specified diff in this revision.  
+   *
+   * This could be used to implement a rebase operation.
+   */
+  public void apply(DiffResult diff)
+    throws IllegalStateException,
+           DuplicateKeyException,
+           ClassCastException;
+
+  /**
    * Deletes any rows matching the specified path.  This is equivalent
    * to delete(path, 0, path.length).
    */
@@ -82,6 +92,8 @@ public interface RevisionBuilder {
                      Object[] path,
                      int pathOffset,
                      int pathLength);
+
+  public TableBuilder alter(Table table);
 
   /**
    * Adds the specified index to this builder.  This has no effect if
