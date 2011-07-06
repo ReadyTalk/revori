@@ -5,11 +5,14 @@ import static com.readytalk.oss.dbms.util.Util.list;
 import static com.readytalk.oss.dbms.util.Util.copy;
 
 import com.readytalk.oss.dbms.RevisionBuilder;
+import com.readytalk.oss.dbms.TableBuilder;
+import com.readytalk.oss.dbms.RowBuilder;
 import com.readytalk.oss.dbms.Index;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Revision;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
+import com.readytalk.oss.dbms.Resolution;
 import com.readytalk.oss.dbms.DuplicateKeyException;
 import com.readytalk.oss.dbms.PatchTemplate;
 import com.readytalk.oss.dbms.TableReference;
@@ -18,10 +21,12 @@ import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.UpdateTemplate;
 import com.readytalk.oss.dbms.InsertTemplate;
 import com.readytalk.oss.dbms.DeleteTemplate;
+import com.readytalk.oss.dbms.ColumnList;
 
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Arrays;
 
 class MyRevisionBuilder implements RevisionBuilder {
   private static final Map<Class, PatchTemplateAdapter> adapters
@@ -483,6 +488,89 @@ class MyRevisionBuilder implements RevisionBuilder {
           ("unexpected resolution: " + duplicateKeyResolution);
       }
     }
+  }
+
+  private class MyTableBuilder implements TableBuilder {
+    private class MyRowBuilder implements RowBuilder {
+      private Object[] path;
+
+      public MyRowBuilder() {
+        path = new Object[1+ table.primaryKey.columns.size()];
+        path[0] = table;
+      }
+
+      public void init(Object[] keys) {
+        for(int i = 1; i < keys.length; i++) {
+          path[i + 1] = keys[i];
+        }
+      }
+      
+      public RowBuilder column(Column key,
+                               Object value)
+      {
+        path[path.length - 2] = key;
+        path[path.length - 1] = value;
+        insert(DuplicateKeyResolution.Overwrite, path);
+        return this;
+      }
+      
+      public RowBuilder columns(ColumnList columns,
+                                Object ... values)
+      {
+        // TODO: optimize
+        if(columns.columns.size() != values.length) {
+          throw new IllegalArgumentException
+            ("wrong number of parameters (expected "
+             + columns.columns.size() + "; got "
+             + values.length + ")");
+        }
+        for(int i = 0; i < values.length; i++) {
+          column(columns.columns.get(i), values[i]);
+        }
+        return this;
+      }
+
+      public RowBuilder delete(Column key) {
+        throw new RuntimeException("not implemented");
+        //return this;
+      }
+
+      public void done() {
+        row = this;
+      }
+    }
+
+    private Table table;
+    public MyRowBuilder row;
+
+    public MyTableBuilder(Table table) {
+      this.table = table;
+    }
+
+    public RowBuilder row(Comparable ... key) {
+      if(row != null) {
+        row.init(key);
+        MyRowBuilder ret = row;
+        row = null;
+        return row;
+      }
+      return new MyRowBuilder();
+    }
+
+    public TableBuilder delete(Comparable ... key) {
+      return this;
+    }
+  }
+
+
+
+  public TableBuilder table(Table table)
+  {
+    return new MyTableBuilder(table);
+  }
+
+  public void drop(Table table) {
+    
   }
 
   public int apply(PatchTemplate template,

@@ -1,17 +1,17 @@
 package com.readytalk.oss.dbms;
 
-public interface TableBuilder extends RevisionBuilder {
+public interface TableBuilder {
   
   /**
    * Prepares a RowBuilder to insert or update a row given by the specified 
    * primary key.
-   *
-   * If there is already row with a matching primary key in the table,
-   * or there is no previous matching row, this method will act according
-   * to the specified Resolution.
+   * @return said row builder
    */
-  public RowBuilder row(Resolution resolution,
-                           Object ... key);
+  public RowBuilder row(Comparable ... key);
 
-  public void delete(Object ... key);
+  /**
+   * Deletes the row with the specified primary key.
+   * @return self
+   */
+  public TableBuilder delete(Comparable ... key);
 }
