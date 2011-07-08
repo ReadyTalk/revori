@@ -8,6 +8,7 @@ import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.DiffResult;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Collections;
 
 class ForeignKeys {
@@ -53,8 +54,8 @@ class ForeignKeys {
           
           if (baseTable != null) {
             bottom = baseTable.primaryKey.columns.size();
-            referentKeyAdapters = builder.getReferentForeignKeyAdapters
-              (baseTable);
+            referentKeyAdapters = getReferentForeignKeyAdapters
+              (baseTable, fork.root, scratchStack);
             int size = referentKeyAdapters.size();
             if (size != 0) {
               referentKeyVisitors = new ReferentForeignKeyAdapter.Visitor
@@ -79,8 +80,8 @@ class ForeignKeys {
 
           if (forkTable != null) {
             bottom = forkTable.primaryKey.columns.size();
-            refererKeyAdapters = builder.getRefererForeignKeyAdapters
-              (forkTable);
+            refererKeyAdapters = getRefererForeignKeyAdapters
+              (forkTable, fork.root, scratchStack);
           } else {
             refererKeyAdapters = Collections.emptyList();
           }
@@ -122,6 +123,40 @@ class ForeignKeys {
         throw new RuntimeException("unexpected result type: " + type);
       }
     }
+  }
+
+  private static List<RefererForeignKeyAdapter> getRefererForeignKeyAdapters
+    (Table table, Node root, NodeStack stack)
+  {
+    List<RefererForeignKeyAdapter> list = new ArrayList();
+
+    for (NodeIterator keys = new NodeIterator
+           (stack, Node.pathFind
+            (root, Constants.ForeignKeyTable,
+             Constants.ForeignKeyRefererIndex, table));
+         keys.hasNext();)
+    {
+      list.add(new RefererForeignKeyAdapter((ForeignKey) keys.next().key));
+    }
+
+    return list;
+  }
+
+  private static List<ReferentForeignKeyAdapter> getReferentForeignKeyAdapters
+    (Table table, Node root, NodeStack stack)
+  {
+    List<ReferentForeignKeyAdapter> list = new ArrayList();
+
+    for (NodeIterator keys = new NodeIterator
+           (stack, Node.pathFind
+            (root, Constants.ForeignKeyTable,
+             Constants.ForeignKeyReferentIndex, table));
+         keys.hasNext();)
+    {
+      list.add(new ReferentForeignKeyAdapter((ForeignKey) keys.next().key));
+    }
+
+    return list;
   }
 
   private static void fillRow(Object[] row, List<Column> columns, Node tree) {

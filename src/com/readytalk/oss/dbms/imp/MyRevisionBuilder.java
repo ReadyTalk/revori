@@ -329,7 +329,7 @@ class MyRevisionBuilder implements RevisionBuilder {
   }
 
   private void checkForeignKeys(ForeignKeyResolver resolver) {
-    // todo: is there a performance problem with creating three
+    // todo: is there a performance problem with creating new
     // NodeStacks every time this method is called?  If so, are there
     // common cases were we can avoid creating them, or should we try
     // to recycle them somehow?
@@ -578,50 +578,6 @@ class MyRevisionBuilder implements RevisionBuilder {
           ("unexpected resolution: " + duplicateKeyResolution);
       }
     }
-  }
-
-  public List<RefererForeignKeyAdapter> getRefererForeignKeyAdapters
-    (Table table)
-  {
-    if (indexUpdateBaseStack == null) {
-      indexUpdateBaseStack = new NodeStack();
-      indexUpdateForkStack = new NodeStack();
-    }
-
-    List<RefererForeignKeyAdapter> list = new ArrayList();
-
-    for (NodeIterator keys = new NodeIterator
-           (indexUpdateBaseStack, Node.pathFind
-            (result.root, Constants.ForeignKeyTable,
-             Constants.ForeignKeyRefererIndex, table));
-         keys.hasNext();)
-    {
-      list.add(new RefererForeignKeyAdapter((ForeignKey) keys.next().key));
-    }
-
-    return list;
-  }
-
-  public List<ReferentForeignKeyAdapter> getReferentForeignKeyAdapters
-    (Table table)
-  {
-    if (indexUpdateBaseStack == null) {
-      indexUpdateBaseStack = new NodeStack();
-      indexUpdateForkStack = new NodeStack();
-    }
-
-    List<ReferentForeignKeyAdapter> list = new ArrayList();
-
-    for (NodeIterator keys = new NodeIterator
-           (indexUpdateBaseStack, Node.pathFind
-            (result.root, Constants.ForeignKeyTable,
-             Constants.ForeignKeyReferentIndex, table));
-         keys.hasNext();)
-    {
-      list.add(new ReferentForeignKeyAdapter((ForeignKey) keys.next().key));
-    }
-
-    return list;
   }
 
   public int apply(PatchTemplate template,
