@@ -2,10 +2,14 @@ package com.readytalk.oss.dbms.imp;
 
 import static com.readytalk.oss.dbms.util.Util.list;
 
+import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Index;
 import com.readytalk.oss.dbms.DiffResult;
 import com.readytalk.oss.dbms.imp.DiffIterator.DiffPair;
+
+import java.util.Set;
+import java.util.TreeSet;
 
 class MyDiffResult implements DiffResult {
   public enum State {
@@ -82,6 +86,7 @@ class MyDiffResult implements DiffResult {
   public int depth;
   public int bottom;
   public int clientDepth;
+  public Set<Column> primaryKey;
 
   public MyDiffResult(MyRevision base,
                       NodeStack baseStack,
@@ -137,6 +142,7 @@ class MyDiffResult implements DiffResult {
 
       case Key: {
         DiffPair pair = pairs[depth];
+
         if (pair.base != null && pair.fork != null) {
           if (depth > Constants.IndexDataDepth && depth == bottom) {
             if (Compare.equal(pair.base.value, pair.fork.value)) {
@@ -150,11 +156,20 @@ class MyDiffResult implements DiffResult {
           }
         } else {
           if (depth > Constants.IndexDataDepth && depth == bottom) {
-            nextState = State.Value;
+            Comparable key = pair.base == null ? pair.fork.key : pair.base.key;
+            if (primaryKey.contains(key)) {
+              // no need to report the addition/subtraction of primary
+              // key columns, since we've already covered them during
+              // the descent
+              state = State.Iterate;
+            } else {
+              nextState = State.Value;
+              state = State.Flush;
+            }
           } else {
             nextState = State.Descend;
+            state = State.Flush;
           }
-          state = State.Flush;
         }
       } break;
 
@@ -179,6 +194,7 @@ class MyDiffResult implements DiffResult {
 
             if (Compare.equal(index, table.primaryKey)) {
               bottom = index.columns.size() + Constants.IndexDataBodyDepth;
+              primaryKey = new TreeSet(table.primaryKey.columns);
               descend();
             }
             break;

@@ -543,6 +543,15 @@ class MyRevisionBuilder implements RevisionBuilder {
     delete(i - 1 + Constants.IndexDataBodyDepth, keys[i]);
   }
 
+  private void insert(int depth,
+                      List<Column> columns,
+                      Comparable[] path)
+  {
+    for (int i = 0; i < path.length; ++i) {
+      blaze(depth, columns.get(i)).value = path[i];
+    }
+  }
+
   private void insert(DuplicateKeyResolution duplicateKeyResolution,
                       Table table,
                       Column column,
@@ -562,13 +571,18 @@ class MyRevisionBuilder implements RevisionBuilder {
 
     if (n.value == Node.Null) {
       n.value = value;
+      insert(path.length + Constants.IndexDataBodyDepth,
+             table.primaryKey.columns, path);
     } else {
       switch (duplicateKeyResolution) {
       case Skip:
+        delete(path.length + Constants.IndexDataBodyDepth, column);
         break;
 
       case Overwrite:
         n.value = value;
+        insert(path.length + Constants.IndexDataBodyDepth,
+               table.primaryKey.columns, path);
         break;
 
       case Throw:

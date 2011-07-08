@@ -6,6 +6,9 @@ class ConstantAdapter implements ExpressionAdapter {
   public static final ConstantAdapter Undefined = new ConstantAdapter
     (Compare.Undefined);
 
+  public static final ConstantAdapter Dummy = new ConstantAdapter
+    (Compare.Dummy);
+
   public final Object value;
     
   public ConstantAdapter(Object value) {
@@ -17,7 +20,13 @@ class ConstantAdapter implements ExpressionAdapter {
   }
 
   public Scan makeScan(ColumnReferenceAdapter reference) {
-    throw new UnsupportedOperationException();
+    if (Boolean.TRUE.equals(value)) {
+      return IntervalScan.Unbounded;
+    } else if (Boolean.FALSE.equals(value)) {
+      return IntervalScan.Empty;
+    } else {
+      throw new UnsupportedOperationException();
+    }
   }
 
   public void visit(ExpressionAdapterVisitor visitor) {

@@ -16,12 +16,16 @@ import com.readytalk.oss.dbms.ForeignKeyResolver;
 
 import java.util.List;
 
-class MyRevision implements Revision {
+public class MyRevision implements Revision {
   public static final MyRevision Empty = new MyRevision
     (new Object(), Node.Null);
 
   public final Object token;
   public Node root;
+
+  public static Revision empty() {
+    return Empty;
+  }
 
   public MyRevision(Object token, Node root) {
     this.token = token;
