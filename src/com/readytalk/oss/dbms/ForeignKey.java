@@ -6,10 +6,6 @@ import java.util.Collections;
 import java.util.Iterator;
 
 public final class ForeignKey implements Comparable<ForeignKey> {
-  public enum Action {
-    Restrict, Delete;
-  }
-
   public final Table refererTable;
 
   public final List<Column> refererColumns;
@@ -18,16 +14,10 @@ public final class ForeignKey implements Comparable<ForeignKey> {
 
   public final List<Column> referentColumns;
 
-  public final Action onDelete;
-
-  public final Action onUpdate;
-
   public ForeignKey(Table refererTable,
                     List<Column> refererColumns,
                     Table referentTable,
-                    List<Column> referentColumns,
-                    Action onDelete,
-                    Action onUpdate)
+                    List<Column> referentColumns)
   {
     this.refererTable = refererTable;
     this.refererColumns = Collections.unmodifiableList
@@ -35,8 +25,6 @@ public final class ForeignKey implements Comparable<ForeignKey> {
     this.referentTable = referentTable;
     this.referentColumns = Collections.unmodifiableList
       (new ArrayList(referentColumns));
-    this.onDelete = onDelete;
-    this.onUpdate = onUpdate;
 
     if (this.refererColumns.size() !=this. referentColumns.size()) {
       throw new IllegalArgumentException

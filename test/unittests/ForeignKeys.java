@@ -21,6 +21,7 @@ import com.readytalk.oss.dbms.DeleteTemplate;
 import com.readytalk.oss.dbms.Revision;
 import com.readytalk.oss.dbms.RevisionBuilder;
 import com.readytalk.oss.dbms.ForeignKey;
+import com.readytalk.oss.dbms.ForeignKeyResolvers;
 import com.readytalk.oss.dbms.imp.MyRevision;
 
 public class ForeignKeys extends TestCase {
@@ -34,9 +35,7 @@ public class ForeignKeys extends TestCase {
     RevisionBuilder builder = MyRevision.empty().builder();
 
     builder.add(new ForeignKey(spanishNumbers, list(number),
-                               englishNumbers, list(number),
-                               ForeignKey.Action.Delete,
-                               ForeignKey.Action.Restrict));
+                               englishNumbers, list(number)));
 
     builder.insert(Throw, englishNumbers, 1, name, "one");
     builder.insert(Throw, spanishNumbers, 1, name, "uno");
@@ -54,7 +53,7 @@ public class ForeignKeys extends TestCase {
 
     builder.delete(englishNumbers, 1);
     
-    head = builder.commit();
+    head = builder.commit(ForeignKeyResolvers.Delete);
 
     assertEquals(head.query(englishNumbers.primaryKey, 1, name), null);
     assertEquals(head.query(spanishNumbers.primaryKey, 1, name), null);
@@ -72,9 +71,7 @@ public class ForeignKeys extends TestCase {
     RevisionBuilder builder = MyRevision.empty().builder();
 
     builder.add(new ForeignKey(spanishNumbers, list(number),
-                               englishNumbers, list(number),
-                               ForeignKey.Action.Delete,
-                               ForeignKey.Action.Restrict));
+                               englishNumbers, list(number)));
 
     PatchTemplate englishInsert = new InsertTemplate
       (englishNumbers,
@@ -112,7 +109,7 @@ public class ForeignKeys extends TestCase {
 
     builder.apply(englishDelete, 1);
     
-    head = builder.commit();
+    head = builder.commit(ForeignKeyResolvers.Delete);
 
     assertEquals(head.query(englishNumbers.primaryKey, 1, name), null);
     assertEquals(head.query(spanishNumbers.primaryKey, 1, name), null);

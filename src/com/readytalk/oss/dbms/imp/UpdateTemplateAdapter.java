@@ -55,12 +55,6 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
       (update.tableReference, MyRevision.Empty, NodeStack.Null, revision,
        new NodeStack(), test, expressionContext, plan, false);
 
-    List<RefererForeignKeyAdapter> refererKeyAdapters
-      = builder.getRefererForeignKeyAdapters(table);
-
-    List<ReferentForeignKeyAdapter> referentKeyAdapters
-      = builder.getReferentForeignKeyAdapters(table);
-
     List<Column> keyColumns = index.columns;
 
     int[] keyColumnsUpdated;
@@ -141,12 +135,6 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
              (Comparable) Node.find(original, keyColumns.get(i)).value);
         }
 
-        if (updateToken == null && (! (referentKeyAdapters.isEmpty()))) {
-          // ensure the original tree remains unchanged so we can use
-          // it to validate foreign key constraints:
-          builder.setToken(updateToken = new Object());
-        }
-
         Node tree = original;
 
         for (int i = 0; i < update.columns.size(); ++i) {
@@ -177,14 +165,6 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
           n.value = tree;
         } else {
           throw new DuplicateKeyException();
-        }
-
-        for (RefererForeignKeyAdapter adapter: refererKeyAdapters) {
-          adapter.handleInsert(builder, tree);
-        }
-
-        for (ReferentForeignKeyAdapter adapter: referentKeyAdapters) {
-          adapter.handleUpdate(builder, original);
         }
       } break;
 

@@ -1,7 +1,10 @@
 package com.readytalk.oss.dbms;
 
 public interface ForeignKeyResolver {
-  public ForeignKey.Action handleBrokenReference
-    (ForeignKey constraint,
-     Object[] refererRowPrimaryKeyValues);
+  public enum Action {
+    Restrict, Delete;
+  }
+
+  public Action handleBrokenReference(ForeignKey constraint,
+                                      Object[] refererRowPrimaryKeyValues);
 }

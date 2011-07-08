@@ -40,9 +40,6 @@ class DeleteTemplateAdapter implements PatchTemplateAdapter {
       (delete.tableReference, MyRevision.Empty, NodeStack.Null, revision,
        new NodeStack(), test, expressionContext, plan, false);
 
-    List<ReferentForeignKeyAdapter> referentKeyAdapters
-      = builder.getReferentForeignKeyAdapters(table);
-
     List<Column> keyColumns = index.columns;
 
     Object deleteToken = index.equals(plan.index) ? null : builder.token;
@@ -77,10 +74,6 @@ class DeleteTemplateAdapter implements PatchTemplateAdapter {
         builder.delete
           (i + Constants.IndexDataBodyDepth,
            (Comparable) Node.find(tree, keyColumns.get(i)).value);
-
-        for (ReferentForeignKeyAdapter adapter: referentKeyAdapters) {
-          adapter.handleDelete(builder, tree);
-        }
       } break;
 
       default:

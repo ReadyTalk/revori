@@ -26,6 +26,8 @@ import com.readytalk.oss.dbms.UpdateTemplate;
 import com.readytalk.oss.dbms.InsertTemplate;
 import com.readytalk.oss.dbms.DeleteTemplate;
 import com.readytalk.oss.dbms.ForeignKey;
+import com.readytalk.oss.dbms.ForeignKeyResolver;
+import com.readytalk.oss.dbms.ForeignKeyResolvers;
 import com.readytalk.oss.dbms.ForeignKeyException;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.QueryTemplate;
@@ -56,18 +58,20 @@ class MyRevisionBuilder implements RevisionBuilder {
   public final Node.BlazeResult blazeResult = new Node.BlazeResult();
   public NodeStack indexUpdateBaseStack;
   public NodeStack indexUpdateForkStack;
+  public MyRevision base;
   public MyRevision indexBase;
   public MyRevision result;
   public int max = -1;
   public boolean dirtyIndexes;
 
   public MyRevisionBuilder(Object token,
-                           MyRevision result,
+                           MyRevision base,
                            NodeStack stack)
   {
     this.token = token;
-    this.indexBase = result;
-    this.result = result;
+    this.base = base;
+    this.indexBase = base;
+    this.result = base;
     this.stack = stack;
     keys = new Comparable[Constants.MaxDepth + 1];
     blazedRoots = new Node[Constants.MaxDepth + 1];
@@ -324,6 +328,17 @@ class MyRevisionBuilder implements RevisionBuilder {
     }
   }
 
+  private void checkForeignKeys(ForeignKeyResolver resolver) {
+    // todo: is there a performance problem with creating three
+    // NodeStacks every time this method is called?  If so, are there
+    // common cases were we can avoid creating them, or should we try
+    // to recycle them somehow?
+
+    ForeignKeys.checkForeignKeys
+      (new NodeStack(), base, new NodeStack(), this, new NodeStack(),
+       resolver);
+  }
+
   public void prepareForUpdate(Table table) {
     // since we update non-primary-key indexes lazily, we may need to
     // freeze a copy of the last revision which contained up-to-date
@@ -447,34 +462,6 @@ class MyRevisionBuilder implements RevisionBuilder {
     delete(Constants.IndexDataDepth, index);
   }
 
-  private void checkForeignKey(Revision base, ForeignKey constraint) {
-    TableReference referer = reference(constraint.refererTable);
-    TableReference referent = reference(constraint.referentTable);
-
-    Expression test = isNull
-      (reference
-       (referent, constraint.referentTable.primaryKey.columns.get(0)));
-
-    Iterator<Column> refererIterator = constraint.refererColumns.iterator();
-    Iterator<Column> referentIterator = constraint.referentColumns.iterator();
-    while (refererIterator.hasNext()) {
-      test = and(test, equal(reference(referer, refererIterator.next()),
-                             reference(referent, referentIterator.next())));
-    }
-
-    if (base.diff
-        (result, new QueryTemplate
-         ((List<Expression>) (List) Collections.emptyList(),
-          leftJoin(referer, referent), test)).nextRow()
-        != QueryResult.Type.End)
-    {
-      throw new ForeignKeyException
-        ("one or more rows exist in " + constraint.refererTable
-         + " with no corresponding row in " + constraint.referentTable
-         + " for " + constraint);
-    }
-  }
-
   private void addForeignKey(ForeignKey constraint)
   {
     if (Node.pathFind
@@ -484,8 +471,6 @@ class MyRevisionBuilder implements RevisionBuilder {
       // the specified foreign key is already present -- ignore
       return;
     }
-
-    checkForeignKey(MyRevision.Empty, constraint);
 
     insert(DuplicateKeyResolution.Throw, Constants.ForeignKeyTable, constraint,
            Constants.ForeignKeyRefererColumn, constraint.refererTable);
@@ -789,11 +774,17 @@ class MyRevisionBuilder implements RevisionBuilder {
   }
 
   public Revision commit() {
+    return commit(ForeignKeyResolvers.Restrict);
+  }
+
+  public Revision commit(ForeignKeyResolver foreignKeyResolver) {
     if (token == null) {
       throw new IllegalStateException("builder already committed");
     }
 
     updateIndexes();
+
+    checkForeignKeys(foreignKeyResolver);
 
     token = null;
 
