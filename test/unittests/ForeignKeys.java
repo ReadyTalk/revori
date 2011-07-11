@@ -209,9 +209,55 @@ public class ForeignKeys extends TestCase {
     } catch (ForeignKeyException e) { }
   }
 
+  private static void testMerge(boolean restrict) {
+    Column number = new Column(Integer.class);
+    Column name = new Column(String.class);
+    Table englishNumbers = new Table(list(number));
+    Table spanishNumbers = new Table(list(number));
+
+    RevisionBuilder builder = MyRevision.empty().builder();
+
+    builder.add(new ForeignKey(spanishNumbers, list(number),
+                               englishNumbers, list(number)));
+
+    builder.insert(Throw, englishNumbers, 1, name, "one");
+    builder.insert(Throw, englishNumbers, 2, name, "two");
+    builder.insert(Throw, spanishNumbers, 2, name, "dos");
+
+    Revision base = builder.commit();
+
+    RevisionBuilder leftBuilder = base.builder();
+
+    leftBuilder.delete(englishNumbers, 1);
+
+    Revision left = leftBuilder.commit();
+
+    RevisionBuilder rightBuilder = base.builder();
+
+    rightBuilder.insert(Throw, spanishNumbers, 1, name, "uno");
+
+    Revision right = rightBuilder.commit();
+
+    if (restrict) {
+      try {
+        base.merge(left, right, null, ForeignKeyResolvers.Restrict);
+        fail("expected ForeignKeyException");
+      } catch (ForeignKeyException e) { }
+    } else {
+      Revision head = base.merge
+        (left, right, null, ForeignKeyResolvers.Delete);
+
+      assertEquals(head.query(englishNumbers.primaryKey, 1, name), null);
+      assertEquals(head.query(spanishNumbers.primaryKey, 1, name), null);
+      assertEquals(head.query(englishNumbers.primaryKey, 2, name), "two");
+      assertEquals(head.query(spanishNumbers.primaryKey, 2, name), "dos");
+    }
+  }
+
   @Test
   public void testMerge() {
-    // todo
+    testMerge(true);
+    testMerge(false);
   }
 
   @Test

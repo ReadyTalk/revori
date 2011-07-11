@@ -26,12 +26,12 @@ class MyDiffResult implements DiffResult {
 
       public Node forkTree(MyDiffResult r) {
         Node n = r.pairs[r.clientDepth].fork;
-        return n == null ? null : (Node) n.value;
+        return n == null ? Node.Null : (Node) n.value;
       }
 
       public Node baseTree(MyDiffResult r) {
         Node n = r.pairs[r.clientDepth].base;
-        return n == null ? null : (Node) n.value;
+        return n == null ? Node.Null : (Node) n.value;
       }
 
       public void skip(MyDiffResult r) {
