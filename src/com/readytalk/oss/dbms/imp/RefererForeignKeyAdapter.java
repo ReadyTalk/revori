@@ -66,7 +66,7 @@ public class RefererForeignKeyAdapter {
   }
 
   public boolean isBrokenReference(Revision revision, Node tree) {
-    return query(query, revision, constraint.referentColumns, tree).nextRow()
+    return query(query, revision, constraint.refererColumns, tree).nextRow()
       == QueryResult.Type.End;
   }
 }

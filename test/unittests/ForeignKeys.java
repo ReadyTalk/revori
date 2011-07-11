@@ -2,6 +2,7 @@ package unittests;
 
 import static com.readytalk.oss.dbms.util.Util.list;
 import static com.readytalk.oss.dbms.DuplicateKeyResolution.Throw;
+import static com.readytalk.oss.dbms.DuplicateKeyResolution.Overwrite;
 import static com.readytalk.oss.dbms.ExpressionFactory.parameter;
 import static com.readytalk.oss.dbms.ExpressionFactory.equal;
 import static com.readytalk.oss.dbms.ExpressionFactory.reference;
@@ -22,11 +23,11 @@ import com.readytalk.oss.dbms.Revision;
 import com.readytalk.oss.dbms.RevisionBuilder;
 import com.readytalk.oss.dbms.ForeignKey;
 import com.readytalk.oss.dbms.ForeignKeyResolvers;
+import com.readytalk.oss.dbms.ForeignKeyException;
 import com.readytalk.oss.dbms.imp.MyRevision;
 
 public class ForeignKeys extends TestCase {
-  @Test
-  public void testDeleteCascadeLowLevel() {
+  private static void testDelete(boolean restrict) {
     Column number = new Column(Integer.class);
     Column name = new Column(String.class);
     Table englishNumbers = new Table(list(number));
@@ -53,16 +54,28 @@ public class ForeignKeys extends TestCase {
 
     builder.delete(englishNumbers, 1);
     
-    head = builder.commit(ForeignKeyResolvers.Delete);
+    if (restrict) {
+      try {
+        builder.commit();
+        fail("expected ForeignKeyException");
+      } catch (ForeignKeyException e) { }
+    } else {
+      head = builder.commit(ForeignKeyResolvers.Delete);
 
-    assertEquals(head.query(englishNumbers.primaryKey, 1, name), null);
-    assertEquals(head.query(spanishNumbers.primaryKey, 1, name), null);
-    assertEquals(head.query(englishNumbers.primaryKey, 2, name), "two");
-    assertEquals(head.query(spanishNumbers.primaryKey, 2, name), "dos");
+      assertEquals(head.query(englishNumbers.primaryKey, 1, name), null);
+      assertEquals(head.query(spanishNumbers.primaryKey, 1, name), null);
+      assertEquals(head.query(englishNumbers.primaryKey, 2, name), "two");
+      assertEquals(head.query(spanishNumbers.primaryKey, 2, name), "dos");
+    }
   }
 
   @Test
-  public void testDeleteCascade() {
+  public void testDelete() {
+    testDelete(true);
+    testDelete(false);
+  }
+
+  private static void testDeleteTemplate(boolean restrict) {
     Column number = new Column(Integer.class);
     Column name = new Column(String.class);
     Table englishNumbers = new Table(list(number));
@@ -109,32 +122,91 @@ public class ForeignKeys extends TestCase {
 
     builder.apply(englishDelete, 1);
     
-    head = builder.commit(ForeignKeyResolvers.Delete);
+    if (restrict) {
+      try {
+        builder.commit();
+        fail("expected ForeignKeyException");
+      } catch (ForeignKeyException e) { }
+    } else {
+      head = builder.commit(ForeignKeyResolvers.Delete);
 
-    assertEquals(head.query(englishNumbers.primaryKey, 1, name), null);
-    assertEquals(head.query(spanishNumbers.primaryKey, 1, name), null);
+      assertEquals(head.query(englishNumbers.primaryKey, 1, name), null);
+      assertEquals(head.query(spanishNumbers.primaryKey, 1, name), null);
+      assertEquals(head.query(englishNumbers.primaryKey, 2, name), "two");
+      assertEquals(head.query(spanishNumbers.primaryKey, 2, name), "dos");
+    }
+  }
+
+  private static void testUpdate(boolean restrict) {
+    Column number = new Column(Integer.class);
+    Column english = new Column(String.class);
+    Column name = new Column(String.class);
+    Table englishNumbers = new Table(list(number));
+    Table spanishNumbers = new Table(list(english));
+
+    RevisionBuilder builder = MyRevision.empty().builder();
+
+    builder.add(new ForeignKey(spanishNumbers, list(english),
+                               englishNumbers, list(name)));
+
+    builder.insert(Throw, englishNumbers, 1, name, "one");
+    builder.insert(Throw, spanishNumbers, "one", name, "uno");
+    builder.insert(Throw, englishNumbers, 2, name, "two");
+    builder.insert(Throw, spanishNumbers, "two", name, "dos");
+
+    Revision head = builder.commit();
+
+    assertEquals(head.query(englishNumbers.primaryKey, 1, name), "one");
+    assertEquals(head.query(spanishNumbers.primaryKey, "one", name), "uno");
     assertEquals(head.query(englishNumbers.primaryKey, 2, name), "two");
-    assertEquals(head.query(spanishNumbers.primaryKey, 2, name), "dos");
+    assertEquals(head.query(spanishNumbers.primaryKey, "two", name), "dos");
+
+    builder = head.builder();
+
+    builder.insert(Overwrite, englishNumbers, 1, name, "ONE");
+    
+    if (restrict) {
+      try {
+        builder.commit();
+        fail("expected ForeignKeyException");
+      } catch (ForeignKeyException e) { }
+    } else {
+      head = builder.commit(ForeignKeyResolvers.Delete);
+
+      assertEquals(head.query(englishNumbers.primaryKey, 1, name), "ONE");
+      assertEquals(head.query(spanishNumbers.primaryKey, "one", name), null);
+      assertEquals(head.query(spanishNumbers.primaryKey, "ONE", name), null);
+      assertEquals(head.query(englishNumbers.primaryKey, 2, name), "two");
+      assertEquals(head.query(spanishNumbers.primaryKey, "two", name), "dos");
+    }
   }
 
   @Test
-  public void testUpdateCascadeLowLevel() {
-    // todo: test updates using MyRevisionBuilder.insert(Overwrite, ...)
-  }
-
-  @Test
-  public void testUpdateCascade() {
-    // todo: test updates using UpdateTemplateAdapter
-  }
-
-  @Test
-  public void testInsertLowLevel() {
-    // todo: test updates using MyRevisionBuilder.insert(Throw, ...)
+  public void testUpdate() {
+    testUpdate(true);
+    testUpdate(false);
   }
 
   @Test
   public void testInsert() {
-    // todo: test updates using InsertTemplateAdapter
+    Column number = new Column(Integer.class);
+    Column name = new Column(String.class);
+    Table englishNumbers = new Table(list(number));
+    Table spanishNumbers = new Table(list(number));
+
+    RevisionBuilder builder = MyRevision.empty().builder();
+
+    builder.add(new ForeignKey(spanishNumbers, list(number),
+                               englishNumbers, list(number)));
+
+    builder.insert(Throw, englishNumbers, 1, name, "one");
+    builder.insert(Throw, spanishNumbers, 1, name, "uno");
+    builder.insert(Throw, spanishNumbers, 2, name, "dos");
+
+    try {
+      builder.commit();
+      fail("expected ForeignKeyException");
+    } catch (ForeignKeyException e) { }
   }
 
   @Test
