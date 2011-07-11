@@ -223,10 +223,12 @@ class Merge {
 
     // verify all foreign key constraints
     ForeignKeys.checkForeignKeys
-      (leftStack, left, baseStack, builder, rightStack, foreignKeyResolver);
+      (leftStack, left, baseStack, builder, rightStack, foreignKeyResolver,
+       null);
 
     ForeignKeys.checkForeignKeys
-      (rightStack, right, baseStack, builder, leftStack, foreignKeyResolver);
+      (rightStack, right, baseStack, builder, leftStack, foreignKeyResolver,
+       null);
 
 //     System.out.println("merge base");
 //     dump(base.root, System.out, 1);

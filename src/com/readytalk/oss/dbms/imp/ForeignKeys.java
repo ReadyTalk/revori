@@ -17,7 +17,8 @@ class ForeignKeys {
                                       NodeStack forkStack,
                                       final MyRevisionBuilder builder,
                                       NodeStack scratchStack,
-                                      final ForeignKeyResolver resolver)
+                                      final ForeignKeyResolver resolver,
+                                      Table filter)
   {
     MyRevision fork = builder.result;
 
@@ -32,6 +33,7 @@ class ForeignKeys {
     List<RefererForeignKeyAdapter> refererKeyAdapters = null;
     ReferentForeignKeyAdapter.Visitor[] referentKeyVisitors = null;
     Object[] row = null;
+    Table table = null;
     
     while (true) {
       DiffResult.Type type = result.next();
@@ -53,6 +55,7 @@ class ForeignKeys {
           Table forkTable = (Table) result.fork();
           
           if (baseTable != null) {
+            table = baseTable;
             bottom = baseTable.primaryKey.columns.size();
             referentKeyAdapters = getReferentForeignKeyAdapters
               (baseTable, fork.root, scratchStack);
@@ -79,11 +82,20 @@ class ForeignKeys {
           }
 
           if (forkTable != null) {
+            table = forkTable;
             bottom = forkTable.primaryKey.columns.size();
             refererKeyAdapters = getRefererForeignKeyAdapters
               (forkTable, fork.root, scratchStack);
           } else {
             refererKeyAdapters = Collections.emptyList();
+          }
+
+          if ((filter != null && filter != table)
+              || (forkTable != Constants.ForeignKeyTable
+                  && referentKeyAdapters.isEmpty()
+                  && refererKeyAdapters.isEmpty()))
+          {
+            result.skip();
           }
         } else if (depth == bottom) {
           Node baseTree = result.baseTree();
@@ -98,19 +110,33 @@ class ForeignKeys {
           }
 
           if (forkTree != Node.Null) {
-            for (RefererForeignKeyAdapter adapter: refererKeyAdapters) {
-              if (adapter.isBrokenReference(fork, forkTree)) {
-                Table table = adapter.constraint.refererTable;
-                int count = table.primaryKey.columns.size();
+            if (table == Constants.ForeignKeyTable) {
+              // a new foreign key has been added, so we need to look
+              // at all the rows in the referer table, not just the
+              // new and updated rows
 
-                if (row == null || row.length != count) {
-                  row = new Object[count];
+              ForeignKey constraint = (ForeignKey)
+                Node.find(forkTree, Constants.ForeignKeyColumn).value;
+
+              checkForeignKeys
+                (new NodeStack(), MyRevision.Empty,
+                 new NodeStack(), builder,
+                 new NodeStack(), resolver, constraint.refererTable);
+            } else {
+              for (RefererForeignKeyAdapter adapter: refererKeyAdapters) {
+                if (adapter.isBrokenReference(fork, forkTree)) {
+                  Table referer = adapter.constraint.refererTable;
+                  int count = referer.primaryKey.columns.size();
+
+                  if (row == null || row.length != count) {
+                    row = new Object[count];
+                  }
+
+                  fillRow(row, referer.primaryKey.columns, forkTree);
+
+                  handleBrokenReference
+                    (resolver, builder, adapter.constraint, row);
                 }
-
-                fillRow(row, table.primaryKey.columns, forkTree);
-
-                handleBrokenReference
-                  (resolver, builder, adapter.constraint, row);
               }
             }
           }

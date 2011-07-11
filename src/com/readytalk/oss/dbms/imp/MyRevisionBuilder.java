@@ -336,7 +336,7 @@ class MyRevisionBuilder implements RevisionBuilder {
 
     ForeignKeys.checkForeignKeys
       (new NodeStack(), base, new NodeStack(), this, new NodeStack(),
-       resolver);
+       resolver, null);
   }
 
   public void prepareForUpdate(Table table) {

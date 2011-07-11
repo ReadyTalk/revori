@@ -261,6 +261,30 @@ public class ForeignKeys extends TestCase {
   }
 
   @Test
+  public void testAddForeignKey() {
+    Column number = new Column(Integer.class);
+    Column name = new Column(String.class);
+    Table englishNumbers = new Table(list(number));
+    Table spanishNumbers = new Table(list(number));
+
+    RevisionBuilder builder = MyRevision.empty().builder();
+
+    builder.insert(Throw, englishNumbers, 1, name, "one");
+    builder.insert(Throw, spanishNumbers, 1, name, "uno");
+    builder.insert(Throw, spanishNumbers, 2, name, "dos");
+
+    builder = builder.commit().builder();
+
+    builder.add(new ForeignKey(spanishNumbers, list(number),
+                               englishNumbers, list(number)));
+
+    try {
+      builder.commit();
+      fail("expected ForeignKeyException");
+    } catch (ForeignKeyException e) { }
+  }
+
+  @Test
   public void testDiff() {
     // todo
   }
