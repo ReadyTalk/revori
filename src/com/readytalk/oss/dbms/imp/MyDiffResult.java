@@ -214,9 +214,11 @@ class MyDiffResult implements DiffResult {
             table = (Table)
               (pair.base == null ? pair.fork.key : pair.base.key);
 
-            refererKeyAdapters
-              = ForeignKeys.getRefererForeignKeyAdapters
-              (table, iterators[0].forkRoot, baseStack);
+            if (skipBrokenReferences) {
+              refererKeyAdapters
+                = ForeignKeys.getRefererForeignKeyAdapters
+                (table, iterators[0].forkRoot, baseStack);
+            }
           } else if (depth == Constants.IndexDataDepth) {
             Index index = (Index)
               (pair.base == null ? pair.fork.key : pair.base.key);
