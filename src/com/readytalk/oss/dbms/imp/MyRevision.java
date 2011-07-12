@@ -102,7 +102,7 @@ public class MyRevision implements Revision {
     return new MyQueryResult(myBase, myFork, template, copy(parameters));
   }
 
-  public DiffResult diff(Revision fork)
+  public DiffResult diff(Revision fork, boolean skipBrokenReferences)
   {
     MyRevision myBase = this;
     MyRevision myFork;
@@ -113,7 +113,8 @@ public class MyRevision implements Revision {
         ("revision not created by this implementation");        
     }
 
-    return new MyDiffResult(myBase, new NodeStack(), myFork, new NodeStack());
+    return new MyDiffResult
+      (myBase, new NodeStack(), myFork, new NodeStack(), skipBrokenReferences);
   }
 
   public RevisionBuilder builder() {

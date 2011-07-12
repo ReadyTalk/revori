@@ -25,7 +25,8 @@ class ForeignKeys {
     // ensure fork remains unmodified as we iterate over it:
     builder.setToken(new Object());
 
-    MyDiffResult result = new MyDiffResult(base, baseStack, fork, forkStack);
+    MyDiffResult result = new MyDiffResult
+      (base, baseStack, fork, forkStack, false);
 
     int bottom = 0;
     int depth = 0;
@@ -151,7 +152,7 @@ class ForeignKeys {
     }
   }
 
-  private static List<RefererForeignKeyAdapter> getRefererForeignKeyAdapters
+  static List<RefererForeignKeyAdapter> getRefererForeignKeyAdapters
     (Table table, Node root, NodeStack stack)
   {
     List<RefererForeignKeyAdapter> list = new ArrayList();
@@ -168,7 +169,7 @@ class ForeignKeys {
     return list;
   }
 
-  private static List<ReferentForeignKeyAdapter> getReferentForeignKeyAdapters
+  static List<ReferentForeignKeyAdapter> getReferentForeignKeyAdapters
     (Table table, Node root, NodeStack stack)
   {
     List<ReferentForeignKeyAdapter> list = new ArrayList();

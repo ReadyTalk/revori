@@ -32,6 +32,7 @@ import com.readytalk.oss.dbms.DeleteTemplate;
 import com.readytalk.oss.dbms.UpdateTemplate;
 import com.readytalk.oss.dbms.ForeignKey;
 import com.readytalk.oss.dbms.ForeignKeyResolver;
+import com.readytalk.oss.dbms.ForeignKeyResolvers;
 
 import java.util.Collection;
 import java.util.List;
@@ -63,16 +64,6 @@ public class SQLServer {
   private static final boolean Debug = true;
 
   private static final Logger log = Logger.getLogger("SQLServer");
-
-  private static final ForeignKeyResolver DeleteForeignKeyResolver
-    = new ForeignKeyResolver() {
-        public ForeignKey.Action handleBrokenReference
-          (ForeignKey constraint,
-           Object[] refererRowPrimaryKeyValues)
-        {
-          return ForeignKey.Action.Delete;
-        }
-      };
 
   public enum Request {
     Execute, Complete;
@@ -153,7 +144,7 @@ public class SQLServer {
                 ((Tag) leftValue).revision,
                 ((Tag) rightValue).revision,
                 rightPreferenceConflictResolver,
-                DeleteForeignKeyResolver));
+                ForeignKeyResolvers.Delete));
           } else {
             return rightValue;
           }
@@ -1336,7 +1327,7 @@ public class SQLServer {
         while (! dbHead.compareAndSet(myTail, myHead)) {
           Revision fork = dbHead.get();
           myHead = dbms.merge
-            (myTail, fork, myHead, conflictResolver, DeleteForeignKeyResolver);
+            (myTail, fork, myHead, conflictResolver, ForeignKeyResolvers.Delete);
           myTail = fork;
         }
       }
@@ -2237,7 +2228,7 @@ public class SQLServer {
                         findTag(client, ((Name) tree.get(2)).value).revision,
                         findTag(client, ((Name) tree.get(3)).value).revision,
                         conflictResolver,
-                        DeleteForeignKeyResolver)));
+                        ForeignKeyResolvers.Delete)));
                commitTransaction(client);
              } finally {
                popTransaction(client);

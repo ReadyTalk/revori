@@ -20,11 +20,12 @@ import com.readytalk.oss.dbms.PatchTemplate;
 import com.readytalk.oss.dbms.InsertTemplate;
 import com.readytalk.oss.dbms.DeleteTemplate;
 import com.readytalk.oss.dbms.Revision;
+import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.RevisionBuilder;
+import com.readytalk.oss.dbms.DiffResult;
 import com.readytalk.oss.dbms.ForeignKey;
 import com.readytalk.oss.dbms.ForeignKeyResolvers;
 import com.readytalk.oss.dbms.ForeignKeyException;
-import com.readytalk.oss.dbms.imp.MyRevision;
 
 public class ForeignKeys extends TestCase {
   private static void testDelete(boolean restrict) {
@@ -33,7 +34,7 @@ public class ForeignKeys extends TestCase {
     Table englishNumbers = new Table(list(number));
     Table spanishNumbers = new Table(list(number));
 
-    RevisionBuilder builder = MyRevision.empty().builder();
+    RevisionBuilder builder = Revisions.Empty.builder();
 
     builder.add(new ForeignKey(spanishNumbers, list(number),
                                englishNumbers, list(number)));
@@ -81,7 +82,7 @@ public class ForeignKeys extends TestCase {
     Table englishNumbers = new Table(list(number));
     Table spanishNumbers = new Table(list(number));
 
-    RevisionBuilder builder = MyRevision.empty().builder();
+    RevisionBuilder builder = Revisions.Empty.builder();
 
     builder.add(new ForeignKey(spanishNumbers, list(number),
                                englishNumbers, list(number)));
@@ -144,7 +145,7 @@ public class ForeignKeys extends TestCase {
     Table englishNumbers = new Table(list(number));
     Table spanishNumbers = new Table(list(english));
 
-    RevisionBuilder builder = MyRevision.empty().builder();
+    RevisionBuilder builder = Revisions.Empty.builder();
 
     builder.add(new ForeignKey(spanishNumbers, list(english),
                                englishNumbers, list(name)));
@@ -194,7 +195,7 @@ public class ForeignKeys extends TestCase {
     Table englishNumbers = new Table(list(number));
     Table spanishNumbers = new Table(list(number));
 
-    RevisionBuilder builder = MyRevision.empty().builder();
+    RevisionBuilder builder = Revisions.Empty.builder();
 
     builder.add(new ForeignKey(spanishNumbers, list(number),
                                englishNumbers, list(number)));
@@ -215,7 +216,7 @@ public class ForeignKeys extends TestCase {
     Table englishNumbers = new Table(list(number));
     Table spanishNumbers = new Table(list(number));
 
-    RevisionBuilder builder = MyRevision.empty().builder();
+    RevisionBuilder builder = Revisions.Empty.builder();
 
     builder.add(new ForeignKey(spanishNumbers, list(number),
                                englishNumbers, list(number)));
@@ -267,7 +268,7 @@ public class ForeignKeys extends TestCase {
     Table englishNumbers = new Table(list(number));
     Table spanishNumbers = new Table(list(number));
 
-    RevisionBuilder builder = MyRevision.empty().builder();
+    RevisionBuilder builder = Revisions.Empty.builder();
 
     builder.insert(Throw, englishNumbers, 1, name, "one");
     builder.insert(Throw, spanishNumbers, 1, name, "uno");
@@ -286,6 +287,75 @@ public class ForeignKeys extends TestCase {
 
   @Test
   public void testDiff() {
-    // todo
+    Column number = new Column(Integer.class);
+    Column name = new Column(String.class);
+    Table englishNumbers = new Table(list(number));
+    Table spanishNumbers = new Table(list(number));
+
+    RevisionBuilder builder = Revisions.Empty.builder();
+
+    builder.add(new ForeignKey(spanishNumbers, list(number),
+                               englishNumbers, list(number)));
+
+    builder.insert(Throw, englishNumbers, 1, name, "one");
+    builder.insert(Throw, spanishNumbers, 1, name, "uno");
+    builder.insert(Throw, englishNumbers, 2, name, "two");
+    builder.insert(Throw, spanishNumbers, 2, name, "dos");
+
+    Revision base = builder.commit();
+
+    builder = base.builder();
+
+    builder.delete(englishNumbers, 1);
+
+    Revision fork = builder.commit(ForeignKeyResolvers.Delete);
+    
+    for (Boolean skipBrokenReferences: list(true, false)) {
+      System.out.println("skipBrokenReferences " + skipBrokenReferences);
+
+      DiffResult result = base.diff(fork, skipBrokenReferences);
+
+      assertEquals(result.next(), DiffResult.Type.Key);
+      assertEquals(result.base(), englishNumbers);
+      assertEquals(result.fork(), englishNumbers);
+
+      assertEquals(result.next(), DiffResult.Type.Descend);
+      assertEquals(result.next(), DiffResult.Type.Key);
+      assertEquals(result.base(), 1);
+      assertEquals(result.fork(), null);
+      assertEquals(result.next(), DiffResult.Type.Descend);
+      assertEquals(result.next(), DiffResult.Type.Key);
+      assertEquals(result.base(), name);
+      assertEquals(result.fork(), null);
+      assertEquals(result.next(), DiffResult.Type.Value);
+      assertEquals(result.base(), "one");
+      assertEquals(result.fork(), null);
+
+      if (! skipBrokenReferences) {
+        assertEquals(result.next(), DiffResult.Type.Ascend);
+        assertEquals(result.next(), DiffResult.Type.Ascend);
+
+        assertEquals(result.next(), DiffResult.Type.Key);
+        assertEquals(result.base(), spanishNumbers);
+        assertEquals(result.fork(), spanishNumbers);
+
+        assertEquals(result.next(), DiffResult.Type.Descend);
+        assertEquals(result.next(), DiffResult.Type.Key);
+        assertEquals(result.base(), 1);
+        assertEquals(result.fork(), null);
+        assertEquals(result.next(), DiffResult.Type.Descend);
+        assertEquals(result.next(), DiffResult.Type.Key);
+        assertEquals(result.base(), name);
+        assertEquals(result.fork(), null);
+        assertEquals(result.next(), DiffResult.Type.Value);
+        assertEquals(result.base(), "uno");
+        assertEquals(result.fork(), null);
+      }
+
+      assertEquals(result.next(), DiffResult.Type.Ascend);
+      assertEquals(result.next(), DiffResult.Type.Ascend);
+
+      assertEquals(result.next(), DiffResult.Type.End);
+    }
   }
 }

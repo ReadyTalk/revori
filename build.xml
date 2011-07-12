@@ -53,7 +53,7 @@
   <target name="jar-and-client" depends="jar, client" />
 
   <target name="javadoc">
-    <javadoc destdir="${basedir}/build/api">
+    <javadoc destdir="${basedir}/build/api" nodeprecated="true">
       <packageset dir="${basedir}/src">
         <include name="com/readytalk/oss/dbms"/>
       </packageset>

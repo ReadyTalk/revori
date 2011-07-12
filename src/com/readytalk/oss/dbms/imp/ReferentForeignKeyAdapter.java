@@ -16,6 +16,7 @@ import com.readytalk.oss.dbms.DeleteTemplate;
 import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.ForeignKey;
+import com.readytalk.oss.dbms.ForeignKeyResolver;
 import com.readytalk.oss.dbms.ForeignKeyException;
 
 import java.util.List;
@@ -23,7 +24,6 @@ import java.util.ArrayList;
 
 public class ReferentForeignKeyAdapter {
   public final ForeignKey constraint;
-  public final DeleteTemplate refererDelete;
   public final QueryTemplate refererQuery;
   public final QueryTemplate referentQuery;
 
@@ -38,8 +38,6 @@ public class ReferentForeignKeyAdapter {
       refererTest = and
         (equal(reference(referer, c), parameter()), refererTest);
     }
-
-    refererDelete = new DeleteTemplate(referer, refererTest);
     
     List<Column> refererColumns = referer.table.primaryKey.columns;
     List<Expression> refererColumnReferences
@@ -86,42 +84,6 @@ public class ReferentForeignKeyAdapter {
                             Revision revision, List<Column> columns, Node tree)
   {
     return MyRevision.Empty.diff(revision, query, parameters(columns, tree));
-  }
-
-  private void act(ForeignKey.Action action, MyRevisionBuilder builder,
-                   Node tree)
-  {
-    if (query(referentQuery, builder.result, constraint.referentColumns, tree)
-        .nextRow() == QueryResult.Type.End)
-    {
-      switch (action) {
-      case Delete:
-        builder.apply
-          (refererDelete, parameters(constraint.referentColumns, tree));
-        break;
-
-      case Restrict:
-        if (query(refererQuery, builder.result, constraint.referentColumns,
-                  tree).nextRow() != QueryResult.Type.End)
-        {
-          throw new ForeignKeyException();
-        }
-        break;
-
-      default:
-        throw new RuntimeException
-          ("unexpected action: " + action);
-      }
-    }
-  }
-
-  public void handleDelete(MyRevisionBuilder builder, Node tree) {
-    act(constraint.onDelete, builder, tree);
-  }
-
-  public void handleUpdate(MyRevisionBuilder builder, Node oldTree)
-  {
-    act(constraint.onUpdate, builder, oldTree);
   }
 
   public void visitBrokenReferences(Revision revision, Node tree,

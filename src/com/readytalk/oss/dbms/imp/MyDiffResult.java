@@ -8,6 +8,7 @@ import com.readytalk.oss.dbms.Index;
 import com.readytalk.oss.dbms.DiffResult;
 import com.readytalk.oss.dbms.imp.DiffIterator.DiffPair;
 
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -78,6 +79,8 @@ class MyDiffResult implements DiffResult {
   public final DiffIterator[] iterators = new DiffIterator[Constants.MaxDepth];
   public final DiffPair[] pairs = new DiffPair[Constants.MaxDepth];
   public final boolean[] clientHasKey = new boolean[Constants.MaxDepth];
+  public final MyRevision fork;
+  public final boolean skipBrokenReferences;
   public State state = State.Iterate;
   public State nextState;
   public NodeStack baseStack;
@@ -87,11 +90,13 @@ class MyDiffResult implements DiffResult {
   public int bottom;
   public int clientDepth;
   public Set<Column> primaryKey;
+  public List<RefererForeignKeyAdapter> refererKeyAdapters;
 
   public MyDiffResult(MyRevision base,
                       NodeStack baseStack,
                       MyRevision fork,
-                      NodeStack forkStack)
+                      NodeStack forkStack,
+                      boolean skipBrokenReferences)
   {
     iterators[0] = new DiffIterator
       (base.root,
@@ -102,6 +107,10 @@ class MyDiffResult implements DiffResult {
        false);
 
     pairs[0] = new DiffPair();
+
+    this.fork = fork;
+
+    this.skipBrokenReferences = skipBrokenReferences;
   }
 
   public DiffResult.Type next() {
@@ -155,15 +164,31 @@ class MyDiffResult implements DiffResult {
             state = State.Descend;
           }
         } else {
-          if (depth > Constants.IndexDataDepth && depth == bottom) {
-            Comparable key = pair.base == null ? pair.fork.key : pair.base.key;
-            if (primaryKey.contains(key)) {
-              // no need to report the addition/subtraction of primary
-              // key columns, since we've already covered them during
-              // the descent
-              state = State.Iterate;
+          if (depth > Constants.IndexDataDepth) {
+            if (depth == bottom) {
+              Comparable key = pair.base == null
+                ? pair.fork.key : pair.base.key;
+
+              if (primaryKey.contains(key)) {
+                // no need to report the addition/subtraction of primary
+                // key columns, since we've already covered them during
+                // the descent
+                state = State.Iterate;
+              } else {
+                nextState = State.Value;
+                state = State.Flush;
+              }
+            } else if (depth == bottom - 1
+                       && skipBrokenReferences
+                       && pair.fork == null
+                       && findBrokenReference
+                       (fork, (Node) pair.base.value, refererKeyAdapters))
+            {
+              // no need to explicitly report deletion of rows which
+              // cannot exist due to a foreign key constraint
+              state = State.Iterate;              
             } else {
-              nextState = State.Value;
+              nextState = State.Descend;
               state = State.Flush;
             }
           } else {
@@ -188,6 +213,10 @@ class MyDiffResult implements DiffResult {
           if (depth == Constants.TableDataDepth) {
             table = (Table)
               (pair.base == null ? pair.fork.key : pair.base.key);
+
+            refererKeyAdapters
+              = ForeignKeys.getRefererForeignKeyAdapters
+              (table, iterators[0].forkRoot, baseStack);
           } else if (depth == Constants.IndexDataDepth) {
             Index index = (Index)
               (pair.base == null ? pair.fork.key : pair.base.key);
@@ -280,5 +309,18 @@ class MyDiffResult implements DiffResult {
 
   public void skip() {
     state.skip(this);
+  }
+
+  private static boolean findBrokenReference
+    (MyRevision revision,
+     Node tree,
+     List<RefererForeignKeyAdapter> adapters)
+  {
+    for (RefererForeignKeyAdapter adapter: adapters) {
+      if (adapter.isBrokenReference(revision, tree)) {
+        return true;
+      }
+    }
+    return false;
   }
 }

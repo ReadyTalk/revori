@@ -27,7 +27,7 @@ public class MyDBMS implements DBMS {
   public DiffResult diff(Revision base,
                          Revision fork)
   {
-    return base.diff(fork);
+    return base.diff(fork, false);
   }
 
   public RevisionBuilder builder(Revision base) {
