@@ -824,7 +824,7 @@ public class EpidemicServer {
     public void writeTo(EpidemicServer server, OutputStream out)
       throws IOException
     {
-      DiffResult result = dbms.diff(base, fork);
+      DiffResult result = base.diff(fork, true);
       WriteContext writeContext = new WriteContext(out, server);
       while (true) {
         DiffResult.Type type = result.next();
