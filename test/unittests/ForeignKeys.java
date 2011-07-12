@@ -285,8 +285,7 @@ public class ForeignKeys extends TestCase {
     } catch (ForeignKeyException e) { }
   }
 
-  @Test
-  public void testDiff() {
+  private static void testDiff(boolean skipBrokenReferences) {
     Column number = new Column(Integer.class);
     Column name = new Column(String.class);
     Table englishNumbers = new Table(list(number));
@@ -310,14 +309,30 @@ public class ForeignKeys extends TestCase {
 
     Revision fork = builder.commit(ForeignKeyResolvers.Delete);
     
-    for (Boolean skipBrokenReferences: list(true, false)) {
-      System.out.println("skipBrokenReferences " + skipBrokenReferences);
+    DiffResult result = base.diff(fork, skipBrokenReferences);
 
-      DiffResult result = base.diff(fork, skipBrokenReferences);
+    assertEquals(result.next(), DiffResult.Type.Key);
+    assertEquals(result.base(), englishNumbers);
+    assertEquals(result.fork(), englishNumbers);
 
+    assertEquals(result.next(), DiffResult.Type.Descend);
+    assertEquals(result.next(), DiffResult.Type.Key);
+    assertEquals(result.base(), 1);
+    assertEquals(result.fork(), null);
+    assertEquals(result.next(), DiffResult.Type.Descend);
+    assertEquals(result.next(), DiffResult.Type.Key);
+    assertEquals(result.base(), name);
+    assertEquals(result.fork(), null);
+    assertEquals(result.next(), DiffResult.Type.Value);
+    assertEquals(result.base(), "one");
+    assertEquals(result.fork(), null);
+
+    if (! skipBrokenReferences) {
+      assertEquals(result.next(), DiffResult.Type.Ascend);
+      assertEquals(result.next(), DiffResult.Type.Ascend);
       assertEquals(result.next(), DiffResult.Type.Key);
-      assertEquals(result.base(), englishNumbers);
-      assertEquals(result.fork(), englishNumbers);
+      assertEquals(result.base(), spanishNumbers);
+      assertEquals(result.fork(), spanishNumbers);
 
       assertEquals(result.next(), DiffResult.Type.Descend);
       assertEquals(result.next(), DiffResult.Type.Key);
@@ -328,34 +343,18 @@ public class ForeignKeys extends TestCase {
       assertEquals(result.base(), name);
       assertEquals(result.fork(), null);
       assertEquals(result.next(), DiffResult.Type.Value);
-      assertEquals(result.base(), "one");
+      assertEquals(result.base(), "uno");
       assertEquals(result.fork(), null);
-
-      if (! skipBrokenReferences) {
-        assertEquals(result.next(), DiffResult.Type.Ascend);
-        assertEquals(result.next(), DiffResult.Type.Ascend);
-
-        assertEquals(result.next(), DiffResult.Type.Key);
-        assertEquals(result.base(), spanishNumbers);
-        assertEquals(result.fork(), spanishNumbers);
-
-        assertEquals(result.next(), DiffResult.Type.Descend);
-        assertEquals(result.next(), DiffResult.Type.Key);
-        assertEquals(result.base(), 1);
-        assertEquals(result.fork(), null);
-        assertEquals(result.next(), DiffResult.Type.Descend);
-        assertEquals(result.next(), DiffResult.Type.Key);
-        assertEquals(result.base(), name);
-        assertEquals(result.fork(), null);
-        assertEquals(result.next(), DiffResult.Type.Value);
-        assertEquals(result.base(), "uno");
-        assertEquals(result.fork(), null);
-      }
-
-      assertEquals(result.next(), DiffResult.Type.Ascend);
-      assertEquals(result.next(), DiffResult.Type.Ascend);
-
-      assertEquals(result.next(), DiffResult.Type.End);
     }
+
+    assertEquals(result.next(), DiffResult.Type.Ascend);
+    assertEquals(result.next(), DiffResult.Type.Ascend);
+    assertEquals(result.next(), DiffResult.Type.End);
+  }
+
+  @Test
+  public void testDiff() {
+    testDiff(true);
+    testDiff(false);
   }
 }
