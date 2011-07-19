@@ -168,6 +168,12 @@ public class EpidemicServer {
     this.localNode = state(self);
   }
 
+  private void debugMessage(String message) {
+    if(Debug) {
+      System.out.println((localNode != null ? localNode.id : "(null)") + ": " + message);
+    }
+  }
+
   public void updateView(Set<NodeID> directlyConnectedNodes) {
     synchronized (lock) {
       for (Iterator<NodeState> it
@@ -176,6 +182,7 @@ public class EpidemicServer {
       {
         NodeState state = it.next();
         if (! directlyConnectedNodes.contains(state.id)) {
+          debugMessage("remove directly connected state " + state);
           it.remove();
           state.connectionState = null;
         }
@@ -187,6 +194,7 @@ public class EpidemicServer {
           state.connectionState = new ConnectionState();
           state.connectionState.readyToReceive = true;
 
+          debugMessage("add directly connected state " + node);
           directlyConnectedStates.put(node, state);
 
           sendNext(state);
@@ -203,6 +211,7 @@ public class EpidemicServer {
                     Revision fork)
   {
     synchronized (lock) {
+      debugMessage("merging");
       acceptRevision
         (localNode,
          nextLocalSequenceNumber++,
@@ -237,11 +246,21 @@ public class EpidemicServer {
       state.head = new Record(node, dbms.revision(), 0, null);
 
       for (NodeState s: states.values()) {
+        debugMessage(s.id + " sees " + node + " at 0");
         s.pending.put(state.id, state.head);
-        
-        
-
-        state.pending.put(s.id, s.head);
+        // state.pending.put(s.id, s.head);
+        Record rec;
+        if(s.head.sequenceNumber == 0) {
+          rec = s.head;
+        } else {
+          rec = new Record(s.id, dbms.revision(), 0, null);
+          if(s.head.merged != null && s.head.merged.node == s.id) {
+            rec.next = s.head.merged;
+          } else {
+            rec.next = s.head;
+          }
+        }
+        state.pending.put(s.id, rec);
       }
     }
     return state;
@@ -271,6 +290,8 @@ public class EpidemicServer {
 
     if (! cs.sentHello && readyForDataFromNewNode()) {
       state.connectionState.sentHello = true;
+
+      debugMessage("hello to " + state.id);
       send(state, Hello.Instance);
       return;
     }
@@ -280,6 +301,7 @@ public class EpidemicServer {
     }
 
     for (NodeState other: states.values()) {
+      debugMessage("sendNext: other: " + other.id + ", state: " + state.id+ ", nu: " + needsUpdate(state, other.head));
       if (other != state && needsUpdate(state, other.head)) {
         cs.sentSync = false;
         sendUpdate(state, other.head);
@@ -289,6 +311,7 @@ public class EpidemicServer {
       
     if (! cs.sentSync) {
       cs.sentSync = true;
+      debugMessage("sync to " + state.id);
       send(state, Sync.Instance);
       return;
     }
@@ -296,6 +319,7 @@ public class EpidemicServer {
 
   private boolean needsUpdate(NodeState state, Record target) {
     Record pending = state.pending.get(target.node);
+    // debugMessage("needsUpdate(psn: " + pending.sequenceNumber + ", tsn: " + target.sequenceNumber + ")");
     if (pending.sequenceNumber < target.sequenceNumber) {
       Record lastSent = state.connectionState.lastSent.get(target.node);
       if (lastSent == null) {
@@ -318,6 +342,8 @@ public class EpidemicServer {
     while (true) {
       Record lastSent = state.connectionState.lastSent.get(target.node);
       Record record = lastSent.next;
+
+      debugMessage("ls: " + lastSent.hashCode() + ", rec: " + record.hashCode());
             
       if (record.merged != null) {
         if (needsUpdate(state, record.merged)) {
@@ -325,10 +351,12 @@ public class EpidemicServer {
           continue;
         }
 
+        debugMessage("ack to " + state.id);
         send(state, new Ack
              (record.node, record.sequenceNumber, record.merged.node,
               record.merged.sequenceNumber));
       } else {
+        debugMessage("diff to " + state.id + ", ssn: " + lastSent.sequenceNumber + ", esn: " + record.sequenceNumber);
         send(state, new Diff
              (target.node, lastSent.sequenceNumber, record.sequenceNumber,
               new RevisionDiffBody(dbms, lastSent.revision, record.revision)));
@@ -340,6 +368,7 @@ public class EpidemicServer {
   }
 
   private void acceptSync(NodeID origin) {
+    debugMessage("sync from " + origin);
     NodeState state = state(origin);
     
     if (! state.connectionState.gotSync) {
@@ -350,6 +379,7 @@ public class EpidemicServer {
   }
 
   private void acceptHello(NodeID origin) {
+    debugMessage("hello from " + origin);
     NodeState state = state(origin);
     
     state.connectionState.gotHello = true;
@@ -361,6 +391,7 @@ public class EpidemicServer {
                           long endSequenceNumber,
                           DiffBody body)
   {
+    debugMessage("diff from " + origin + ", ssn: " + startSequenceNumber + ", esn: " + endSequenceNumber);
     NodeState state = state(origin);
 
     if (startSequenceNumber <= state.head.sequenceNumber) {
@@ -375,6 +406,7 @@ public class EpidemicServer {
       if (record != null) {
         if (endSequenceNumber == record.sequenceNumber) {
           // do nothing -- we already have this revision
+          debugMessage("(ignoring diff from " + origin + ")");
         } else if (startSequenceNumber == record.sequenceNumber) {
           acceptRevision
             (state, endSequenceNumber, body.apply(this, record.revision));
@@ -405,6 +437,7 @@ public class EpidemicServer {
                               Record merged)
   {
     Record record = state.head;
+    debugMessage("insertRevision: record: " + record.hashCode());
     while (sequenceNumber < record.sequenceNumber) {
       record = record.previous.get();
     }
@@ -424,6 +457,7 @@ public class EpidemicServer {
     } else {
       state.head = newRecord;
     }
+    debugMessage("insertRevision state.id: " + state.id + ", sequenceNo: " + sequenceNumber + ", record: " + newRecord.hashCode());
   }
 
   private void acceptAck(NodeID acknowledger,
@@ -431,6 +465,7 @@ public class EpidemicServer {
                          NodeID diffOrigin,
                          long diffSequenceNumber)
   {
+    debugMessage("ack from " + acknowledger + ", ackSeqNo: " + acknowledgerSequenceNumber + ", diffSeqNo: " + diffSequenceNumber);
     NodeState state = state(acknowledger);
 
     Record record = state.pending.get(diffOrigin);
@@ -992,6 +1027,10 @@ public class EpidemicServer {
 
     public boolean equals(Object o) {
       return o instanceof NodeID && id.equals(((NodeID) o).id);
+    }
+
+    public String toString() {
+      return id;
     }
   }
 

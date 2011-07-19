@@ -6,6 +6,7 @@ import static org.junit.Assert.assertEquals;
 import static com.readytalk.oss.dbms.util.Util.list;
 import static com.readytalk.oss.dbms.util.Util.set;
 import static com.readytalk.oss.dbms.DuplicateKeyResolution.Throw;
+import static com.readytalk.oss.dbms.DuplicateKeyResolution.Overwrite;
 
 import com.readytalk.oss.dbms.DBMS;
 import com.readytalk.oss.dbms.Table;
@@ -82,9 +83,32 @@ public class Epidemic extends TestCase{
 
     expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
     expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
+
+    base = n1.server.head();
+    builder = dbms.builder(base);
+    builder.insert(Overwrite, numbers, 1, name, "une");
+
+    n1.server.merge(base, builder.commit());
+
+    expectEqual(n1.server.head().query(numbersKey, 1, name), "une");
+
+    base = n2.server.head();
+
+    builder = dbms.builder(base);
+    builder.insert(Overwrite, numbers, 1, name, "ichi");
+
+    n2.server.merge(base, builder.commit());
+
+    expectEqual(n2.server.head().query(numbersKey, 1, name), "ichi");
+
+    flush(network);
+
+    expectEqual(n1.server.head().query(numbersKey, 1, name), "une");
+    expectEqual(n2.server.head().query(numbersKey, 1, name), "une");
   }
 
   private static void flush(NodeNetwork network) {
+    System.out.println("--- flush ---");
     final int MaxIterations = 100;
     int iteration = 0;
     while (network.messages.size() > 0) {
@@ -118,6 +142,7 @@ public class Epidemic extends TestCase{
         }
       }
     }
+    System.out.println("--- done ---");
   }
 
   private static class MyConflictResolver implements NodeConflictResolver {
