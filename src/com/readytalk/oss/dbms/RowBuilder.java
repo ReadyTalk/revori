@@ -27,7 +27,8 @@ public interface RowBuilder {
   /**
    * Indicate that no further updates will
    * be performed on this RowBuilder.
+   * @return the parent TableBuilder
    */
-  public void done();
+  public TableBuilder up();
   
 }

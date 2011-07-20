@@ -14,4 +14,11 @@ public interface TableBuilder {
    * @return self
    */
   public TableBuilder delete(Comparable ... key);
+
+  /**
+   * Indicate that no further updates will
+   * be performed on this TableBuilder.
+   * @return the parent RevisionBuilder
+   */
+  public RevisionBuilder up();
 }

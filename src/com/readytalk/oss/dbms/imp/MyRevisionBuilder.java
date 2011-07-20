@@ -630,8 +630,9 @@ class MyRevisionBuilder implements RevisionBuilder {
         //return this;
       }
 
-      public void done() {
-        row = this;
+      public TableBuilder up() {
+        MyTableBuilder.this.row = this;
+        return MyTableBuilder.this;
       }
     }
 
@@ -654,6 +655,10 @@ class MyRevisionBuilder implements RevisionBuilder {
 
     public TableBuilder delete(Comparable ... key) {
       return this;
+    }
+
+    public RevisionBuilder up() {
+      return MyRevisionBuilder.this;
     }
   }
 
