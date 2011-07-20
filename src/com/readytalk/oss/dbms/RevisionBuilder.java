@@ -107,11 +107,31 @@ public interface RevisionBuilder {
   public void remove(Index index);
 
   /**
+   * Adds the specified foreign key constraint to this builder.  This
+   * has no effect if the constraint is already present.
+   */
+  public void add(ForeignKey constraint);
+
+  /**
+   * Removes the specified foreign key constraint from this builder.
+   * This has no effect if the constraint is not found.
+   */
+  public void remove(ForeignKey constraint);
+
+  /**
+   * Identical to commit(ForeignKeyResolvers.Restrict). 
+   */
+  public Revision commit();
+
+  /**
    * Commits the changes accumulated in this builder, producing a
    * revision which reflects the base revision with which was created
    * plus any modifications applied thereafter.  This call invalidates
    * the builder; any further attempts to apply modifications to it
    * will result in IllegalStateExceptions.
+   *
+   * Any foreign key violations present at the time of this call will
+   * trigger calls to foreignKeyResolver.handleBrokenReference.
    */
-  public Revision commit();
+  public Revision commit(ForeignKeyResolver foreignKeyResolver);
 }

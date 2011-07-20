@@ -30,6 +30,9 @@ import com.readytalk.oss.dbms.InsertTemplate;
 import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.DeleteTemplate;
 import com.readytalk.oss.dbms.UpdateTemplate;
+import com.readytalk.oss.dbms.ForeignKey;
+import com.readytalk.oss.dbms.ForeignKeyResolver;
+import com.readytalk.oss.dbms.ForeignKeyResolvers;
 
 import java.util.Collection;
 import java.util.List;
@@ -140,7 +143,8 @@ public class SQLServer {
                 ? dbms.revision() : ((Tag) baseValue).revision,
                 ((Tag) leftValue).revision,
                 ((Tag) rightValue).revision,
-                rightPreferenceConflictResolver));
+                rightPreferenceConflictResolver,
+                ForeignKeyResolvers.Delete));
           } else {
             return rightValue;
           }
@@ -1322,7 +1326,8 @@ public class SQLServer {
         AtomicReference<Revision> dbHead = client.server.dbHead;
         while (! dbHead.compareAndSet(myTail, myHead)) {
           Revision fork = dbHead.get();
-          myHead = dbms.merge(myTail, fork, myHead, conflictResolver);
+          myHead = dbms.merge
+            (myTail, fork, myHead, conflictResolver, ForeignKeyResolvers.Delete);
           myTail = fork;
         }
       }
@@ -2222,7 +2227,8 @@ public class SQLServer {
                        (findTag(client, ((Name) tree.get(1)).value).revision,
                         findTag(client, ((Name) tree.get(2)).value).revision,
                         findTag(client, ((Name) tree.get(3)).value).revision,
-                        conflictResolver)));
+                        conflictResolver,
+                        ForeignKeyResolvers.Delete)));
                commitTransaction(client);
              } finally {
                popTransaction(client);

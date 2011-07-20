@@ -2,10 +2,15 @@ package com.readytalk.oss.dbms.imp;
 
 import static com.readytalk.oss.dbms.util.Util.list;
 
+import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Index;
 import com.readytalk.oss.dbms.DiffResult;
 import com.readytalk.oss.dbms.imp.DiffIterator.DiffPair;
+
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 class MyDiffResult implements DiffResult {
   public enum State {
@@ -18,6 +23,16 @@ class MyDiffResult implements DiffResult {
       public Object base(MyDiffResult r) {
         Node n = r.pairs[r.clientDepth].base;
         return n == null ? null : n.key;
+      }
+
+      public Node forkTree(MyDiffResult r) {
+        Node n = r.pairs[r.clientDepth].fork;
+        return n == null ? Node.Null : (Node) n.value;
+      }
+
+      public Node baseTree(MyDiffResult r) {
+        Node n = r.pairs[r.clientDepth].base;
+        return n == null ? Node.Null : (Node) n.value;
       }
 
       public void skip(MyDiffResult r) {
@@ -48,6 +63,14 @@ class MyDiffResult implements DiffResult {
       throw new IllegalStateException();
     }
 
+    public Node forkTree(MyDiffResult r) {
+      throw new IllegalStateException();
+    }
+
+    public Node baseTree(MyDiffResult r) {
+      throw new IllegalStateException();
+    }
+
     public void skip(MyDiffResult r) {
       throw new IllegalStateException();
     }
@@ -56,6 +79,8 @@ class MyDiffResult implements DiffResult {
   public final DiffIterator[] iterators = new DiffIterator[Constants.MaxDepth];
   public final DiffPair[] pairs = new DiffPair[Constants.MaxDepth];
   public final boolean[] clientHasKey = new boolean[Constants.MaxDepth];
+  public final MyRevision fork;
+  public final boolean skipBrokenReferences;
   public State state = State.Iterate;
   public State nextState;
   public NodeStack baseStack;
@@ -64,11 +89,14 @@ class MyDiffResult implements DiffResult {
   public int depth;
   public int bottom;
   public int clientDepth;
+  public Set<Column> primaryKey;
+  public List<RefererForeignKeyAdapter> refererKeyAdapters;
 
   public MyDiffResult(MyRevision base,
                       NodeStack baseStack,
                       MyRevision fork,
-                      NodeStack forkStack)
+                      NodeStack forkStack,
+                      boolean skipBrokenReferences)
   {
     iterators[0] = new DiffIterator
       (base.root,
@@ -79,6 +107,10 @@ class MyDiffResult implements DiffResult {
        false);
 
     pairs[0] = new DiffPair();
+
+    this.fork = fork;
+
+    this.skipBrokenReferences = skipBrokenReferences;
   }
 
   public DiffResult.Type next() {
@@ -119,6 +151,7 @@ class MyDiffResult implements DiffResult {
 
       case Key: {
         DiffPair pair = pairs[depth];
+
         if (pair.base != null && pair.fork != null) {
           if (depth > Constants.IndexDataDepth && depth == bottom) {
             if (Compare.equal(pair.base.value, pair.fork.value)) {
@@ -131,12 +164,37 @@ class MyDiffResult implements DiffResult {
             state = State.Descend;
           }
         } else {
-          if (depth > Constants.IndexDataDepth && depth == bottom) {
-            nextState = State.Value;
+          if (depth > Constants.IndexDataDepth) {
+            if (depth == bottom) {
+              Comparable key = pair.base == null
+                ? pair.fork.key : pair.base.key;
+
+              if (primaryKey.contains(key)) {
+                // no need to report the addition/subtraction of primary
+                // key columns, since we've already covered them during
+                // the descent
+                state = State.Iterate;
+              } else {
+                nextState = State.Value;
+                state = State.Flush;
+              }
+            } else if (depth == bottom - 1
+                       && skipBrokenReferences
+                       && pair.fork == null
+                       && findBrokenReference
+                       (fork, (Node) pair.base.value, refererKeyAdapters))
+            {
+              // no need to explicitly report deletion of rows which
+              // cannot exist due to a foreign key constraint
+              state = State.Iterate;              
+            } else {
+              nextState = State.Descend;
+              state = State.Flush;
+            }
           } else {
             nextState = State.Descend;
+            state = State.Flush;
           }
-          state = State.Flush;
         }
       } break;
 
@@ -155,12 +213,19 @@ class MyDiffResult implements DiffResult {
           if (depth == Constants.TableDataDepth) {
             table = (Table)
               (pair.base == null ? pair.fork.key : pair.base.key);
+
+            if (skipBrokenReferences) {
+              refererKeyAdapters
+                = ForeignKeys.getRefererForeignKeyAdapters
+                (table, iterators[0].forkRoot, baseStack);
+            }
           } else if (depth == Constants.IndexDataDepth) {
             Index index = (Index)
               (pair.base == null ? pair.fork.key : pair.base.key);
 
             if (Compare.equal(index, table.primaryKey)) {
               bottom = index.columns.size() + Constants.IndexDataBodyDepth;
+              primaryKey = new TreeSet(table.primaryKey.columns);
               descend();
             }
             break;
@@ -183,6 +248,14 @@ class MyDiffResult implements DiffResult {
       } break;
 
       case End:
+        // todo: be defensive to ensure we can safely keep returning
+        // DiffResult.Type.End if the application calls next again
+        // after this.  The popStack calls below should not be called
+        // more than once.
+
+        baseStack.popStack();
+        forkStack.popStack();
+
         return DiffResult.Type.End;
 
       default:
@@ -228,7 +301,28 @@ class MyDiffResult implements DiffResult {
     return state.base(this);
   }
 
+  public Node forkTree() {
+    return state.forkTree(this);
+  }
+
+  public Node baseTree() {
+    return state.baseTree(this);
+  }
+
   public void skip() {
     state.skip(this);
+  }
+
+  private static boolean findBrokenReference
+    (MyRevision revision,
+     Node tree,
+     List<RefererForeignKeyAdapter> adapters)
+  {
+    for (RefererForeignKeyAdapter adapter: adapters) {
+      if (adapter.isBrokenReference(revision, tree)) {
+        return true;
+      }
+    }
+    return false;
   }
 }

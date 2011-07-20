@@ -4,13 +4,13 @@ package com.readytalk.oss.dbms;
  * Type representing a database-wide diff between two revisions.<p>
  *
  * The diff is represented as a tree, where the first level is the
- * union of tables appearing in both the base and the fork, subsequent
- * levels are primary key values for the respective tables, and the
- * leaf nodes are the key-value pairs composing the rows for the
- * respective primary keys.  If a table or key appears in at least one
- * of the two revisions being compared, it will appear in this tree.
- * Thus, a DiffResult is a state machine which visits each node in the
- * tree in a depth first fashion.
+ * union of tables appearing in either the base or the fork,
+ * subsequent levels are primary key values for the respective tables,
+ * and the leaf nodes are the key-value pairs composing the rows for
+ * the respective primary keys.  If a table or key appears in at least
+ * one of the two revisions being compared, it will appear in this
+ * tree.  Thus, a DiffResult is a state machine which visits each node
+ * in the tree in a depth-first fashion.
  */
 public interface DiffResult {
   /**

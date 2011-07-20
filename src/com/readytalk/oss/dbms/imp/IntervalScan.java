@@ -10,6 +10,9 @@ class IntervalScan implements Scan {
   public static final IntervalScan Unbounded
     = new IntervalScan(ConstantAdapter.Undefined, ConstantAdapter.Undefined);
 
+  public static final IntervalScan Empty
+    = new IntervalScan(ConstantAdapter.Dummy, ConstantAdapter.Dummy);
+
   public final ExpressionAdapter low;
   public final BoundType lowBoundType;
   public final ExpressionAdapter high;

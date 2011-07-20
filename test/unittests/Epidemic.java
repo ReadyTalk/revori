@@ -13,6 +13,9 @@ import com.readytalk.oss.dbms.Index;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Revision;
 import com.readytalk.oss.dbms.RevisionBuilder;
+import com.readytalk.oss.dbms.ForeignKey;
+import com.readytalk.oss.dbms.ForeignKeyResolver;
+import com.readytalk.oss.dbms.ForeignKeyResolvers;
 import com.readytalk.oss.dbms.imp.MyDBMS;
 import com.readytalk.oss.dbms.util.BufferOutputStream;
 import com.readytalk.oss.dbms.server.EpidemicServer;
@@ -43,9 +46,10 @@ public class Epidemic extends TestCase{
     DBMS dbms = new MyDBMS();
     NodeNetwork network = new NodeNetwork();
     NodeConflictResolver conflictResolver = new MyConflictResolver();
+    ForeignKeyResolver foreignKeyResolver = ForeignKeyResolvers.Delete;
 
-    Node n1 = new Node(dbms, conflictResolver, network, 1);
-    Node n2 = new Node(dbms, conflictResolver, network, 2);
+    Node n1 = new Node(dbms, conflictResolver, foreignKeyResolver, network, 1);
+    Node n2 = new Node(dbms, conflictResolver, foreignKeyResolver, network, 2);
 
     n1.server.updateView(set(n2.id));
     n2.server.updateView(set(n1.id));
@@ -140,12 +144,13 @@ public class Epidemic extends TestCase{
 
     public Node(DBMS dbms,
                 NodeConflictResolver conflictResolver,
+                ForeignKeyResolver foreignKeyResolver,
                 NodeNetwork network,
                 int id)
     {
       this.id = new NodeID(String.valueOf(id));
       this.server = new EpidemicServer
-        (dbms, conflictResolver, network, this.id);
+        (dbms, conflictResolver, foreignKeyResolver, network, this.id);
       network.nodes.put(this.id, this);
     }
   }

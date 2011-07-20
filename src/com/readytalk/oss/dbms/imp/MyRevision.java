@@ -12,15 +12,20 @@ import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.DiffResult;
 import com.readytalk.oss.dbms.ConflictResolver;
+import com.readytalk.oss.dbms.ForeignKeyResolver;
 
 import java.util.List;
 
-class MyRevision implements Revision {
+public class MyRevision implements Revision {
   public static final MyRevision Empty = new MyRevision
     (new Object(), Node.Null);
 
   public final Object token;
   public Node root;
+
+  public static Revision empty() {
+    return Empty;
+  }
 
   public MyRevision(Object token, Node root) {
     this.token = token;
@@ -97,7 +102,7 @@ class MyRevision implements Revision {
     return new MyQueryResult(myBase, myFork, template, copy(parameters));
   }
 
-  public DiffResult diff(Revision fork)
+  public DiffResult diff(Revision fork, boolean skipBrokenReferences)
   {
     MyRevision myBase = this;
     MyRevision myFork;
@@ -108,7 +113,8 @@ class MyRevision implements Revision {
         ("revision not created by this implementation");        
     }
 
-    return new MyDiffResult(myBase, new NodeStack(), myFork, new NodeStack());
+    return new MyDiffResult
+      (myBase, new NodeStack(), myFork, new NodeStack(), skipBrokenReferences);
   }
 
   public RevisionBuilder builder() {
@@ -117,7 +123,8 @@ class MyRevision implements Revision {
 
   public Revision merge(Revision left,
                         Revision right,
-                        ConflictResolver conflictResolver)
+                        ConflictResolver conflictResolver,
+                        ForeignKeyResolver foreignKeyResolver)
   {
     MyRevision myBase = this;
     MyRevision myLeft;
@@ -130,6 +137,7 @@ class MyRevision implements Revision {
         ("revision not created by this implementation");
     }
 
-    return Merge.mergeRevisions(myBase, myLeft, myRight, conflictResolver);
+    return Merge.mergeRevisions
+      (myBase, myLeft, myRight, conflictResolver, foreignKeyResolver);
   }
 }

@@ -54,7 +54,7 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
     TableIterator iterator = new TableIterator
       (update.tableReference, MyRevision.Empty, NodeStack.Null, revision,
        new NodeStack(), test, expressionContext, plan, false);
-                                                                            
+
     List<Column> keyColumns = index.columns;
 
     int[] keyColumnsUpdated;
@@ -78,7 +78,7 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
       }
     }
         
-    Object deleteToken = index.equals(plan.index) ? null : builder.token;
+    Object updateToken = index.equals(plan.index) ? null : builder.token;
 
     count = 0;
     boolean done = false;
@@ -119,8 +119,8 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
             break;
           }
 
-          if (deleteToken == null) {
-            builder.setToken(deleteToken = new Object());
+          if (updateToken == null) {
+            builder.setToken(updateToken = new Object());
           }
 
           int i = 0;

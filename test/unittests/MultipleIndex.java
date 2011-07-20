@@ -462,7 +462,7 @@ public class MultipleIndex extends TestCase{
             {
               throw new RuntimeException();
             }
-          });
+          }, null);
 
         TableReference numbersReference = new TableReference(numbers);
 
@@ -556,7 +556,7 @@ public class MultipleIndex extends TestCase{
             {
               throw new RuntimeException();
             }
-          });
+          }, null);
 
         result = dbms.diff
           (tail, merge, greaterThanAndLessThan, "four", "two");

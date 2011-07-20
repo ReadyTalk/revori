@@ -1,7 +1,49 @@
 package com.readytalk.oss.dbms;
 
 /**
- * Type representing an immutable database revision.
+ * Type representing an immutable database revision.<p>
+ *
+ * This interface defines an API for using a revision-oriented
+ * relational database management system.  The design centers on
+ * immutable database revisions from which new revisions may be
+ * derived by applying patches composed of inserts, updates and
+ * deletes.  This, along with associated classes and interfaces,
+ * provides methods to do the following:<p>
+ *
+ * <ul><li>Define sets of tables and columns which represent the
+ * structure of the data to be stored</li>
+ *
+ * <li>Define a new, empty database revision</li>
+ *
+ * <li>Create new revisions by performing actions such as adding and
+ * removing indexes and applying SQL-style inserts, updates, and
+ * deletes
+ *
+ *   <ul><li>A row may contain values for any column, and there is no
+ *   fixed list of columns which each row in a table must have except
+ *   for those specified by the primary key.  A query for a column for
+ *   which a row has no value will return null.</li></ul></li>
+ *
+ * <li>Calculate three-way merges from revisions for concurrency
+ * control</li>
+ *
+ * <li>Define queries using SQL-style relational semantics</li>
+ *
+ * <li>Execute queries by supplying two revisions
+ *
+ *   <ul><li>The result is two sets of tuples satisfying the query
+ *   constraints:
+ *
+ *     <ul><li>New tuples which either appear in the second revision
+ *     but not the first or which have changed from the first to the
+ *     second</li>
+ *
+ *     <li>Obsolete tuples which appear in the first but not the
+ *     second</li></ul></li>
+ *
+ *   <li>Note that traditional query semantics may be achieved by
+ *   specifying an empty revision as the first parameter and the
+ *   revision to be queried as the second</li></ul></li></ul>
  */
 public interface Revision {
   /**
@@ -66,8 +108,14 @@ public interface Revision {
    *
    * See the DiffResult documentation for how this diff is
    * represented.
+   *
+   * If skipBrokenReferences is true, the diff will not visit deleted
+   * rows for which at least one foreign key constraint is broken,
+   * since their deletion can be inferred by the deletion or update of
+   * the referent row(s).  Otherwise, all deleted rows will be
+   * visited.
    */
-  public DiffResult diff(Revision fork);
+  public DiffResult diff(Revision fork, boolean skipBrokenReferences);
 
   /**
    * Creates a new builder for use in incrementally defining a new
@@ -106,5 +154,6 @@ public interface Revision {
    */
   public Revision merge(Revision left,
                         Revision right,
-                        ConflictResolver conflictResolver);
+                        ConflictResolver conflictResolver,
+                        ForeignKeyResolver foreignKeyResolver);
 }

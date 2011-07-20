@@ -13,7 +13,9 @@ public class UnaryOperation implements Expression {
     /**
      * Indicates a boolean "not" operation.
      */
-    Not(OperationClass.Boolean);
+    Not(OperationClass.Boolean),
+
+      IsNull(OperationClass.Boolean);
 
     private final OperationClass operationClass;
 

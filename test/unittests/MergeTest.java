@@ -82,7 +82,7 @@ public class MergeTest extends TestCase{
 
         Revision right = builder.commit();
 
-        Revision merge = dbms.merge(base, left, right, null);
+        Revision merge = dbms.merge(base, left, right, null, null);
 
         QueryTemplate any = new QueryTemplate
           (list((Expression) new ColumnReference(numbersReference, name)),
@@ -123,7 +123,7 @@ public class MergeTest extends TestCase{
 
         right = builder.commit();
 
-        merge = dbms.merge(base, left, right, null);
+        merge = dbms.merge(base, left, right, null, null);
 
         result = dbms.diff(base, merge, any);
 
@@ -150,7 +150,7 @@ public class MergeTest extends TestCase{
 
         right = builder.commit();
 
-        merge = dbms.merge(base, left, right, null);
+        merge = dbms.merge(base, left, right, null, null);
 
         result = dbms.diff(base, merge, any);
 
@@ -188,7 +188,7 @@ public class MergeTest extends TestCase{
               
               return "quatro";
             }
-          });
+          }, null);
 
         result = dbms.diff(base, merge, any);
 
@@ -226,7 +226,7 @@ public class MergeTest extends TestCase{
               
               return "unit";
             }
-          });
+          }, null);
 
         result = dbms.diff(base, merge, any);
 
@@ -266,7 +266,7 @@ public class MergeTest extends TestCase{
               
               return "unit";
             }
-          });
+          }, null);
 
         result = dbms.diff(tail, merge, any);
 
@@ -306,7 +306,7 @@ public class MergeTest extends TestCase{
               
               return "unit";
             }
-          });
+          }, null);
 
         result = dbms.diff(tail, merge, any);
 

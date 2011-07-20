@@ -4,19 +4,23 @@ import static com.readytalk.oss.dbms.util.Util.expect;
 import static com.readytalk.oss.dbms.util.Util.list;
 
 import com.readytalk.oss.dbms.ConflictResolver;
+import com.readytalk.oss.dbms.ForeignKeyResolver;
 import com.readytalk.oss.dbms.Index;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Column;
+import com.readytalk.oss.dbms.DiffResult;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
 
 class Merge {
   public static MyRevision mergeRevisions
     (MyRevision base,
      MyRevision left,
      MyRevision right,
-     ConflictResolver conflictResolver)
+     ConflictResolver conflictResolver,
+     ForeignKeyResolver foreignKeyResolver)
   {
     // The merge builds a new revision starting with the specified
     // left revision via a process which consists of the following
@@ -29,6 +33,8 @@ class Merge {
     //     and adding new or updated ones.
     //
     //  3. Build data trees for any new indexes added.
+    //
+    //  4. Verify foreign keys constraints.
 
     MyRevisionBuilder builder = new MyRevisionBuilder
       (new Object(), left, new NodeStack());
@@ -214,6 +220,15 @@ class Merge {
     for (Index index: newIndexes) {
       builder.buildIndexTree(index);
     }
+
+    // verify all foreign key constraints
+    ForeignKeys.checkForeignKeys
+      (leftStack, left, baseStack, builder, rightStack, foreignKeyResolver,
+       null);
+
+    ForeignKeys.checkForeignKeys
+      (rightStack, right, baseStack, builder, leftStack, foreignKeyResolver,
+       null);
 
 //     System.out.println("merge base");
 //     dump(base.root, System.out, 1);

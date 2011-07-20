@@ -9,6 +9,7 @@ import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.DiffResult;
 import com.readytalk.oss.dbms.ConflictResolver;
+import com.readytalk.oss.dbms.ForeignKeyResolver;
 
 public class MyDBMS implements DBMS {
   public Revision revision() {
@@ -26,7 +27,7 @@ public class MyDBMS implements DBMS {
   public DiffResult diff(Revision base,
                          Revision fork)
   {
-    return base.diff(fork);
+    return base.diff(fork, false);
   }
 
   public RevisionBuilder builder(Revision base) {
@@ -36,8 +37,9 @@ public class MyDBMS implements DBMS {
   public Revision merge(Revision base,
                         Revision left,
                         Revision right,
-                        ConflictResolver conflictResolver)
+                        ConflictResolver conflictResolver,
+                        ForeignKeyResolver foreignKeyResolver)
   {
-    return base.merge(left, right, conflictResolver);
+    return base.merge(left, right, conflictResolver, foreignKeyResolver);
   }
 }

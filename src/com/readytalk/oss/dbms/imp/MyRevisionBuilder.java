@@ -4,6 +4,13 @@ import static com.readytalk.oss.dbms.util.Util.expect;
 import static com.readytalk.oss.dbms.util.Util.list;
 import static com.readytalk.oss.dbms.util.Util.copy;
 
+import static com.readytalk.oss.dbms.ExpressionFactory.reference;
+import static com.readytalk.oss.dbms.ExpressionFactory.isNull;
+import static com.readytalk.oss.dbms.ExpressionFactory.and;
+import static com.readytalk.oss.dbms.ExpressionFactory.equal;
+import static com.readytalk.oss.dbms.SourceFactory.reference;
+import static com.readytalk.oss.dbms.SourceFactory.leftJoin;
+
 import com.readytalk.oss.dbms.RevisionBuilder;
 import com.readytalk.oss.dbms.TableBuilder;
 import com.readytalk.oss.dbms.RowBuilder;
@@ -22,11 +29,20 @@ import com.readytalk.oss.dbms.UpdateTemplate;
 import com.readytalk.oss.dbms.InsertTemplate;
 import com.readytalk.oss.dbms.DeleteTemplate;
 import com.readytalk.oss.dbms.ColumnList;
+import com.readytalk.oss.dbms.ForeignKey;
+import com.readytalk.oss.dbms.ForeignKeyResolver;
+import com.readytalk.oss.dbms.ForeignKeyResolvers;
+import com.readytalk.oss.dbms.ForeignKeyException;
+import com.readytalk.oss.dbms.Expression;
+import com.readytalk.oss.dbms.QueryTemplate;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Collections;
 
 class MyRevisionBuilder implements RevisionBuilder {
   private static final Map<Class, PatchTemplateAdapter> adapters
@@ -47,18 +63,20 @@ class MyRevisionBuilder implements RevisionBuilder {
   public final Node.BlazeResult blazeResult = new Node.BlazeResult();
   public NodeStack indexUpdateBaseStack;
   public NodeStack indexUpdateForkStack;
+  public MyRevision base;
   public MyRevision indexBase;
   public MyRevision result;
   public int max = -1;
   public boolean dirtyIndexes;
 
   public MyRevisionBuilder(Object token,
-                           MyRevision result,
+                           MyRevision base,
                            NodeStack stack)
   {
     this.token = token;
-    this.indexBase = result;
-    this.result = result;
+    this.base = base;
+    this.indexBase = base;
+    this.result = base;
     this.stack = stack;
     keys = new Comparable[Constants.MaxDepth + 1];
     blazedRoots = new Node[Constants.MaxDepth + 1];
@@ -221,7 +239,7 @@ class MyRevisionBuilder implements RevisionBuilder {
 
     TableIterator iterator
       = new TableIterator
-      (new TableReference(index.table), base, baseStack, result, forkStack,
+      (reference(index.table), base, baseStack, result, forkStack,
        ConstantAdapter.True, new ExpressionContext(null), false);
 
     setKey(Constants.TableDataDepth, index.table);
@@ -315,6 +333,17 @@ class MyRevisionBuilder implements RevisionBuilder {
     }
   }
 
+  private void checkForeignKeys(ForeignKeyResolver resolver) {
+    // todo: is there a performance problem with creating new
+    // NodeStacks every time this method is called?  If so, are there
+    // common cases were we can avoid creating them, or should we try
+    // to recycle them somehow?
+
+    ForeignKeys.checkForeignKeys
+      (new NodeStack(), base, new NodeStack(), this, new NodeStack(),
+       resolver, null);
+  }
+
   public void prepareForUpdate(Table table) {
     // since we update non-primary-key indexes lazily, we may need to
     // freeze a copy of the last revision which contained up-to-date
@@ -334,7 +363,7 @@ class MyRevisionBuilder implements RevisionBuilder {
   public void buildIndexTree(Index index)
   {
     TableIterator iterator = new TableIterator
-      (new TableReference(index.table), MyRevision.Empty, NodeStack.Null,
+      (reference(index.table), MyRevision.Empty, NodeStack.Null,
        result, new NodeStack(), ConstantAdapter.True,
        new ExpressionContext(null), false);
 
@@ -372,6 +401,39 @@ class MyRevisionBuilder implements RevisionBuilder {
     }
   }
 
+  private void pathInsert(Table table, Comparable ... path) {
+    setKey(Constants.TableDataDepth, table);
+    setKey(Constants.IndexDataDepth, table.primaryKey);
+
+    Node tree = Node.Null;
+    Node.BlazeResult result = new Node.BlazeResult();
+    List<Column> columns = table.primaryKey.columns;
+    for (int i = 0; i < columns.size(); ++i) {
+      tree = Node.blaze(result, token, stack, tree, columns.get(i));
+      result.node.value = path[i];
+
+      if (i == columns.size() - 1) {
+        insertOrUpdate(Constants.IndexDataBodyDepth + i, path[i], tree);
+      } else {
+        setKey(Constants.IndexDataBodyDepth + i, path[i]);
+      }
+    }
+  }
+
+  private void pathDelete(Table table, Comparable ... path) {
+    setKey(Constants.TableDataDepth, table);
+    setKey(Constants.IndexDataDepth, table.primaryKey);
+
+    List<Column> columns = table.primaryKey.columns;
+    for (int i = 0; i < columns.size(); ++i) {
+      if (i == columns.size() - 1) {
+        delete(Constants.IndexDataBodyDepth + i, path[i]);
+      } else {
+        setKey(Constants.IndexDataBodyDepth + i, path[i]);
+      }
+    }
+  }
+
   private void addIndex(Index index)
   {
     if (index.equals(index.table.primaryKey)
@@ -389,25 +451,8 @@ class MyRevisionBuilder implements RevisionBuilder {
     updateIndexes();
 
     buildIndexTree(index);
-    
-    setKey(Constants.TableDataDepth, Constants.IndexTable);
-    setKey(Constants.IndexDataDepth, Constants.IndexTable.primaryKey);
 
-    Node tree = Node.Null;
-    Node.BlazeResult result = new Node.BlazeResult();
-    Comparable[] values = new Comparable[] { index.table, index };
-    List<Column> columns = Constants.IndexTable.primaryKey.columns;
-    for (int i = 0; i < columns.size(); ++i) {
-      tree = Node.blaze
-        (result, token, stack, tree, columns.get(i));
-      result.node.value = values[i];
-
-      if (i == columns.size() - 1) {
-        insertOrUpdate(Constants.IndexDataBodyDepth + i, values[i], tree);
-      } else {
-        setKey(Constants.IndexDataBodyDepth + i, values[i]);
-      }
-    }
+    pathInsert(Constants.IndexTable, index.table, index);
   }
 
   private void removeIndex(Index index)
@@ -416,13 +461,49 @@ class MyRevisionBuilder implements RevisionBuilder {
       throw new IllegalArgumentException("cannot remove primary key");
     }
 
-    setKey(Constants.TableDataDepth, Constants.IndexTable);
-    setKey(Constants.IndexDataDepth, Constants.IndexTable.primaryKey);
-    setKey(Constants.IndexDataBodyDepth, index.table);
-    delete(Constants.IndexDataBodyDepth + 1, index);
+    pathDelete(Constants.IndexTable, index.table, index);
 
     setKey(Constants.TableDataDepth, index.table);
     delete(Constants.IndexDataDepth, index);
+  }
+
+  private void addForeignKey(ForeignKey constraint)
+  {
+    if (Node.pathFind
+        (result.root, Constants.ForeignKeyTable,
+         Constants.ForeignKeyTable.primaryKey, constraint) != Node.Null)
+    {
+      // the specified foreign key is already present -- ignore
+      return;
+    }
+
+    insert(DuplicateKeyResolution.Throw, Constants.ForeignKeyTable, constraint,
+           Constants.ForeignKeyRefererColumn, constraint.refererTable);
+
+    insert(DuplicateKeyResolution.Throw, Constants.ForeignKeyTable, constraint,
+           Constants.ForeignKeyReferentColumn, constraint.referentTable);
+
+    add(Constants.ForeignKeyRefererIndex);
+    add(Constants.ForeignKeyReferentIndex);
+
+    dirtyIndexes = true;
+    updateIndexes();
+  }
+
+  private void removeForeignKey(ForeignKey constraint)
+  {
+    pathDelete(Constants.ForeignKeyTable, constraint);
+
+    if (Node.pathFind(result.root, Constants.ForeignKeyTable) == Node.Null) {
+      // the last foreign key constraint has been removed -- remove
+      // the indexes
+
+      remove(Constants.ForeignKeyRefererIndex);
+      remove(Constants.ForeignKeyReferentIndex);
+    } else {
+      dirtyIndexes = true;
+      updateIndexes();
+    }
   }
 
   private void delete(Comparable[] keys)
@@ -452,6 +533,15 @@ class MyRevisionBuilder implements RevisionBuilder {
     delete(i - 1 + Constants.IndexDataBodyDepth, keys[i]);
   }
 
+  private void insert(int depth,
+                      List<Column> columns,
+                      Comparable[] path)
+  {
+    for (int i = 0; i < path.length; ++i) {
+      blaze(depth, columns.get(i)).value = path[i];
+    }
+  }
+
   private void insert(DuplicateKeyResolution duplicateKeyResolution,
                       Table table,
                       Column column,
@@ -471,13 +561,18 @@ class MyRevisionBuilder implements RevisionBuilder {
 
     if (n.value == Node.Null) {
       n.value = value;
+      insert(path.length + Constants.IndexDataBodyDepth,
+             table.primaryKey.columns, path);
     } else {
       switch (duplicateKeyResolution) {
       case Skip:
+        delete(path.length + Constants.IndexDataBodyDepth, column);
         break;
 
       case Overwrite:
         n.value = value;
+        insert(path.length + Constants.IndexDataBodyDepth,
+               table.primaryKey.columns, path);
         break;
 
       case Throw:
@@ -694,12 +789,46 @@ class MyRevisionBuilder implements RevisionBuilder {
     }
   }
 
+  public void add(ForeignKey constraint)
+  {
+    if (token == null) {
+      throw new IllegalStateException("builder already committed");
+    }
+
+    try {
+      addForeignKey(constraint);
+    } catch (RuntimeException e) {
+      token = null;
+      throw e;
+    }
+  }
+
+  public void remove(ForeignKey constraint)
+  {
+    if (token == null) {
+      throw new IllegalStateException("builder already committed");
+    }
+
+    try {
+      removeForeignKey(constraint);
+    } catch (RuntimeException e) {
+      token = null;
+      throw e;
+    }
+  }
+
   public Revision commit() {
+    return commit(ForeignKeyResolvers.Restrict);
+  }
+
+  public Revision commit(ForeignKeyResolver foreignKeyResolver) {
     if (token == null) {
       throw new IllegalStateException("builder already committed");
     }
 
     updateIndexes();
+
+    checkForeignKeys(foreignKeyResolver);
 
     token = null;
 

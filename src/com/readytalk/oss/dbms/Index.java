@@ -65,7 +65,6 @@ public final class Index implements Comparable<Index> {
     }
 
     return 0;
-
   }
 
   public int compareTo(Index o) {

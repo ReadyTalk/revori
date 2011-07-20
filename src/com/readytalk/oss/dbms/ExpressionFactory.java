@@ -118,4 +118,8 @@ public class ExpressionFactory {
   public static Expression not(Expression operand) {
     return new UnaryOperation(UnaryOperation.Type.Not, operand);
   }
+
+  public static Expression isNull(Expression operand) {
+    return new UnaryOperation(UnaryOperation.Type.IsNull, operand);
+  }
 }
