@@ -600,8 +600,8 @@ class MyRevisionBuilder implements RevisionBuilder {
         }
       }
       
-      public RowBuilder column(Column key,
-                               Object value)
+      public <T> RowBuilder column(Column<T> key,
+                               T value)
       {
         path[path.length - 2] = key;
         path[path.length - 1] = value;
@@ -625,7 +625,7 @@ class MyRevisionBuilder implements RevisionBuilder {
         return this;
       }
 
-      public RowBuilder delete(Column key) {
+      public RowBuilder delete(Column<?> key) {
         throw new RuntimeException("not implemented");
         //return this;
       }

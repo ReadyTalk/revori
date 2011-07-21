@@ -7,8 +7,8 @@ public interface RowBuilder {
    * in the row this RowBuilder was constructed for. 
    * @return self
    */
-  public RowBuilder column(Column key,
-                           Object value);
+  public <T> RowBuilder column(Column<T> key,
+                           T value);
 
   /**
    * Inserts or updates multiple columns at once.
@@ -22,7 +22,7 @@ public interface RowBuilder {
    * RowBuilder was constructed for.
    * @return self
    */
-  public RowBuilder delete(Column key);
+  public RowBuilder delete(Column<?> key);
 
   /**
    * Indicate that no further updates will
