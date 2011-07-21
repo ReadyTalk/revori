@@ -8,6 +8,9 @@ import com.readytalk.oss.dbms.ConflictResolver;
 import com.readytalk.oss.dbms.DiffResult;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
 import com.readytalk.oss.dbms.ForeignKeyResolver;
+import com.readytalk.oss.dbms.server.EpidemicServer.NodeID;
+import com.readytalk.oss.dbms.server.EpidemicServer.NodeState;
+import com.readytalk.oss.dbms.server.EpidemicServer.Record;
 import com.readytalk.oss.dbms.server.protocol.Protocol;
 import com.readytalk.oss.dbms.server.protocol.Readable;
 import com.readytalk.oss.dbms.server.protocol.ReadContext;
@@ -43,8 +46,8 @@ public class EpidemicServer {
   private final ForeignKeyResolver foreignKeyResolver;
   private final Network network;
   private final Object lock = new Object();
-  private final Map<NodeID, NodeState> states = new HashMap();
-  private final Map<NodeID, NodeState> directlyConnectedStates = new HashMap();
+  private final Map<NodeID, NodeState> states = new HashMap<NodeID, NodeState>();
+  private final Map<NodeID, NodeState> directlyConnectedStates = new HashMap<NodeID, NodeState>();
   private final NodeState localNode;
   private long nextLocalSequenceNumber = 1;
 
@@ -310,10 +313,10 @@ public class EpidemicServer {
     Record newRecord = new Record
       (state.id, revision, sequenceNumber, merged);
     record.next = newRecord;
-    newRecord.previous = new WeakReference(record);
+    newRecord.previous = new WeakReference<Record>(record);
     if (next != null) {
       newRecord.next = next;
-      next.previous = new WeakReference(newRecord);
+      next.previous = new WeakReference<Record>(newRecord);
     } else {
       state.head = newRecord;
     }
@@ -357,7 +360,7 @@ public class EpidemicServer {
   private static class NodeState {
     public final NodeID id;
     public Record head;
-    public final Map<NodeID, Record> pending = new HashMap();
+    public final Map<NodeID, Record> pending = new HashMap<NodeID, Record>();
     public ConnectionState connectionState;
 
     public NodeState(NodeID id) {
@@ -366,7 +369,7 @@ public class EpidemicServer {
   }
 
   private static class ConnectionState {
-    public final Map<NodeID, Record> lastSent = new HashMap();
+    public final Map<NodeID, Record> lastSent = new HashMap<NodeID, Record>();
     public boolean readyToReceive;
     public boolean sentHello;
     public boolean gotHello;
