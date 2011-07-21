@@ -7,16 +7,15 @@ import static com.readytalk.oss.dbms.util.Util.list;
 import static com.readytalk.oss.dbms.util.Util.set;
 import static com.readytalk.oss.dbms.DuplicateKeyResolution.Throw;
 
-import com.readytalk.oss.dbms.DBMS;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Index;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Revision;
+import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.RevisionBuilder;
 import com.readytalk.oss.dbms.ForeignKey;
 import com.readytalk.oss.dbms.ForeignKeyResolver;
 import com.readytalk.oss.dbms.ForeignKeyResolvers;
-import com.readytalk.oss.dbms.imp.MyDBMS;
 import com.readytalk.oss.dbms.util.BufferOutputStream;
 import com.readytalk.oss.dbms.server.EpidemicServer;
 import com.readytalk.oss.dbms.server.EpidemicServer.Writable;
@@ -43,13 +42,13 @@ public class Epidemic extends TestCase{
 
   @Test
   public void testTwoNodeNetwork() {
-    DBMS dbms = new MyDBMS();
+    Revision emptyRevision = Revisions.Empty;
     NodeNetwork network = new NodeNetwork();
     NodeConflictResolver conflictResolver = new MyConflictResolver();
     ForeignKeyResolver foreignKeyResolver = ForeignKeyResolvers.Delete;
 
-    Node n1 = new Node(dbms, conflictResolver, foreignKeyResolver, network, 1);
-    Node n2 = new Node(dbms, conflictResolver, foreignKeyResolver, network, 2);
+    Node n1 = new Node(emptyRevision, conflictResolver, foreignKeyResolver, network, 1);
+    Node n2 = new Node(emptyRevision, conflictResolver, foreignKeyResolver, network, 2);
 
     n1.server.updateView(set(n2.id));
     n2.server.updateView(set(n1.id));
@@ -59,7 +58,7 @@ public class Epidemic extends TestCase{
     Table numbers = new Table(list(number));
 
     Revision base = n1.server.head();
-    RevisionBuilder builder = dbms.builder(base);
+    RevisionBuilder builder = base.builder();
     
     builder.insert(Throw, numbers, 1, name, "one");
 
@@ -70,7 +69,7 @@ public class Epidemic extends TestCase{
     expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
 
     base = n2.server.head();
-    builder = dbms.builder(base);
+    builder = base.builder();
     
     builder.insert(Throw, numbers, 1, name, "uno");
 
@@ -142,7 +141,7 @@ public class Epidemic extends TestCase{
     public final NodeID id;
     public final EpidemicServer server;
 
-    public Node(DBMS dbms,
+    public Node(Revision emptyRevision,
                 NodeConflictResolver conflictResolver,
                 ForeignKeyResolver foreignKeyResolver,
                 NodeNetwork network,
@@ -150,7 +149,7 @@ public class Epidemic extends TestCase{
     {
       this.id = new NodeID(String.valueOf(id));
       this.server = new EpidemicServer
-        (dbms, conflictResolver, foreignKeyResolver, network, this.id);
+        (emptyRevision, conflictResolver, foreignKeyResolver, network, this.id);
       network.nodes.put(this.id, this);
     }
   }

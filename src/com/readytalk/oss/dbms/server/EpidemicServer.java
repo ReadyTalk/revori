@@ -1,6 +1,5 @@
 package com.readytalk.oss.dbms.server;
 
-import com.readytalk.oss.dbms.DBMS;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.RevisionBuilder;
@@ -145,7 +144,7 @@ public class EpidemicServer {
   private static final int ClassReference = 7;
   private static final int Reference = 8;
 
-  private final DBMS dbms;
+  private final Revision emptyRevision;
   private final NodeConflictResolver conflictResolver;
   private final ForeignKeyResolver foreignKeyResolver;
   private final Network network;
@@ -155,13 +154,13 @@ public class EpidemicServer {
   private final NodeState localNode;
   private long nextLocalSequenceNumber = 1;
 
-  public EpidemicServer(DBMS dbms,
+  public EpidemicServer(Revision emptyRevision,
                         NodeConflictResolver conflictResolver,
                         ForeignKeyResolver foreignKeyResolver,
                         Network network,
                         NodeID self)
   {
-    this.dbms = dbms;
+    this.emptyRevision = emptyRevision;
     this.conflictResolver = conflictResolver;
     this.foreignKeyResolver = foreignKeyResolver;
     this.network = network;
@@ -206,8 +205,8 @@ public class EpidemicServer {
       acceptRevision
         (localNode,
          nextLocalSequenceNumber++,
-         dbms.merge
-         (base, localNode.head.revision, fork, new MyConflictResolver
+         base.merge
+         (localNode.head.revision, fork, new MyConflictResolver
           (localNode.id, localNode.id, conflictResolver), foreignKeyResolver));
     }
   }
@@ -234,7 +233,7 @@ public class EpidemicServer {
     if (state == null) {
       states.put(node, state = new NodeState(node));
 
-      state.head = new Record(node, dbms.revision(), 0, null);
+      state.head = new Record(node, emptyRevision, 0, null);
 
       for (NodeState s: states.values()) {
         s.pending.put(state.id, state.head);
@@ -331,7 +330,7 @@ public class EpidemicServer {
       } else {
         send(state, new Diff
              (target.node, lastSent.sequenceNumber, record.sequenceNumber,
-              new RevisionDiffBody(dbms, lastSent.revision, record.revision)));
+              new RevisionDiffBody(lastSent.revision, record.revision)));
       }
 
       state.connectionState.lastSent.put(target.node, record);
@@ -445,8 +444,8 @@ public class EpidemicServer {
 
       if (record != null && record.sequenceNumber == diffSequenceNumber) {
         insertRevision
-          (state, acknowledgerSequenceNumber, dbms.merge
-           (base, state.head.revision, record.revision, new MyConflictResolver
+          (state, acknowledgerSequenceNumber, base.merge
+           (state.head.revision, record.revision, new MyConflictResolver
             (acknowledger, diffOrigin, conflictResolver), foreignKeyResolver),
            record);
 
@@ -807,12 +806,10 @@ public class EpidemicServer {
   }
 
   private static class RevisionDiffBody implements DiffBody, Writable {
-    public final DBMS dbms;
     public final Revision base;
     public final Revision fork;
 
-    public RevisionDiffBody(DBMS dbms, Revision base, Revision fork) {
-      this.dbms = dbms;
+    public RevisionDiffBody(Revision base, Revision fork) {
       this.base = base;
       this.fork = fork;
     }
@@ -881,8 +878,7 @@ public class EpidemicServer {
     public BufferOutputStream buffer;
 
     public Revision apply(EpidemicServer server, Revision base) {
-      DBMS dbms = server.dbms;
-      RevisionBuilder builder = dbms.builder(base);
+      RevisionBuilder builder = base.builder();
       final int MaxDepth = 16;
       Object[] path = new Object[MaxDepth];
       int depth = 0;
