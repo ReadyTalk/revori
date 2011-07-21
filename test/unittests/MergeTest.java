@@ -7,13 +7,13 @@ import org.junit.Test;
 import static com.readytalk.oss.dbms.util.Util.list;
 import static org.junit.Assert.*;
 
-import com.readytalk.oss.dbms.DBMS;
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.ConflictResolver;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.Revision;
+import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.RevisionBuilder;
 import com.readytalk.oss.dbms.PatchTemplate;
 import com.readytalk.oss.dbms.InsertTemplate;
@@ -26,19 +26,17 @@ import com.readytalk.oss.dbms.ColumnReference;
 import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
-import com.readytalk.oss.dbms.imp.MyDBMS;
 
 public class MergeTest extends TestCase{
     
     @Test
     public void testMerges(){
-    	DBMS dbms = new MyDBMS();
 
         final Column number = new Column(Integer.class);
         final Column name = new Column(String.class);
         final Table numbers = new Table(list(number));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
@@ -46,7 +44,7 @@ public class MergeTest extends TestCase{
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         builder.apply(insert,  1, "one");
         builder.apply(insert,  2, "two");
@@ -58,7 +56,7 @@ public class MergeTest extends TestCase{
 
         Revision base = builder.commit();
 
-        builder = dbms.builder(base);
+        builder = base.builder();
 
         builder.apply(insert, 4, "four");
 
@@ -75,21 +73,21 @@ public class MergeTest extends TestCase{
            list(name),
            list((Expression) new Parameter()));
 
-        builder = dbms.builder(base);
+        builder = base.builder();
 
         builder.apply(update,  6, "roku");
         builder.apply(insert, 42, "forty two");
 
         Revision right = builder.commit();
 
-        Revision merge = dbms.merge(base, left, right, null, null);
+        Revision merge = base.merge(left, right, null, null);
 
         QueryTemplate any = new QueryTemplate
           (list((Expression) new ColumnReference(numbersReference, name)),
            numbersReference,
            new Constant(true));
 
-        QueryResult result = dbms.diff(tail, merge, any);
+        QueryResult result = tail.diff(merge, any);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "one");
@@ -111,21 +109,21 @@ public class MergeTest extends TestCase{
         assertEquals(result.nextItem(), "forty two");
         assertEquals(result.nextRow(), QueryResult.Type.End);
         
-        builder = dbms.builder(base);
+        builder = base.builder();
 
         builder.apply(insert, 4, "four");
 
         left = builder.commit();
 
-        builder = dbms.builder(base);
+        builder = base.builder();
 
         builder.apply(insert, 4, "four");
 
         right = builder.commit();
 
-        merge = dbms.merge(base, left, right, null, null);
+        merge = base.merge(left, right, null, null);
 
-        result = dbms.diff(base, merge, any);
+        result = base.diff(merge, any);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "four");
@@ -138,39 +136,39 @@ public class MergeTest extends TestCase{
             new ColumnReference(numbersReference, number),
             new Parameter()));
 
-        builder = dbms.builder(base);
+        builder = base.builder();
 
         builder.apply(delete, 8);
 
         left = builder.commit();
 
-        builder = dbms.builder(base);
+        builder = base.builder();
 
         builder.apply(update, 8, "hachi");
 
         right = builder.commit();
 
-        merge = dbms.merge(base, left, right, null, null);
+        merge = base.merge(left, right, null, null);
 
-        result = dbms.diff(base, merge, any);
+        result = base.diff(merge, any);
 
         assertEquals(result.nextRow(), QueryResult.Type.Deleted);
         assertEquals(result.nextItem(), "eight");
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        builder = dbms.builder(base);
+        builder = base.builder();
 
         builder.apply(insert, 4, "four");
 
         left = builder.commit();
 
-        builder = dbms.builder(base);
+        builder = base.builder();
 
         builder.apply(insert, 4, "shi");
 
         right = builder.commit();
 
-        merge = dbms.merge(base, left, right, new ConflictResolver() {
+        merge = base.merge(left, right, new ConflictResolver() {
             public Object resolveConflict(Table table,
                                           Column column,
                                           Object[] primaryKeyValues,
@@ -190,25 +188,25 @@ public class MergeTest extends TestCase{
             }
           }, null);
 
-        result = dbms.diff(base, merge, any);
+        result = base.diff(merge, any);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "quatro");
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        builder = dbms.builder(base);
+        builder = base.builder();
 
         builder.apply(update, 1, "ichi");
 
         left = builder.commit();
 
-        builder = dbms.builder(base);
+        builder = base.builder();
 
         builder.apply(update, 1, "uno");
 
         right = builder.commit();
 
-        merge = dbms.merge(base, left, right, new ConflictResolver() {
+        merge = base.merge(left, right, new ConflictResolver() {
             public Object resolveConflict(Table table,
                                           Column column,
                                           Object[] primaryKeyValues,
@@ -228,7 +226,7 @@ public class MergeTest extends TestCase{
             }
           }, null);
 
-        result = dbms.diff(base, merge, any);
+        result = base.diff(merge, any);
 
         assertEquals(result.nextRow(), QueryResult.Type.Deleted);
         assertEquals(result.nextItem(), "one");
@@ -236,19 +234,19 @@ public class MergeTest extends TestCase{
         assertEquals(result.nextItem(), "unit");
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        builder = dbms.builder(tail);
+        builder = tail.builder();
 
         builder.apply(insert, 1, "one");
 
         Revision t1 = builder.commit();
 
-        builder = dbms.builder(tail);
+        builder = tail.builder();
 
         builder.apply(insert, 1, "uno");
 
         Revision t2 = builder.commit();
 
-        merge = dbms.merge(tail, t1, t2, new ConflictResolver() {
+        merge = tail.merge(t1, t2, new ConflictResolver() {
             public Object resolveConflict(Table table,
                                           Column column,
                                           Object[] primaryKeyValues,
@@ -268,27 +266,27 @@ public class MergeTest extends TestCase{
             }
           }, null);
 
-        result = dbms.diff(tail, merge, any);
+        result = tail.diff(merge, any);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "unit");
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        builder = dbms.builder(tail);
+        builder = tail.builder();
 
         builder.apply(insert, 1, "one");
         builder.apply(insert, 2, "two");
 
         t1 = builder.commit();
 
-        builder = dbms.builder(tail);
+        builder = tail.builder();
 
         builder.apply(insert, 1, "uno");
         builder.apply(insert, 3, "tres");
 
         t2 = builder.commit();
 
-        merge = dbms.merge(tail, t1, t2, new ConflictResolver() {
+        merge = tail.merge(t1, t2, new ConflictResolver() {
             public Object resolveConflict(Table table,
                                           Column column,
                                           Object[] primaryKeyValues,
@@ -308,7 +306,7 @@ public class MergeTest extends TestCase{
             }
           }, null);
 
-        result = dbms.diff(tail, merge, any);
+        result = tail.diff(merge, any);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "unit");
