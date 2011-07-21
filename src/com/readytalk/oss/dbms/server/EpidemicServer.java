@@ -1061,4 +1061,8 @@ public class EpidemicServer {
          leftValue, rightValue);
     }
   }
+
+  public void listen(Runnable runnable) {
+    throw new RuntimeException("not implemented");
+  }
 }
