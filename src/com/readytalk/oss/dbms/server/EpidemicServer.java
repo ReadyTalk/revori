@@ -7,8 +7,12 @@ import com.readytalk.oss.dbms.Revision;
 import com.readytalk.oss.dbms.ConflictResolver;
 import com.readytalk.oss.dbms.DiffResult;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
-import com.readytalk.oss.dbms.ForeignKey;
 import com.readytalk.oss.dbms.ForeignKeyResolver;
+import com.readytalk.oss.dbms.server.protocol.Protocol;
+import com.readytalk.oss.dbms.server.protocol.Readable;
+import com.readytalk.oss.dbms.server.protocol.ReadContext;
+import com.readytalk.oss.dbms.server.protocol.Writable;
+import com.readytalk.oss.dbms.server.protocol.WriteContext;
 import com.readytalk.oss.dbms.util.BufferOutputStream;
 
 import java.lang.ref.WeakReference;
@@ -16,11 +20,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.IOException;
 import java.io.EOFException;
-import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.List;
 import java.util.ArrayList;
@@ -29,120 +31,12 @@ import java.util.Iterator;
 public class EpidemicServer {
   private static final boolean Debug = true;
 
-  private static volatile Map<Class, Serializer> serializers = new HashMap();
-  private static volatile Map<Class, Deserializer> deserializers
-    = new HashMap();
-
-  static {
-    serializers.put(Integer.class, new Serializer() {
-      public void writeTo(WriteContext context, Object v) throws IOException {
-        writeInteger(context.out, (Integer) v);
-      }
-    });
-
-    deserializers.put(Integer.class, new Deserializer() {
-      public Object readFrom(ReadContext context, Class c) throws IOException {
-        return readInteger(context.in);
-      }
-    });
-
-    serializers.put(String.class, new Serializer() {
-      public void writeTo(WriteContext context, Object v) throws IOException {
-        writeString(context.out, (String) v);
-      }
-    });
-
-    deserializers.put(String.class, new Deserializer() {
-      public Object readFrom(ReadContext context, Class c) throws IOException {
-        return readString(context.in);
-      }
-    });
-
-    serializers.put(Class.class, new Serializer() {
-      public void writeTo(WriteContext context, Object v) throws IOException {
-        write(context, ((Class) v).getName());
-      }
-    });
-
-    deserializers.put(Class.class, new Deserializer() {
-      public Object readFrom(ReadContext context, Class c) throws IOException {
-        try {
-          return Class.forName((String) read(context));
-        } catch (ClassNotFoundException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    });
-
-    serializers.put(Writable.class, new Serializer() {
-      public void writeTo(WriteContext context, Object v) throws IOException {
-        ((Writable) v).writeTo(context.server, context.out);
-      }
-    });
-
-    deserializers.put(Readable.class, new Deserializer() {
-      public Object readFrom(ReadContext context, Class c) throws IOException {
-        Readable v;
-        try {
-          v = (Readable) c.newInstance();
-        } catch (InstantiationException e) {
-          throw new RuntimeException(e);
-        } catch (IllegalAccessException e) {
-          throw new RuntimeException(e);
-        }
-        v.readFrom(context.server, context.in);
-        return v;
-      }
-    });
-
-    serializers.put(Table.class, new Serializer() {
-      public void writeTo(WriteContext context, Object v) throws IOException {
-        Table t = (Table) v;
-        write(context, t.id);
-        List<Column> columns = t.primaryKey.columns;
-        writeInteger(context.out, columns.size());
-        for (Column c: columns) {
-          write(context, c);
-        }
-      }
-    });
-
-    deserializers.put(Table.class, new Deserializer() {
-      public Object readFrom(ReadContext context, Class c) throws IOException {
-        String id = (String) read(context);
-        int columnCount = readInteger(context.in);
-        List<Column> columns = new ArrayList(columnCount);
-        for (int i = 0; i < columnCount; ++i) {
-          columns.add((Column) read(context));
-        }
-        return new Table(columns, id);
-      }
-    });
-
-    serializers.put(Column.class, new Serializer() {
-      public void writeTo(WriteContext context, Object v) throws IOException {
-        Column c = (Column) v;
-        write(context, c.type);
-        write(context, c.id);
-      }
-    });
-
-    deserializers.put(Column.class, new Deserializer() {
-      public Object readFrom(ReadContext context, Class c) throws IOException {
-        return new Column((Class) read(context), (String) read(context));
-      }
-    });
-  }
-
   private static final int End = 0;
   private static final int Descend = 1;
   private static final int Ascend = 2;
   private static final int Key = 3;
   private static final int Delete = 4;
   private static final int Insert = 5;
-  private static final int ClassDefinition = 6;
-  private static final int ClassReference = 7;
-  private static final int Reference = 8;
 
   private final Revision emptyRevision;
   private final NodeConflictResolver conflictResolver;
@@ -460,184 +354,6 @@ public class EpidemicServer {
     }
   }
 
-  private static void write(WriteContext context, Object value)
-    throws IOException
-  {
-    Integer id = context.objectIDs.get(value);
-    if (id == null) {
-      Class c = value.getClass();
-      Integer classID = context.classIDs.get(c);
-      if (classID == null) {
-        int newClassID = context.nextID++;
-
-        context.out.write(ClassDefinition);
-        writeInteger(context.out, newClassID);
-        writeString(context.out, c.getName());
-
-        context.classIDs.put(c, newClassID);
-      } else {
-        context.out.write(ClassReference);
-        writeInteger(context.out, classID);
-      }
-
-      int newID = context.nextID++;
-      writeInteger(context.out, newID);
-      writeObject(context, value);
-
-      context.objectIDs.put(value, newID);
-    } else {
-      context.out.write(Reference);
-      writeInteger(context.out, id);
-    }
-  }
-
-  private static void writeInteger(OutputStream out, int v)
-    throws IOException
-  {
-    if (v == (v & 0x7F)) {
-      out.write(v);
-    } else {
-      out.write((v & 0x7F) | 0x80);
-      writeInteger(out, v >>> 7);
-    }
-  }
-
-  private static void writeString(OutputStream out, String s)
-    throws IOException
-  {
-    byte[] bytes = s.getBytes("UTF-8");
-    writeInteger(out, bytes.length);
-    out.write(bytes);
-  }
-
-  private static Class find(Class class_, Map<Class, ?> map) {
-    for (Class c = class_; c != Object.class; c = c.getSuperclass()) {
-      if (map.containsKey(c)) {
-        return c;
-      }
-    }
-
-    for (Class c: class_.getInterfaces()) {
-      if (map.containsKey(c)) {
-        return c;
-      }
-    }
-
-    throw new RuntimeException("no value found for " + class_);
-  }
-
-  private static Serializer findSerializer(Class class_) {
-    Class c = find(class_, serializers);
-    Serializer s = serializers.get(c);
-    if (c != class_) {
-      synchronized (EpidemicServer.class) {
-        Map<Class, Serializer> map = new HashMap(serializers);
-        map.put(class_, s);
-        serializers = map;
-      }
-    }
-    return s;
-  }
-
-  private static Deserializer findDeserializer(Class class_) {
-    Class c = find(class_, deserializers);
-    Deserializer d = deserializers.get(c);
-    if (c != class_) {
-      synchronized (EpidemicServer.class) {
-        Map<Class, Deserializer> map = new HashMap(deserializers);
-        map.put(class_, d);
-        deserializers = map;
-      }
-    }
-    return d;
-  }
-
-  private static void writeObject(WriteContext context, Object v)
-    throws IOException
-  {
-    findSerializer(v.getClass()).writeTo(context, v);
-  }
-
-  private static int readInteger(InputStream in)
-    throws IOException
-  {
-    int b = in.read();
-    if (b < 0) {
-      throw new EOFException();
-    } else if ((b & 0x80) == 0) {
-      return b;
-    } else {
-      return (b & 0x7F) | (readInteger(in) << 7);
-    }
-  }
-
-  private static String readString(InputStream in)
-    throws IOException
-  {
-    byte[] array = new byte[readInteger(in)];
-    if (StreamUtil.readFully(in, array, 0, array.length) != array.length) {
-      throw new EOFException();
-    }
-    return new String(array, "UTF-8");
-  }
-
-  private static Object readObject(Class c, ReadContext context)
-    throws IOException
-  {
-    return findDeserializer(c).readFrom(context, c);
-  }
-
-  private static Object readDefinition(Class c,
-                                       ReadContext context)
-    throws IOException
-  {
-    int id = readInteger(context.in);
-    Object value = readObject(c, context);
-    context.objects.put(id, value);
-    return value;
-  }
-
-  private static Object read(ReadContext context)
-    throws IOException
-  {
-    InputStream in = context.in;
-    int flag = in.read();
-    switch (flag) {
-    case ClassDefinition: {
-      int classID = readInteger(in);
-      Class c;
-      try {
-        c = Class.forName(readString(in));
-      } catch (ClassNotFoundException e) {
-        throw new RuntimeException(e);
-      }
-      context.classes.put(classID, c);
-      return readDefinition(c, context);
-    }
-      
-    case ClassReference: {
-      int id = readInteger(in);
-      Class value = context.classes.get(id);
-      if (value == null) {
-        throw new NullPointerException();
-      }
-      return readDefinition(value, context);
-    }
-      
-    case Reference: {
-      int id = readInteger(in);
-      Object value = context.objects.get(id);
-      if (value == null) {
-        throw new NullPointerException();
-      }
-      return value;
-    }
-      
-    default:
-      throw new RuntimeException("unexpected flag: " + flag);
-    }    
-  }
-
   private static class NodeState {
     public final NodeID id;
     public Record head;
@@ -842,17 +558,17 @@ public class EpidemicServer {
           Object forkKey = result.fork();
           if (forkKey != null) {
             out.write(Key);
-            write(writeContext, forkKey);
+            Protocol.write(writeContext, forkKey);
           } else {
             out.write(Delete);
-            write(writeContext, result.base());
+            Protocol.write(writeContext, result.base());
             result.skip();
           }
         } break;
 
         case Value: {
           out.write(Insert);
-          write(writeContext, result.fork());
+          Protocol.write(writeContext, result.fork());
         } break;
 
         default:
@@ -902,16 +618,16 @@ public class EpidemicServer {
             break;
 
           case Key:
-            path[depth] = read(readContext);
+            path[depth] = Protocol.read(readContext);
             break;
 
           case Delete:
-            path[depth] = read(readContext);
+            path[depth] = Protocol.read(readContext);
             builder.delete(path, 0, depth + 1);
             break;
 
           case Insert:
-            path[depth + 1] = read(readContext);
+            path[depth + 1] = Protocol.read(readContext);
             builder.insert(DuplicateKeyResolution.Overwrite,
                            path, 0, depth + 2);
             break;
@@ -951,7 +667,7 @@ public class EpidemicServer {
         case Delete:
         case Insert:
           buffer.write(flag);
-          write(writeContext, read(readContext));
+          Protocol.write(writeContext, Protocol.read(readContext));
           break;
 
         default:
@@ -959,16 +675,6 @@ public class EpidemicServer {
         }
       }
     }
-  }
-
-  public static interface Writable {
-    public void writeTo(EpidemicServer server, OutputStream out)
-      throws IOException;
-  }
-
-  public static interface Readable {
-    public void readFrom(EpidemicServer server, InputStream in)
-      throws IOException;
   }
 
   public static interface Network {
@@ -1002,39 +708,6 @@ public class EpidemicServer {
                                   Object rightValue);
   }
 
-  private static class WriteContext {
-    public final Map<Class, Integer> classIDs = new IdentityHashMap();
-    public final Map<Object, Integer> objectIDs = new IdentityHashMap();
-    public final OutputStream out;
-    public final EpidemicServer server;
-    public int nextID;
-
-    public WriteContext(OutputStream out, EpidemicServer server) {
-      this.out = out;
-      this.server = server;
-    }
-  }
-
-  private static class ReadContext {
-    public final Map<Integer, Class> classes = new HashMap();
-    public final Map<Integer, Object> objects = new HashMap();
-    public final InputStream in;
-    public final EpidemicServer server;
-
-    public ReadContext(InputStream in, EpidemicServer server) {
-      this.in = in;
-      this.server = server;
-    }
-  }
-
-  private interface Serializer {
-    public void writeTo(WriteContext context, Object v) throws IOException;
-  }
-
-  private interface Deserializer {
-    public Object readFrom(ReadContext context, Class c) throws IOException;
-  }
-
   private static class MyConflictResolver implements ConflictResolver {
     private final NodeID leftNode;
     private final NodeID rightNode;
@@ -1061,8 +734,10 @@ public class EpidemicServer {
          leftValue, rightValue);
     }
   }
+  
+  private List<Runnable> listeners = new ArrayList<Runnable>();
 
-  public void listen(Runnable runnable) {
-    throw new RuntimeException("not implemented");
+  public void listen(Runnable listener) {
+    listeners.add(listener);
   }
 }
