@@ -4,7 +4,7 @@ package com.readytalk.oss.dbms;
  * Class representing a column which may be used to identify an item
  * of interest in a query or update.
  */
-public final class Column implements Comparable<Column> {
+public final class Column<T> implements Comparable<Column<?>> {
   private static long nextId = 1;
 
   private synchronized static String makeId() {
@@ -14,7 +14,7 @@ public final class Column implements Comparable<Column> {
   /**
    * The type which values stored to this column must be instances of.
    */
-  public final Class type;
+  public final Class<T> type;
 
   /**
    * The ID specified when this column was defined.
@@ -28,7 +28,7 @@ public final class Column implements Comparable<Column> {
    * of a table; only values which are instances of the specified
    * class will be accepted.<p>
    */
-  public Column(Class type, String id) {
+  public Column(Class<T> type, String id) {
     this.type = type;
     this.id = id;
 
@@ -40,11 +40,11 @@ public final class Column implements Comparable<Column> {
    * Defines a column which is associated with the specified type and
    * an automatically generated ID.<p>
    */
-  public Column(Class type) {
+  public Column(Class<T> type) {
     this(type, makeId());
   }
 
-  public int compareTo(Column o) {
+  public int compareTo(Column<?> o) {
     int d = id.compareTo(o.id);
     if (d != 0) {
       return d;
@@ -58,7 +58,7 @@ public final class Column implements Comparable<Column> {
    * and type are equal to those of this instance.
    */
   public boolean equals(Object o) {
-    return o instanceof Column && compareTo((Column) o) == 0;
+    return o instanceof Column && compareTo((Column<?>) o) == 0;
   }
       
   public String toString() {
