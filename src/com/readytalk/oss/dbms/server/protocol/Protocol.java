@@ -298,7 +298,7 @@ public class Protocol {
     throws IOException
   {
     int id = Protocol.readInteger(context.in);
-    Object value = Protocol.readObject(c, context);
+    Object value = readObject(c, context);
     context.objects.put(id, value);
     return value;
   }

@@ -46,7 +46,7 @@ import java.util.Collections;
 
 class MyRevisionBuilder implements RevisionBuilder {
   private static final Map<Class, PatchTemplateAdapter> adapters
-    = new HashMap();
+    = new HashMap<Class, PatchTemplateAdapter>();
 
   static {
     adapters.put(UpdateTemplate.class, new UpdateTemplateAdapter());
