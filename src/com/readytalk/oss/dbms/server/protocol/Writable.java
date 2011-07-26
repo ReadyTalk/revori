@@ -7,6 +7,6 @@ import com.readytalk.oss.dbms.server.EpidemicServer;
 
 
 public interface Writable {
-  public void writeTo(EpidemicServer server, OutputStream out)
+  public void writeTo(OutputStream out)
     throws IOException;
 }

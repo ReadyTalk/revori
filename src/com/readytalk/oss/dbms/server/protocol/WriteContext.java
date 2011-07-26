@@ -11,11 +11,9 @@ public class WriteContext {
   public final Map<Class, Integer> classIDs = new IdentityHashMap();
   public final Map<Object, Integer> objectIDs = new IdentityHashMap();
   public final OutputStream out;
-  public final EpidemicServer server;
   public int nextID;
 
-  public WriteContext(OutputStream out, EpidemicServer server) {
+  public WriteContext(OutputStream out) {
     this.out = out;
-    this.server = server;
   }
 }
