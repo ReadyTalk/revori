@@ -422,7 +422,7 @@ public class EpidemicServer {
     // for deserialization
     public Ack() { }
 
-    public void writeTo(EpidemicServer server, OutputStream out)
+    public void writeTo(OutputStream out)
       throws IOException
     {
       StreamUtil.writeString(out, acknowledger.id);
@@ -431,7 +431,7 @@ public class EpidemicServer {
       StreamUtil.writeLong(out, diffSequenceNumber);
     }
 
-    public void readFrom(EpidemicServer server, InputStream in)
+    public void readFrom(InputStream in)
       throws IOException
     {
       acknowledger = new NodeID(StreamUtil.readString(in));
@@ -467,23 +467,23 @@ public class EpidemicServer {
     // for deserialization
     public Diff() { }
 
-    public void writeTo(EpidemicServer server, OutputStream out)
+    public void writeTo(OutputStream out)
       throws IOException
     {
       StreamUtil.writeString(out, origin.id);
       StreamUtil.writeLong(out, startSequenceNumber);
       StreamUtil.writeLong(out, endSequenceNumber);
-      ((Writable) body).writeTo(server, out);
+      ((Writable) body).writeTo(out);
     }
 
-    public void readFrom(EpidemicServer server, InputStream in)
+    public void readFrom(InputStream in)
       throws IOException
     {
       origin = new NodeID(StreamUtil.readString(in));
       startSequenceNumber = StreamUtil.readLong(in);
       endSequenceNumber = StreamUtil.readLong(in);
       BufferDiffBody list = new BufferDiffBody();
-      list.readFrom(server, in);
+      list.readFrom(in);
       body = list;
     }
 
@@ -493,11 +493,11 @@ public class EpidemicServer {
   }
 
   private static abstract class Singleton implements Message {
-    public void writeTo(EpidemicServer server, OutputStream out) {
+    public void writeTo(OutputStream out) {
       // ignore
     }
 
-    public void readFrom(EpidemicServer server, InputStream in) {
+    public void readFrom(InputStream in) {
       // ignore
     }
   }
@@ -537,11 +537,11 @@ public class EpidemicServer {
       return fork;
     }
 
-    public void writeTo(EpidemicServer server, OutputStream out)
+    public void writeTo(OutputStream out)
       throws IOException
     {
       DiffResult result = base.diff(fork, true);
-      WriteContext writeContext = new WriteContext(out, server);
+      WriteContext writeContext = new WriteContext(out);
       while (true) {
         DiffResult.Type type = result.next();
         switch (type) {
@@ -603,7 +603,7 @@ public class EpidemicServer {
       int depth = 0;
       InputStream in = new ByteArrayInputStream
         (buffer.getBuffer(), 0, buffer.size());
-      ReadContext readContext = new ReadContext(in, server);
+      ReadContext readContext = new ReadContext(in);
 
       try {
         while (true) {
@@ -645,12 +645,12 @@ public class EpidemicServer {
       }
     }
 
-    public void readFrom(EpidemicServer server, InputStream in)
+    public void readFrom(InputStream in)
       throws IOException
     {
       buffer = new BufferOutputStream();
-      ReadContext readContext = new ReadContext(in, server);
-      WriteContext writeContext = new WriteContext(buffer, server);
+      ReadContext readContext = new ReadContext(in);
+      WriteContext writeContext = new WriteContext(buffer);
       while (true) {
         int flag = in.read();
         switch (flag) {

@@ -6,6 +6,6 @@ import java.io.InputStream;
 import com.readytalk.oss.dbms.server.EpidemicServer;
 
 public interface Readable {
-  public void readFrom(EpidemicServer server, InputStream in)
+  public void readFrom(InputStream in)
     throws IOException;
 }

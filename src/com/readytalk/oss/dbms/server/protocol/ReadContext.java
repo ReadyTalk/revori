@@ -11,10 +11,8 @@ public class ReadContext {
   public final Map<Integer, Class> classes = new HashMap();
   public final Map<Integer, Object> objects = new HashMap();
   public final InputStream in;
-  public final EpidemicServer server;
 
-  public ReadContext(InputStream in, EpidemicServer server) {
+  public ReadContext(InputStream in) {
     this.in = in;
-    this.server = server;
   }
 }
