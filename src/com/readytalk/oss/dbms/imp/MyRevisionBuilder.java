@@ -590,12 +590,12 @@ class MyRevisionBuilder implements RevisionBuilder {
       private Object[] path;
 
       public MyRowBuilder() {
-        path = new Object[1+ table.primaryKey.columns.size()];
+        path = new Object[3 + table.primaryKey.columns.size()];
         path[0] = table;
       }
 
-      public void init(Object[] keys) {
-        for(int i = 1; i < keys.length; i++) {
+      public void init(Comparable[] keys) {
+        for(int i = 0; i < keys.length; i++) {
           path[i + 1] = keys[i];
         }
       }
@@ -648,9 +648,11 @@ class MyRevisionBuilder implements RevisionBuilder {
         row.init(key);
         MyRowBuilder ret = row;
         row = null;
-        return row;
+        return ret;
       }
-      return new MyRowBuilder();
+      MyRowBuilder ret = new MyRowBuilder();
+      ret.init(key);
+      return ret;
     }
 
     public TableBuilder delete(Comparable ... key) {
