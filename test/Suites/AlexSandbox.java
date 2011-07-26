@@ -17,12 +17,12 @@ import org.junit.Test;
 import static com.readytalk.oss.dbms.util.Util.list;
 import static org.junit.Assert.*;
 
-import com.readytalk.oss.dbms.DBMS;
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.QueryTemplate;
+import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Revision;
 import com.readytalk.oss.dbms.Parameter;
@@ -34,8 +34,6 @@ import com.readytalk.oss.dbms.TableReference;
 import com.readytalk.oss.dbms.ColumnReference;
 import com.readytalk.oss.dbms.Constant;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
-import com.readytalk.oss.dbms.imp.MyDBMS;
-
 
 public class AlexSandbox extends TestCase{
 	
@@ -62,7 +60,6 @@ public class AlexSandbox extends TestCase{
 	
 	@Test
 	public void testDataTypes(){
-		DBMS dbms = new MyDBMS();
         
         Column uuidColumn = new Column(UUID.class);
         Column longColumn= new Column(Long.class);
@@ -92,7 +89,7 @@ public class AlexSandbox extends TestCase{
 		Table numbers = new Table(list(uuidColumn, longColumn, nameColumn, dateColumn, floatColumn,
 				intColumn, byteColumn, timeColumn));
 
-		Revision tail = dbms.revision();
+		Revision tail = Revisions.Empty;
 		
 		//Setup Insert Data
 		UUID uuidData = UUID.randomUUID();
@@ -108,7 +105,7 @@ public class AlexSandbox extends TestCase{
 		CustomClass customClassData = new CustomClass();
 		customClassData.setAll(1,2,"Some Name");
 				
-		RevisionBuilder builder = dbms.builder(tail);
+		RevisionBuilder builder = tail.builder();
 
 		PatchTemplate insert = new InsertTemplate
 		(numbers,
@@ -141,7 +138,7 @@ public class AlexSandbox extends TestCase{
                 numbersReference,
                 new Constant(true));
 		
-		QueryResult result = dbms.diff(tail, first, any);
+		QueryResult result = tail.diff(first, any);
 		
 		assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), uuidData);
@@ -160,16 +157,15 @@ public class AlexSandbox extends TestCase{
 	
 	@Test
 	public void testInsertIncorrectDataType(){
-        DBMS dbms = new MyDBMS();
         
         Column key = new Column(Integer.class);
         Column number = new Column(Integer.class);
         
         Table table = new Table(list(key));
         
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
         
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
         PatchTemplate insert = new InsertTemplate(
    	    table, 
    	    list(key, number),
@@ -184,17 +180,15 @@ public class AlexSandbox extends TestCase{
 	
 	@Test
 	public void testInsertIncorrectDataTypeMultiKey(){
-        DBMS dbms = new MyDBMS();
-        
         Column key = new Column(Integer.class);
         Column number = new Column(Integer.class);
         Column name = new Column(String.class);
         
         Table table = new Table(list(key, number));
         
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
         
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
         PatchTemplate insert = new InsertTemplate(
    	    table, 
    	    list(key, number, name),
@@ -208,17 +202,15 @@ public class AlexSandbox extends TestCase{
 	
 	@Test
 	public void testApplyAlreadyCommitted(){
-        DBMS dbms = new MyDBMS();
-        
         Column key = new Column(Integer.class);
         Column number = new Column(Integer.class);
         Column name = new Column(String.class);
         
         Table table = new Table(list(key, number));
         
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
         
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
         PatchTemplate insert = new InsertTemplate(
    	    table, 
    	    list(key, number, name),
@@ -238,15 +230,14 @@ public class AlexSandbox extends TestCase{
 	
 	@Test
 	public void testInvalidApplyWrongNumberOfParameters(){
-	 DBMS dbms = new MyDBMS();
 	 Column number = new Column(Integer.class);
 	 Column number1 = new Column(Integer.class);
 	 Column number2 = new Column(Integer.class);
 	 
 	 Table numbers = new Table(list(number));
 		   
-	 Revision tail = dbms.revision();
-	 RevisionBuilder builder = dbms.builder(tail);
+	 Revision tail = Revisions.Empty;
+	 RevisionBuilder builder = tail.builder();
 	 PatchTemplate insert = new InsertTemplate(
 	   numbers, 
 	   list(number, number1, number2),
@@ -259,13 +250,13 @@ public class AlexSandbox extends TestCase{
 	 fail("Expected Illegal Argument Exception...");
 	 }catch(IllegalArgumentException expected){}
 	 
-	 builder = dbms.builder(tail);
+	 builder = tail.builder();
 	 try{
      builder.apply(insert, 3, 2, 1, 1);
      fail("Expected Illegal Argument Exception...");
 	 }catch(IllegalArgumentException expected){}
 	 
-	 builder = dbms.builder(tail);
+	 builder = tail.builder();
 
 	 Revision first = builder.commit();
 		   
@@ -276,7 +267,7 @@ public class AlexSandbox extends TestCase{
 	   numbersReference,
 	   new Constant(true));
 		   
-	 QueryResult result = dbms.diff(tail, first, myQT);
+	 QueryResult result = tail.diff(first, myQT);
 		   
 	 assertEquals(result.nextRow(), QueryResult.Type.End);
 	}
@@ -284,12 +275,11 @@ public class AlexSandbox extends TestCase{
 	
    @Test
    public void testNoValuesInserted(){
-       DBMS dbms = new MyDBMS();
        Column number = new Column(Integer.class);
        Table numbers = new Table(list(number));
        
-       Revision tail = dbms.revision();
-       RevisionBuilder builder = dbms.builder(tail);
+       Revision tail = Revisions.Empty;
+       RevisionBuilder builder = tail.builder();
        PatchTemplate insert = new InsertTemplate(
                numbers,
                list(number),
@@ -306,20 +296,19 @@ public class AlexSandbox extends TestCase{
 				numbersReference,
 				new Constant(true));
 
-       QueryResult result = dbms.diff(tail, first, myQT);
+       QueryResult result = tail.diff(first, myQT);
 
        assertEquals(result.nextRow(), QueryResult.Type.End);
    }
 
    @Test
    public void testInsertNoPrimaryKey(){
-	   DBMS dbms = new MyDBMS();
 	   Column key = new Column(Integer.class);
 	   Column number = new Column(Integer.class);
 	   Table numbers = new Table(list(key));
 	   
-	   Revision tail = dbms.revision();
-	   RevisionBuilder builder = dbms.builder(tail);
+	   Revision tail = Revisions.Empty;
+	   RevisionBuilder builder = tail.builder();
 	   try{
 	   PatchTemplate insert = new InsertTemplate(
 			   numbers, list(number), list((Expression) new Parameter()), DuplicateKeyResolution.Throw);
@@ -335,7 +324,7 @@ public class AlexSandbox extends TestCase{
 			   numbersReference,
 			   new Constant(true));
 	   
-	   QueryResult result = dbms.diff(tail, first, myQT);
+	   QueryResult result = tail.diff(first, myQT);
 	   
 	   assertEquals(result.nextRow(), QueryResult.Type.End);	   
    }
@@ -343,12 +332,11 @@ public class AlexSandbox extends TestCase{
 	
    @Test
    public void testInsertKeyOnly(){
-	   DBMS dbms = new MyDBMS();
 	   Column number = new Column(Integer.class);
 	   Table numbers = new Table(list(number));
 	   
-	   Revision tail = dbms.revision();
-	   RevisionBuilder builder = dbms.builder(tail);
+	   Revision tail = Revisions.Empty;
+	   RevisionBuilder builder = tail.builder();
 	   PatchTemplate insert = new InsertTemplate(
 			   numbers, list(number), list((Expression) new Parameter()), DuplicateKeyResolution.Throw);
 	   
@@ -367,7 +355,7 @@ public class AlexSandbox extends TestCase{
 			   numbersReference,
 			   new Constant(true));
 	   
-	   QueryResult result = dbms.diff(tail, first, myQT);
+	   QueryResult result = tail.diff(first, myQT);
 	   
 	   assertEquals(result.nextRow(), QueryResult.Type.Inserted);
 	   assertEquals(result.nextItem(), 1);
@@ -384,13 +372,11 @@ public class AlexSandbox extends TestCase{
 	
    @Test
    public void testColumnTypes(){
-	   DBMS dbms = new MyDBMS();
-
 	    Column number = new Column(Integer.class);
 	    Column name = new Column(String.class);
 	    Table numbers = new Table(list(number));
 
-	    Revision tail = dbms.revision();
+	    Revision tail = Revisions.Empty;
 
 	    PatchTemplate insert = new InsertTemplate
 	      (numbers,
@@ -399,16 +385,16 @@ public class AlexSandbox extends TestCase{
 	            new Parameter()), DuplicateKeyResolution.Throw);
 
 	    try {
-	      dbms.builder(tail).apply(insert, "1", "one");
+	      tail.builder().apply(insert, "1", "one");
 	      throw new RuntimeException();
 	    } catch (ClassCastException e) { }
 
 	    try {
-	      dbms.builder(tail).apply(insert, 1, 1);
+	      tail.builder().apply(insert, 1, 1);
 	      throw new RuntimeException();
 	    } catch (ClassCastException e) { }
 
-	    RevisionBuilder builder = dbms.builder(tail);
+	    RevisionBuilder builder = tail.builder();
 
 	    builder.apply(insert, 1, "one");
 
@@ -426,23 +412,21 @@ public class AlexSandbox extends TestCase{
 	       list((Expression) new Parameter()));
 
 	    try {
-	      dbms.builder(first).apply(updateNameWhereNumberEqual, 1, 2);
+	      first.builder().apply(updateNameWhereNumberEqual, 1, 2);
 	      throw new RuntimeException();
 	    } catch (ClassCastException e) { }
    }
    
    @Test (expected=IllegalArgumentException.class)
    public void testNotEnoughColumnsForPrimaryKeyQuery(){
-       DBMS dbms = new MyDBMS();
-       
        Column key = new Column(Integer.class);
        Column firstName = new Column(String.class);
        Column lastName = new Column(String.class);
        Column city = new Column(String.class);
        Table names = new Table(list(key, city));
-       Revision tail = dbms.revision();
+       Revision tail = Revisions.Empty;
        
-       RevisionBuilder builder = dbms.builder(tail);
+       RevisionBuilder builder = tail.builder();
        try{
        PatchTemplate insert = new InsertTemplate
         (names,

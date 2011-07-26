@@ -5,7 +5,6 @@ import static com.readytalk.oss.dbms.util.Util.copy;
 
 import com.readytalk.oss.dbms.Index;
 import com.readytalk.oss.dbms.Column;
-import com.readytalk.oss.dbms.DBMS;
 import com.readytalk.oss.dbms.Revision;
 import com.readytalk.oss.dbms.RevisionBuilder;
 import com.readytalk.oss.dbms.QueryTemplate;

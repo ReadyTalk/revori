@@ -7,10 +7,10 @@ import org.junit.Test;
 import static com.readytalk.oss.dbms.util.Util.list;
 import static org.junit.Assert.*;
 
-import com.readytalk.oss.dbms.DBMS;
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Join;
+import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.Revision;
@@ -23,15 +23,12 @@ import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.Parameter;
 import com.readytalk.oss.dbms.ColumnReference;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
-import com.readytalk.oss.dbms.imp.MyDBMS;
 
 public class JoinTest extends TestCase{
     
     @Test
     public void testSimpleJoins(){
     	
-        DBMS dbms = new MyDBMS();
-
         Column id = new Column(Integer.class);
         Column name = new Column(String.class);
         Table names = new Table(list(id));
@@ -39,7 +36,7 @@ public class JoinTest extends TestCase{
         Column nickname = new Column(String.class);
         Table nicknames = new Table(list(id, nickname));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate nameInsert = new InsertTemplate
           (names,
@@ -53,7 +50,7 @@ public class JoinTest extends TestCase{
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         builder.apply(nameInsert, 1, "tom");
         builder.apply(nameInsert, 2, "ted");
@@ -83,8 +80,9 @@ public class JoinTest extends TestCase{
            (BinaryOperation.Type.Equal,
             new ColumnReference(namesReference, id),
             new ColumnReference(nicknamesReference, id)));
+        Object[] parameters = {};
         
-        QueryResult result = dbms.diff(tail, first, namesInnerNicknames);
+        QueryResult result = tail.diff(first, namesInnerNicknames, parameters);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tom");
@@ -111,8 +109,9 @@ public class JoinTest extends TestCase{
            (BinaryOperation.Type.Equal,
             new ColumnReference(namesReference, id),
             new ColumnReference(nicknamesReference, id)));
+        Object[] parameters1 = {};
         
-        result = dbms.diff(tail, first, namesLeftNicknames);
+        result = tail.diff(first, namesLeftNicknames, parameters1);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tom");
@@ -131,7 +130,7 @@ public class JoinTest extends TestCase{
         assertEquals(result.nextItem(), "knuckles");
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        builder = dbms.builder(first);
+        builder = first.builder();
 
         builder.apply(nameInsert, 6, "rapunzel");
         builder.apply(nameInsert, 7, "carlos");
@@ -141,8 +140,9 @@ public class JoinTest extends TestCase{
         builder.apply(nicknameInsert, 8, "jellybean");
 
         Revision second = builder.commit();
+        Object[] parameters2 = {};
 
-        result = dbms.diff(first, second, namesLeftNicknames);
+        result = first.diff(second, namesLeftNicknames, parameters2);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tom");
@@ -157,8 +157,9 @@ public class JoinTest extends TestCase{
         assertEquals(result.nextItem(), "benjamin");
         assertEquals(result.nextItem(), "jellybean");
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters3 = {};
 
-        result = dbms.diff(tail, second, namesLeftNicknames);
+        result = tail.diff(second, namesLeftNicknames, parameters3);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tom");
@@ -194,8 +195,6 @@ public class JoinTest extends TestCase{
     @Test
     public void testCompoundJoins(){
     	
-        DBMS dbms = new MyDBMS();
-
         Column id = new Column(Integer.class);
         Column name = new Column(String.class);
         Table names = new Table(list(id));
@@ -210,7 +209,7 @@ public class JoinTest extends TestCase{
         Column color = new Column(String.class);
         Table colors = new Table(list(string));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate nameInsert = new InsertTemplate
           (names,
@@ -236,7 +235,7 @@ public class JoinTest extends TestCase{
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         builder.apply(nameInsert, 1, "tom");
         builder.apply(nameInsert, 2, "ted");
@@ -288,9 +287,9 @@ public class JoinTest extends TestCase{
             (BinaryOperation.Type.Equal,
              new ColumnReference(colorsReference, string),
              new ColumnReference(nicknamesReference, nickname))));
+        Object[] parameters = {};
         
-        QueryResult result = dbms.diff
-          (tail, first, namesInnerNicknamesInnerColors);
+        QueryResult result = tail.diff(first, namesInnerNicknamesInnerColors, parameters);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tom");
@@ -327,8 +326,9 @@ public class JoinTest extends TestCase{
             (BinaryOperation.Type.Equal,
              new ColumnReference(colorsReference, string),
              new ColumnReference(nicknamesReference, nickname))));
+        Object[] parameters1 = {};
         
-        result = dbms.diff(tail, first, namesLeftNicknamesInnerColors);
+        result = tail.diff(first, namesLeftNicknamesInnerColors, parameters1);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tom");
@@ -365,8 +365,9 @@ public class JoinTest extends TestCase{
             (BinaryOperation.Type.Equal,
              new ColumnReference(colorsReference, string),
              new ColumnReference(nicknamesReference, nickname))));
+        Object[] parameters2 = {};
         
-        result = dbms.diff(tail, first, namesInnerNicknamesLeftColors);
+        result = tail.diff(first, namesInnerNicknamesLeftColors, parameters2);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tom");
@@ -422,9 +423,9 @@ public class JoinTest extends TestCase{
              (BinaryOperation.Type.Equal,
               new ColumnReference(colorsReference, string),
               new ColumnReference(nicknamesReference, nickname)))));
+        Object[] parameters3 = {};
         
-        result = dbms.diff
-          (tail, first, namesInnerLastnamesLeftNicknamesLeftColors);
+        result = tail.diff(first, namesInnerLastnamesLeftNicknamesLeftColors, parameters3);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tom");

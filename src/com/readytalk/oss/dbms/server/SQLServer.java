@@ -4,9 +4,8 @@ import static com.readytalk.oss.dbms.util.Util.list;
 import static com.readytalk.oss.dbms.util.Util.set;
 
 import com.readytalk.oss.dbms.util.Util;
-import com.readytalk.oss.dbms.imp.MyDBMS;
 import com.readytalk.oss.dbms.Coerceable;
-import com.readytalk.oss.dbms.DBMS;
+import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.TableReference;
 import com.readytalk.oss.dbms.Column;
@@ -82,8 +81,6 @@ public class SQLServer {
   private static final Tree Nothing = new Leaf();
 
   private static class Server {
-    public final DBMS dbms;
-
     public final Parser parser = new ParserFactory().parser();
 
     public final PatchTemplate insertOrUpdateDatabase;
@@ -138,9 +135,8 @@ public class SQLServer {
             expect(column == tagsTag);
 
             return new Tag
-              (((Tag) leftValue).name, dbms.merge
-               (baseValue == null
-                ? dbms.revision() : ((Tag) baseValue).revision,
+              (((Tag) leftValue).name,
+                  ((baseValue == null ? Revisions.Empty : ((Tag) baseValue).revision)).merge(
                 ((Tag) leftValue).revision,
                 ((Tag) rightValue).revision,
                 rightPreferenceConflictResolver,
@@ -151,9 +147,7 @@ public class SQLServer {
         }
       };
 
-    public Server(DBMS dbms) {
-      this.dbms = dbms;
-
+    public Server() {
       Column databasesName = new Column(String.class);
       Column databasesDatabase = new Column(Object.class);
       Table databases = new Table(list(databasesName));
@@ -292,7 +286,7 @@ public class SQLServer {
            new ColumnReference(tagsReference, tagsName),
            new Parameter())));
 
-      this.dbHead = new AtomicReference(dbms.revision());
+      this.dbHead = new AtomicReference(Revisions.Empty);
 
       binaryOperationTypes.put("and", BinaryOperation.Type.And);
       binaryOperationTypes.put("or", BinaryOperation.Type.Or);
@@ -709,9 +703,8 @@ public class SQLServer {
                                        String name)
   {
     Server server = client.server;
-    DBMS dbms = server.dbms;
-    QueryResult result = dbms.diff
-      (dbms.revision(), dbHead(client), server.findDatabase, name);
+    QueryResult result = Revisions.Empty.diff
+      (dbHead(client), server.findDatabase, name);
 
     if (result.nextRow() == QueryResult.Type.Inserted) {
       return (Database) result.nextItem();
@@ -724,20 +717,19 @@ public class SQLServer {
                              String name)
   {
     Server server = client.server;
-    DBMS dbms = server.dbms;
 
     if ("tail".equals(name)) {
-      return new Tag(name, dbms.revision());
+      return new Tag(name, Revisions.Empty);
     }
 
-    QueryResult result = dbms.diff
-      (dbms.revision(), dbHead(client), server.findTag, database(client).name,
+    QueryResult result = Revisions.Empty.diff
+      (dbHead(client), server.findTag, database(client).name,
        name);
 
     if (result.nextRow() == QueryResult.Type.Inserted) {
       return (Tag) result.nextItem();
     } else if ("head".equals(name)) {
-      return new Tag(name, dbms.revision());
+      return new Tag(name, Revisions.Empty);
     } else {
       throw new RuntimeException("no such tag: " + name);
     }
@@ -758,9 +750,8 @@ public class SQLServer {
   private static MyTable findTable(Client client,
                                    String name)
   {
-    DBMS dbms = client.server.dbms;
-    QueryResult result = dbms.diff
-      (dbms.revision(), dbHead(client), client.server.findTable,
+    QueryResult result = Revisions.Empty.diff
+      (dbHead(client), client.server.findTable,
        database(client).name, name);
 
     if (result.nextRow() == QueryResult.Type.Inserted) {
@@ -796,8 +787,7 @@ public class SQLServer {
   }
 
   private static ColumnReference makeColumnReference
-    (DBMS dbms,
-     List<MyTableReference> tableReferences,
+    (List<MyTableReference> tableReferences,
      String tableName,
      String columnName)
   {
@@ -849,7 +839,7 @@ public class SQLServer {
   {
     if (tree instanceof Name) {
       return makeColumnReference
-        (server.dbms, tableReferences, null, ((Name) tree).value);
+        (tableReferences, null, ((Name) tree).value);
     } else if (tree instanceof StringLiteral) {
       return new Constant(((StringLiteral) tree).value);
     } else if (tree instanceof NumberLiteral) {
@@ -861,8 +851,7 @@ public class SQLServer {
           && ".".equals(((Terminal) tree.get(1)).value))
       {
         return makeColumnReference
-          (server.dbms,
-           tableReferences,
+          (tableReferences,
            ((Name) tree.get(0)).value,
            ((Name) tree.get(2)).value);
       }
@@ -916,8 +905,7 @@ public class SQLServer {
     }
   }
 
-  private static Expression andExpressions(DBMS dbms,
-                                           Expression expression,
+  private static Expression andExpressions(Expression expression,
                                            List<Expression> expressions)
   {
     for (Expression e: expressions) {
@@ -943,7 +931,7 @@ public class SQLServer {
 
     return new QueryTemplate
       (expressions, source, andExpressions
-       (client.server.dbms, makeExpressionFromWhere
+       (makeExpressionFromWhere
         (client.server, tree.get(4), tableReferences), tests));
   }
 
@@ -1046,7 +1034,6 @@ public class SQLServer {
 
     List<Column> columns = makeOptionalColumnList(table, tree.get(2));
     List<Expression> values = new ArrayList(columns.size());
-    DBMS dbms = client.server.dbms;
     for (Column c: columns) {
       values.add(new Parameter());
       columnTypes.add(findColumn(table, c).type);
@@ -1090,7 +1077,6 @@ public class SQLServer {
       throw new RuntimeException("no primary key specified");
     }
 
-    DBMS dbms = server.dbms;
     List<MyColumn> columnList = new ArrayList(columns.size());
     Map<String, MyColumn> columnMap = new HashMap(columns.size());
     for (Tree column: columns) {
@@ -1168,21 +1154,20 @@ public class SQLServer {
   public static String makeList(Client client,
                                 Tree tree)
   {
-    DBMS dbms = client.server.dbms;
     StringBuilder sb = new StringBuilder();
     if (tree instanceof Terminal) {
       String type = ((Terminal) tree).value;
       if (type == "databases") {
-        QueryResult result = dbms.diff
-          (dbms.revision(), dbHead(client), client.server.listDatabases);
+        QueryResult result = Revisions.Empty.diff
+          (dbHead(client), client.server.listDatabases);
 
         while (result.nextRow() == QueryResult.Type.Inserted) {
           sb.append("\n");
           sb.append(((Database) result.nextItem()).name);
         }
       } else if (type == "tables") {
-        QueryResult result = dbms.diff
-          (dbms.revision(), dbHead(client), client.server.listTables,
+        QueryResult result = Revisions.Empty.diff
+          (dbHead(client), client.server.listTables,
            database(client).name);
 
         while (result.nextRow() == QueryResult.Type.Inserted) {
@@ -1190,8 +1175,8 @@ public class SQLServer {
           sb.append(((MyTable) result.nextItem()).name);
         }
       } else if (type == "tags") {
-        QueryResult result = dbms.diff
-          (dbms.revision(), dbHead(client), client.server.listTags,
+        QueryResult result = Revisions.Empty.diff
+          (dbHead(client), client.server.listTags,
            database(client).name);
 
         while (result.nextRow() == QueryResult.Type.Inserted) {
@@ -1233,15 +1218,14 @@ public class SQLServer {
     }
   }
 
-  private static void diff(DBMS dbms,
-                           Revision base,
+  private static void diff(Revision base,
                            Revision fork,
                            QueryTemplate template,
                            int expressionCount,
                            OutputStream out)
     throws IOException
   {
-    QueryResult result = dbms.diff(base, fork, template);
+    QueryResult result = base.diff(fork, template);
 
     boolean wroteSentinal = false;
 
@@ -1284,8 +1268,7 @@ public class SQLServer {
                            PatchTemplate template,
                            Object ... parameters)
   {
-    DBMS dbms = client.server.dbms;
-    RevisionBuilder builder = dbms.builder(client.transaction.dbHead);
+    RevisionBuilder builder = client.transaction.dbHead.builder();
     int count = builder.apply(template, parameters);
     client.transaction.dbHead = builder.commit();
     return count;
@@ -1320,14 +1303,13 @@ public class SQLServer {
     if (client.transaction.next == null) {
       Revision myTail = client.transaction.dbTail;
       Revision myHead = client.transaction.dbHead;
-      DBMS dbms = client.server.dbms;
       ConflictResolver conflictResolver = client.server.conflictResolver;
       if (myTail != myHead) {
         AtomicReference<Revision> dbHead = client.server.dbHead;
         while (! dbHead.compareAndSet(myTail, myHead)) {
           Revision fork = dbHead.get();
-          myHead = dbms.merge
-            (myTail, fork, myHead, conflictResolver, ForeignKeyResolvers.Delete);
+          myHead = myTail.merge
+            (fork, myHead, conflictResolver, ForeignKeyResolvers.Delete);
           myTail = fork;
         }
       }
@@ -1348,8 +1330,7 @@ public class SQLServer {
   {
     pushTransaction(client);
     try {
-      DBMS dbms = client.server.dbms;
-      RevisionBuilder builder = dbms.builder(head(client));
+      RevisionBuilder builder = head(client).builder();
       int count = builder.apply(template);
       setTag(client, new Tag("head", builder.commit()));
       commitTransaction(client);
@@ -1373,8 +1354,7 @@ public class SQLServer {
     }
   }
 
-  private static void copy(DBMS dbms,
-                           RevisionBuilder builder,
+  private static void copy(RevisionBuilder builder,
                            PatchTemplate template,
                            List<Class> columnTypes,
                            StringBuilder sb,
@@ -1441,7 +1421,7 @@ public class SQLServer {
       client.copyContext = null;
     } else if (! c.trouble) {
       try {
-        copy(client.server.dbms, c.builder, c.template, c.columnTypes,
+        copy(c.builder, c.template, c.columnTypes,
              c.stringBuilder, c.parameters, line);
         ++ c.count;
       } catch (Exception e) {
@@ -1469,11 +1449,10 @@ public class SQLServer {
                                              NameType type,
                                              String start)
   {
-    DBMS dbms = client.server.dbms;
     switch (type) {
     case Database: {
-      QueryResult result = dbms.diff
-        (dbms.revision(), dbHead(client), client.server.listDatabases);
+      QueryResult result = Revisions.Empty.diff
+        (dbHead(client), client.server.listDatabases);
 
       Set<String> set = new HashSet();
       while (result.nextRow() == QueryResult.Type.Inserted) {
@@ -1487,8 +1466,8 @@ public class SQLServer {
 
     case Table:
       if (client.database != null) {
-        QueryResult result = dbms.diff
-          (dbms.revision(), dbHead(client), client.server.listTables,
+        QueryResult result = Revisions.Empty.diff
+          (dbHead(client), client.server.listTables,
            client.database.name);
 
         Set<String> set = new HashSet();
@@ -1507,8 +1486,8 @@ public class SQLServer {
 
     case Tag:
       if (client.database != null) {
-        QueryResult result = dbms.diff
-          (dbms.revision(), dbHead(client), client.server.listTags,
+        QueryResult result = Revisions.Empty.diff
+          (dbHead(client), client.server.listTags,
            client.database.name);
 
         Set<String> set = new HashSet();
@@ -1540,13 +1519,12 @@ public class SQLServer {
         } else {
           Set<String> tableSet = context.completions.get(NameType.Table);
           if (tableSet != null && context.client.database != null) {
-            DBMS dbms = context.client.server.dbms;
-            Revision tail = dbms.revision();
+            Revision tail = Revisions.Empty;
             Revision head = dbHead(context.client);
             Set<String> columns = new HashSet();
             for (String tableName: tableSet) {
-              QueryResult result = dbms.diff
-                (tail, head, context.client.server.findTable,
+              QueryResult result = tail.diff
+                (head, context.client.server.findTable,
                  context.client.database.name, tableName);
 
               if (result.nextRow() == QueryResult.Type.Inserted) {
@@ -1974,10 +1952,9 @@ public class SQLServer {
                            OutputStream out)
              throws IOException
            {
-             DBMS dbms = client.server.dbms;
              int[] expressionCount = new int[1];
              SQLServer.diff
-               (dbms, dbms.revision(), head(client), makeQueryTemplate
+               (Revisions.Empty, head(client), makeQueryTemplate
                 (client, tree, expressionCount), expressionCount[0], out);
            }           
          });
@@ -1997,10 +1974,9 @@ public class SQLServer {
                            OutputStream out)
              throws IOException
            {
-             DBMS dbms = client.server.dbms;
              int[] expressionCount = new int[1];
              SQLServer.diff
-               (dbms, findTag(client, ((Name) tree.get(1)).value).revision,
+               (findTag(client, ((Name) tree.get(1)).value).revision,
                 findTag(client, ((Name) tree.get(2)).value).revision,
                 makeQueryTemplate
                 (client, tree.get(3), expressionCount), expressionCount[0],
@@ -2107,7 +2083,7 @@ public class SQLServer {
            {
              List<Class> columnTypes = new ArrayList();
              client.copyContext = new CopyContext
-               (client.server.dbms.builder(head(client)), makeCopyTemplate
+               (head(client).builder(), makeCopyTemplate
                 (client, tree, columnTypes), columnTypes);
 
              pushTransaction(client);
@@ -2223,9 +2199,8 @@ public class SQLServer {
              try {
                setTag(client, new Tag
                       ("head",
-                       client.server.dbms.merge
-                       (findTag(client, ((Name) tree.get(1)).value).revision,
-                        findTag(client, ((Name) tree.get(2)).value).revision,
+                       findTag(client, ((Name) tree.get(1)).value).revision.merge
+                       (findTag(client, ((Name) tree.get(2)).value).revision,
                         findTag(client, ((Name) tree.get(3)).value).revision,
                         conflictResolver,
                         ForeignKeyResolvers.Delete)));
@@ -2288,9 +2263,7 @@ public class SQLServer {
 
              pushTransaction(client);
              try {
-               DBMS dbms = client.server.dbms;
-               RevisionBuilder builder = dbms.builder
-                 (client.transaction.dbHead);
+               RevisionBuilder builder = client.transaction.dbHead.builder();
 
                if ("database".equals(type)) {
                  builder.apply(client.server.deleteDatabase, name);
@@ -2526,7 +2499,7 @@ public class SQLServer {
 
     executor.allowCoreThreadTimeOut(true);
 
-    Server server = new Server(new MyDBMS());
+    Server server = new Server();
 
     while (true) {
       executor.execute(new Client(server, serverChannel.accept()));

@@ -7,19 +7,19 @@ package com.readytalk.oss.dbms;
  */
 public enum DuplicateKeyResolution {
   /**
-   * Instructs the DBMS to silently skip the insert or update,
+   * Instructs the MyDBMS to silently skip the insert or update,
    * leaving the old row(s) intact.
    */
   Skip,
       
     /**
-     * Instructs the DBMS to silently overwrite the old row with the
+     * Instructs the MyDBMS to silently overwrite the old row with the
      * new one.
      */
     Overwrite,
 
     /**
-     * Instructs the DBMS to throw a DuplicateKeyException when a
+     * Instructs the MyDBMS to throw a DuplicateKeyException when a
      * conflict is detected.
      */
     Throw;

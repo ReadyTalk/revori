@@ -7,11 +7,11 @@ import org.junit.Test;
 import static com.readytalk.oss.dbms.util.Util.list;
 import static org.junit.Assert.*;
 
-import com.readytalk.oss.dbms.DBMS;
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.ConflictResolver;
 import com.readytalk.oss.dbms.Index;
+import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.Revision;
@@ -27,19 +27,16 @@ import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.Parameter;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
-import com.readytalk.oss.dbms.imp.MyDBMS;
 
 
 public class MultipleIndex extends TestCase{
     @Test
     public void testMultipleIndexInserts(){
-    	DBMS dbms = new MyDBMS();
-
         Column number = new Column(Integer.class);
         Column name = new Column(String.class);
         Table numbers = new Table(list(number));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
@@ -47,7 +44,7 @@ public class MultipleIndex extends TestCase{
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         Index nameIndex = new Index(numbers, list(name));
 
@@ -80,13 +77,13 @@ public class MultipleIndex extends TestCase{
             (BinaryOperation.Type.LessThan,
              new ColumnReference(numbersReference, name),
              new Parameter())));
+        Object[] parameters = { "four", "two" };
 
-        QueryResult result = dbms.diff
-          (tail, first, greaterThanAndLessThan, "four", "two");
+        QueryResult result = tail.diff(first, greaterThanAndLessThan, parameters);
 
         // We assume here that, by defining a query which is implemented
         // most efficiently in terms of the index on numbers.name, the
-        // DBMS will actually use that index to execute it, and thus we
+        // MyDBMS will actually use that index to execute it, and thus we
         // will visit the results in alphabetical order.
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
@@ -101,7 +98,7 @@ public class MultipleIndex extends TestCase{
         assertEquals(result.nextItem(), "three");
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        builder = dbms.builder(tail);
+        builder = tail.builder();
 
         builder.apply(insert, 1, "one");
         builder.apply(insert, 2, "two");
@@ -117,9 +114,9 @@ public class MultipleIndex extends TestCase{
         builder.apply(insert, 9, "nine");
 
         first = builder.commit();
+        Object[] parameters1 = { "four", "two" };
 
-        result = dbms.diff
-          (tail, first, greaterThanAndLessThan, "four", "two");
+        result = tail.diff(first, greaterThanAndLessThan, parameters1);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "nine");
@@ -133,7 +130,7 @@ public class MultipleIndex extends TestCase{
         assertEquals(result.nextItem(), "three");
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        builder = dbms.builder(tail);
+        builder = tail.builder();
 
         builder.apply(insert, 1, "one");
         builder.apply(insert, 2, "two");
@@ -148,9 +145,9 @@ public class MultipleIndex extends TestCase{
         builder.add(nameIndex);
 
         first = builder.commit();
+        Object[] parameters2 = { "four", "two" };
 
-        result = dbms.diff
-          (tail, first, greaterThanAndLessThan, "four", "two");
+        result = tail.diff(first, greaterThanAndLessThan, parameters2);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "nine");
@@ -164,14 +161,14 @@ public class MultipleIndex extends TestCase{
         assertEquals(result.nextItem(), "three");
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        builder = dbms.builder(first);
+        builder = first.builder();
 
         builder.remove(nameIndex);
 
         Revision second = builder.commit();
+        Object[] parameters3 = { "four", "two" };
 
-        result = dbms.diff
-          (tail, second, greaterThanAndLessThan, "four", "two");
+        result = tail.diff(second, greaterThanAndLessThan, parameters3);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "one");
@@ -188,13 +185,11 @@ public class MultipleIndex extends TestCase{
     
     @Test
     public void testMultipleIndexUpdates(){
-    	DBMS dbms = new MyDBMS();
-
         Column number = new Column(Integer.class);
         Column name = new Column(String.class);
         Table numbers = new Table(list(number));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
@@ -202,7 +197,7 @@ public class MultipleIndex extends TestCase{
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         builder.apply(insert, 1, "one");
         builder.apply(insert, 2, "two");
@@ -249,9 +244,9 @@ public class MultipleIndex extends TestCase{
             (BinaryOperation.Type.LessThan,
              new ColumnReference(numbersReference, name),
              new Parameter())));
+        Object[] parameters = { "four", "two" };
 
-        QueryResult result = dbms.diff
-          (tail, first, greaterThanAndLessThan, "four", "two");
+        QueryResult result = tail.diff(first, greaterThanAndLessThan, parameters);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "nine");
@@ -265,14 +260,14 @@ public class MultipleIndex extends TestCase{
         assertEquals(result.nextItem(), "tres");
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        builder = dbms.builder(first);
+        builder = first.builder();
 
         builder.remove(nameIndex);
 
         Revision second = builder.commit();
+        Object[] parameters1 = { "four", "two" };
 
-        result = dbms.diff
-          (tail, second, greaterThanAndLessThan, "four", "two");
+        result = tail.diff(second, greaterThanAndLessThan, parameters1);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tres");
@@ -289,13 +284,11 @@ public class MultipleIndex extends TestCase{
     
     @Test
     public void testMultipleIndexDeletes(){
-    	DBMS dbms = new MyDBMS();
-
         Column number = new Column(Integer.class);
         Column name = new Column(String.class);
         Table numbers = new Table(list(number));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
@@ -303,7 +296,7 @@ public class MultipleIndex extends TestCase{
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         builder.apply(insert, 1, "one");
         builder.apply(insert, 2, "two");
@@ -354,9 +347,9 @@ public class MultipleIndex extends TestCase{
             (BinaryOperation.Type.LessThan,
              new ColumnReference(numbersReference, name),
              new Parameter())));
+        Object[] parameters = { "f", "t" };
 
-        QueryResult result = dbms.diff
-          (tail, first, greaterThanAndLessThanName, "f", "t");
+        QueryResult result = tail.diff(first, greaterThanAndLessThanName, parameters);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "five");
@@ -381,8 +374,9 @@ public class MultipleIndex extends TestCase{
             (BinaryOperation.Type.LessThan,
              new ColumnReference(numbersReference, number),
              new Parameter())));
+        Object[] parameters1 = { 2, 8 };
 
-        result = dbms.diff(tail, first, greaterThanAndLessThanNumber, 2, 8);
+        result = tail.diff(first, greaterThanAndLessThanNumber, parameters1);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "three");
@@ -392,13 +386,14 @@ public class MultipleIndex extends TestCase{
         assertEquals(result.nextItem(), "seven");
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        builder = dbms.builder(first);
+        builder = first.builder();
 
         builder.remove(nameIndex);
 
         Revision second = builder.commit();
+        Object[] parameters2 = { "f", "t" };
 
-        result = dbms.diff(tail, second, greaterThanAndLessThanName, "f", "t");
+        result = tail.diff(second, greaterThanAndLessThanName, parameters2);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "one");
@@ -413,13 +408,11 @@ public class MultipleIndex extends TestCase{
     
     @Test
     public void testMultipleIndexMerges(){
-    	DBMS dbms = new MyDBMS();
-
         Column number = new Column(Integer.class);
         Column name = new Column(String.class);
         Table numbers = new Table(list(number));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
@@ -427,7 +420,7 @@ public class MultipleIndex extends TestCase{
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         Index nameIndex = new Index(numbers, list(name));
 
@@ -441,7 +434,7 @@ public class MultipleIndex extends TestCase{
 
         Revision left = builder.commit();
 
-        builder = dbms.builder(tail);
+        builder = tail.builder();
 
         builder.apply(insert, 4, "four");
         builder.apply(insert, 5, "five");
@@ -452,17 +445,17 @@ public class MultipleIndex extends TestCase{
 
         Revision right = builder.commit();
 
-        Revision merge = dbms.merge(tail, left, right, new ConflictResolver() {
-            public Object resolveConflict(Table table,
-                                          Column column,
-                                          Object[] primaryKeyValues,
-                                          Object baseValue,
-                                          Object leftValue,
-                                          Object rightValue)
-            {
-              throw new RuntimeException();
-            }
-          }, null);
+        Revision merge = tail.merge(left, right, new ConflictResolver() {
+          public Object resolveConflict(Table table,
+                                        Column column,
+                                        Object[] primaryKeyValues,
+                                        Object baseValue,
+                                        Object leftValue,
+                                        Object rightValue)
+          {
+            throw new RuntimeException();
+          }
+        }, null);
 
         TableReference numbersReference = new TableReference(numbers);
 
@@ -479,9 +472,9 @@ public class MultipleIndex extends TestCase{
             (BinaryOperation.Type.LessThan,
              new ColumnReference(numbersReference, name),
              new Parameter())));
+        Object[] parameters = { "four", "two" };
 
-        QueryResult result = dbms.diff
-          (tail, merge, greaterThanAndLessThan, "four", "two");
+        QueryResult result = tail.diff(merge, greaterThanAndLessThan, parameters);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "nine");
@@ -495,14 +488,14 @@ public class MultipleIndex extends TestCase{
         assertEquals(result.nextItem(), "three");
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        builder = dbms.builder(merge);
+        builder = merge.builder();
 
         builder.remove(nameIndex);
 
         Revision second = builder.commit();
+        Object[] parameters1 = { "four", "two" };
 
-        result = dbms.diff
-          (tail, second, greaterThanAndLessThan, "four", "two");
+        result = tail.diff(second, greaterThanAndLessThan, parameters1);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "one");
@@ -516,7 +509,7 @@ public class MultipleIndex extends TestCase{
         assertEquals(result.nextItem(), "nine");
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        builder = dbms.builder(merge);
+        builder = merge.builder();
 
         PatchTemplate updateNameWhereNumberEqual = new UpdateTemplate
           (numbersReference,
@@ -532,7 +525,7 @@ public class MultipleIndex extends TestCase{
 
         left = builder.commit();
 
-        builder = dbms.builder(merge);
+        builder = merge.builder();
 
         PatchTemplate deleteWhereNumberEqual = new DeleteTemplate
           (numbersReference,
@@ -546,20 +539,20 @@ public class MultipleIndex extends TestCase{
 
         right = builder.commit();
 
-        merge = dbms.merge(merge, left, right, new ConflictResolver() {
-            public Object resolveConflict(Table table,
-                                          Column column,
-                                          Object[] primaryKeyValues,
-                                          Object baseValue,
-                                          Object leftValue,
-                                          Object rightValue)
-            {
-              throw new RuntimeException();
-            }
-          }, null);
+        merge = merge.merge(left, right, new ConflictResolver() {
+          public Object resolveConflict(Table table,
+                                        Column column,
+                                        Object[] primaryKeyValues,
+                                        Object baseValue,
+                                        Object leftValue,
+                                        Object rightValue)
+          {
+            throw new RuntimeException();
+          }
+        }, null);
+        Object[] parameters2 = { "four", "two" };
 
-        result = dbms.diff
-          (tail, merge, greaterThanAndLessThan, "four", "two");
+        result = tail.diff(merge, greaterThanAndLessThan, parameters2);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "nine");
@@ -569,14 +562,14 @@ public class MultipleIndex extends TestCase{
         assertEquals(result.nextItem(), "tres");
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        builder = dbms.builder(merge);
+        builder = merge.builder();
 
         builder.remove(nameIndex);
 
         Revision third = builder.commit();
+        Object[] parameters3 = { "four", "two" };
 
-        result = dbms.diff
-          (tail, third, greaterThanAndLessThan, "four", "two");
+        result = tail.diff(third, greaterThanAndLessThan, parameters3);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "tres");

@@ -7,8 +7,8 @@ import org.junit.Test;
 import static com.readytalk.oss.dbms.util.Util.list;
 import static org.junit.Assert.*;
 
-import com.readytalk.oss.dbms.DBMS;
 import com.readytalk.oss.dbms.Column;
+import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.Revision;
@@ -22,21 +22,18 @@ import com.readytalk.oss.dbms.Parameter;
 import com.readytalk.oss.dbms.Constant;
 import com.readytalk.oss.dbms.ColumnReference;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
-import com.readytalk.oss.dbms.imp.MyDBMS;
 
 public class SimpleTest extends TestCase{
     
 	@Test
     public void testSimpleInsertQuery(){
-        DBMS dbms = new MyDBMS();
-        
         Column key = new Column(Integer.class);
         Column firstName = new Column(String.class);
         Column lastName = new Column(String.class);
         Table names = new Table(list(key));
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
         
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
         PatchTemplate insert = new InsertTemplate
          (names,
           list(key, firstName, lastName),
@@ -57,8 +54,9 @@ public class SimpleTest extends TestCase{
                   (Expression) new ColumnReference(namesReference, lastName)),
                   namesReference,
                   new Constant(true));
+        Object[] parameters = {};
 
-        QueryResult result = dbms.diff(tail, first, any);
+        QueryResult result = tail.diff(first, any, parameters);
         
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), 1);
@@ -77,17 +75,15 @@ public class SimpleTest extends TestCase{
     
     @Test
     public void testMultipleColumnInsertQuery(){
-        DBMS dbms = new MyDBMS();
-        
         Column key = new Column(Integer.class);
         Column firstName = new Column(String.class);
         Column lastName = new Column(String.class);
         Column city = new Column(String.class);
         Column age = new Column(Integer.class);
         Table names = new Table(list(key));
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
         //Insert 4 columns
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
         PatchTemplate insert = new InsertTemplate
          (names,
                  list(key, firstName, lastName, city),
@@ -100,7 +96,7 @@ public class SimpleTest extends TestCase{
         Revision first = builder.commit();
         
         //Insert 2 columns
-        builder = dbms.builder(first);
+        builder = first.builder();
         insert = new InsertTemplate
          (names,
                  list(key, firstName),
@@ -111,7 +107,7 @@ public class SimpleTest extends TestCase{
         Revision second = builder.commit();
         
         //Insert 5 columns
-        builder = dbms.builder(second);
+        builder = second.builder();
         insert = new InsertTemplate
          (names,
                  list(key, firstName, lastName, city, age),
@@ -136,8 +132,9 @@ public class SimpleTest extends TestCase{
                   (Expression) new ColumnReference(namesReference, age)),
                   namesReference,
                   new Constant(true));
+        Object[] parameters = {};
 
-          QueryResult result = dbms.diff(tail, third, any);
+          QueryResult result = tail.diff(third, any, parameters);
         
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), 1);
@@ -163,16 +160,14 @@ public class SimpleTest extends TestCase{
     
     @Test
     public void testNotEnoughColumnsForPrimaryKeyQuery(){
-        DBMS dbms = new MyDBMS();
-        
         Column key = new Column(Integer.class);
         Column firstName = new Column(String.class);
         Column lastName = new Column(String.class);
         Column city = new Column(String.class);
         Table names = new Table(list(key, city));
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
         
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
         try{
         PatchTemplate insert = new InsertTemplate
          (names,

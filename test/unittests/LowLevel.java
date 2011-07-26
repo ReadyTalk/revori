@@ -9,14 +9,13 @@ import static com.readytalk.oss.dbms.util.Util.list;
 import static com.readytalk.oss.dbms.DuplicateKeyResolution.Throw;
 import static com.readytalk.oss.dbms.DuplicateKeyResolution.Overwrite;
 
-import com.readytalk.oss.dbms.DBMS;
 import com.readytalk.oss.dbms.Column;
+import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Revision;
 import com.readytalk.oss.dbms.RevisionBuilder;
 import com.readytalk.oss.dbms.DiffResult;
 import com.readytalk.oss.dbms.DiffResult.Type;
-import com.readytalk.oss.dbms.imp.MyDBMS;
 
 public class LowLevel extends TestCase{
   private static void expectEqual(Object actual, Object expected) {
@@ -25,15 +24,13 @@ public class LowLevel extends TestCase{
 
   @Test
   public void testLowLevelDiffs() {
-    DBMS dbms = new MyDBMS();
-
     Column number = new Column(Integer.class);
     Column name = new Column(String.class);
     Table numbers = new Table(list(number));
 
-    Revision tail = dbms.revision();
+    Revision tail = Revisions.Empty;
 
-    RevisionBuilder builder = dbms.builder(tail);
+    RevisionBuilder builder = tail.builder();
 
     builder.insert(Throw, numbers, 1, name, "one");
     builder.insert(Throw, numbers, 2, name, "two");
@@ -47,7 +44,7 @@ public class LowLevel extends TestCase{
 
     Revision first = builder.commit();
 
-    DiffResult result = dbms.diff(tail, first);
+    DiffResult result = tail.diff(first, false);
 
     expectEqual(result.next(), DiffResult.Type.Key);
     expectEqual(result.base(), null);
@@ -165,7 +162,7 @@ public class LowLevel extends TestCase{
     expectEqual(result.next(), DiffResult.Type.Ascend);
     expectEqual(result.next(), DiffResult.Type.End);
 
-    builder = dbms.builder(first);
+    builder = first.builder();
 
     builder.insert(Throw, numbers, 10, name, "ten");
     builder.delete(numbers, 2);
@@ -177,7 +174,7 @@ public class LowLevel extends TestCase{
 
     Revision second = builder.commit();
 
-    result = dbms.diff(first, second);
+    result = first.diff(second, false);
 
     expectEqual(result.next(), DiffResult.Type.Key);
     expectEqual(result.base(), numbers);
@@ -260,7 +257,7 @@ public class LowLevel extends TestCase{
     expectEqual(result.next(), DiffResult.Type.End);
   }
 
-  private static void apply(DBMS dbms, RevisionBuilder builder, DiffResult result)
+  private static void apply(RevisionBuilder builder, DiffResult result)
   {
     final int MaxDepth = 16;
     Object[] path = new Object[MaxDepth];
@@ -303,15 +300,13 @@ public class LowLevel extends TestCase{
 
   @Test
   public void testLowLevelDiffApplication() {
-    DBMS dbms = new MyDBMS();
-
     Column number = new Column(Integer.class);
     Column name = new Column(String.class);
     Table numbers = new Table(list(number));
 
-    Revision tail = dbms.revision();
+    Revision tail = Revisions.Empty;
 
-    RevisionBuilder builder = dbms.builder(tail);
+    RevisionBuilder builder = tail.builder();
 
     builder.insert(Throw, numbers, 1, name, "one");
     builder.insert(Throw, numbers, 2, name, "two");
@@ -325,17 +320,17 @@ public class LowLevel extends TestCase{
 
     Revision first = builder.commit();
 
-    builder = dbms.builder(tail);
+    builder = tail.builder();
 
-    apply(dbms, builder, dbms.diff(tail, first));
+    apply(builder, tail.diff(first, false));
     
     Revision firstApplied = builder.commit();
     
-    DiffResult result = dbms.diff(first, firstApplied);
+    DiffResult result = first.diff(firstApplied, false);
     
     expectEqual(result.next(), DiffResult.Type.End);
 
-    builder = dbms.builder(first);
+    builder = first.builder();
 
     builder.insert(Throw, numbers, 10, name, "ten");
     builder.delete(numbers, 2);
@@ -347,33 +342,33 @@ public class LowLevel extends TestCase{
 
     Revision second = builder.commit();
 
-    builder = dbms.builder(first);
+    builder = first.builder();
 
-    apply(dbms, builder, dbms.diff(first, second));
+    apply(builder, first.diff(second, false));
     
     Revision secondApplied = builder.commit();
     
-    result = dbms.diff(second, secondApplied);
+    result = second.diff(secondApplied, false);
 
     expectEqual(result.next(), DiffResult.Type.End);
 
-    builder = dbms.builder(tail);
+    builder = tail.builder();
 
-    apply(dbms, builder, dbms.diff(tail, second));
+    apply(builder, tail.diff(second, false));
 
     secondApplied = builder.commit();
     
-    result = dbms.diff(second, secondApplied);
+    result = second.diff(secondApplied, false);
 
     expectEqual(result.next(), DiffResult.Type.End);
 
-    builder = dbms.builder(firstApplied);
+    builder = firstApplied.builder();
 
-    apply(dbms, builder, dbms.diff(first, second));
+    apply(builder, first.diff(second, false));
 
     secondApplied = builder.commit();
     
-    result = dbms.diff(second, secondApplied);
+    result = second.diff(secondApplied, false);
 
     expectEqual(result.next(), DiffResult.Type.End);
   }
