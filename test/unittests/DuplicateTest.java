@@ -6,10 +6,10 @@ import org.junit.Test;
 import static com.readytalk.oss.dbms.util.Util.list;
 import static org.junit.Assert.*;
 
-import com.readytalk.oss.dbms.DBMS;
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.DuplicateKeyException;
+import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.Revision;
@@ -24,19 +24,16 @@ import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.Parameter;
 import com.readytalk.oss.dbms.Constant;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
-import com.readytalk.oss.dbms.imp.MyDBMS;
 
 public class DuplicateTest extends TestCase{
     
     @Test
     public void testDuplicateInsertsThrowAndOverwrite(){
-    	DBMS dbms = new MyDBMS();
-
         Column number = new Column(Integer.class);
         Column name = new Column(String.class);
         Table numbers = new Table(list(number));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
@@ -44,7 +41,7 @@ public class DuplicateTest extends TestCase{
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         builder.apply(insert, 1, "one");
         builder.apply(insert, 2, "two");
@@ -53,21 +50,21 @@ public class DuplicateTest extends TestCase{
         Revision first = builder.commit();
 
         try {
-          dbms.builder(first).apply(insert, 1, "uno");
+          first.builder().apply(insert, 1, "uno");
           fail("Inside testDuplicateInserts: Expected Duplicate Key Exception... ");
         } catch (DuplicateKeyException e) { }
 
         try {
-          dbms.builder(first).apply(insert, 2, "dos");
+          first.builder().apply(insert, 2, "dos");
           fail("Inside testDuplicateInserts: Expected Duplicate Key Exception... ");
         } catch (DuplicateKeyException e) { }
 
         try {
-          dbms.builder(first).apply(insert, 3, "tres");
+          first.builder().apply(insert, 3, "tres");
           fail("Inside testDuplicateInserts: Expected Duplicate Key Exception... ");
         } catch (DuplicateKeyException e) { }
 
-        builder = dbms.builder(first);
+        builder = first.builder();
 
         builder.apply(insert, 4, "quatro");
 
@@ -88,7 +85,7 @@ public class DuplicateTest extends TestCase{
            numbersReference,
            new Constant(true));
 
-        QueryResult result = dbms.diff(tail, second, any);
+        QueryResult result = tail.diff(second, any);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "uno");
@@ -103,13 +100,11 @@ public class DuplicateTest extends TestCase{
     
     @Test
     public void testDuplicateInsertsSkip(){
-    	DBMS dbms = new MyDBMS();
-
         Column number = new Column(Integer.class);
         Column name = new Column(String.class);
         Table numbers = new Table(list(number));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
@@ -117,7 +112,7 @@ public class DuplicateTest extends TestCase{
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Skip);
 
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         builder.apply(insert, 1, "one");
         builder.apply(insert, 2, "two");
@@ -132,7 +127,7 @@ public class DuplicateTest extends TestCase{
          numbersReference,
          new Constant(true));
         
-        QueryResult result1 = dbms.diff(tail, first, q1);
+        QueryResult result1 = tail.diff(first, q1);
         
         assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result1.nextItem(), 1);
@@ -145,7 +140,7 @@ public class DuplicateTest extends TestCase{
         assertEquals(result1.nextItem(), "three");
         assertEquals(result1.nextRow(), QueryResult.Type.End);        
         
-        builder = dbms.builder(first);
+        builder = first.builder();
 
         builder.apply(insert, 1, "uno");
         builder.apply(insert, 2, "dos");
@@ -162,7 +157,7 @@ public class DuplicateTest extends TestCase{
            numbersReference,
            new Constant(true));
 
-        QueryResult result2 = dbms.diff(tail, second, any);
+        QueryResult result2 = tail.diff(second, any);
 
         assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result2.nextItem(), 1);
@@ -178,7 +173,7 @@ public class DuplicateTest extends TestCase{
         assertEquals(result2.nextItem(), "quatro");
         assertEquals(result2.nextRow(), QueryResult.Type.End);
         
-        QueryResult result3 = dbms.diff(first, second, any);
+        QueryResult result3 = first.diff(second, any);
         
         assertEquals(result3.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result3.nextItem(), 4);
@@ -188,13 +183,11 @@ public class DuplicateTest extends TestCase{
     
     @Test
     public void testDuplicateInsertsOverwrite(){
-    	DBMS dbms = new MyDBMS();
-
         Column number = new Column(Integer.class);
         Column name = new Column(String.class);
         Table numbers = new Table(list(number));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
@@ -202,7 +195,7 @@ public class DuplicateTest extends TestCase{
            list((Expression) new Parameter(),
                 new Parameter()), DuplicateKeyResolution.Overwrite);
 
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         builder.apply(insert, 1, "one");
         builder.apply(insert, 2, "two");
@@ -217,7 +210,7 @@ public class DuplicateTest extends TestCase{
          numbersReference,
          new Constant(true));
         
-        QueryResult result1 = dbms.diff(tail, first, q1);
+        QueryResult result1 = tail.diff(first, q1);
         
         assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result1.nextItem(), 1);
@@ -230,7 +223,7 @@ public class DuplicateTest extends TestCase{
         assertEquals(result1.nextItem(), "three");
         assertEquals(result1.nextRow(), QueryResult.Type.End);        
         
-        builder = dbms.builder(first);
+        builder = first.builder();
 
         builder.apply(insert, 1, "uno");
         builder.apply(insert, 2, "dos");
@@ -247,7 +240,7 @@ public class DuplicateTest extends TestCase{
            numbersReference,
            new Constant(true));
 
-        QueryResult result2 = dbms.diff(tail, second, any);
+        QueryResult result2 = tail.diff(second, any);
 
         assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result2.nextItem(), 1);
@@ -263,7 +256,7 @@ public class DuplicateTest extends TestCase{
         assertEquals(result2.nextItem(), "quatro");
         assertEquals(result2.nextRow(), QueryResult.Type.End);
         
-        QueryResult result3 = dbms.diff(first, second, any);
+        QueryResult result3 = first.diff(second, any);
         
         assertEquals(result3.nextRow(), QueryResult.Type.Deleted);
         assertEquals(result3.nextItem(), 1);
@@ -291,14 +284,12 @@ public class DuplicateTest extends TestCase{
     
     @Test
     public void testDuplicateInsertsMultiKeyThrow(){
-    	DBMS dbms = new MyDBMS();
-
         Column number = new Column(Integer.class);
         Column key = new Column(Integer.class);
         Column name = new Column(String.class);
         Table numbers = new Table(list(number, key));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
@@ -306,7 +297,7 @@ public class DuplicateTest extends TestCase{
            list((Expression) new Parameter(), new Parameter(),
                 new Parameter()), DuplicateKeyResolution.Throw);
 
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         builder.apply(insert, 1, "one", 1);
         builder.apply(insert, 2, "two", 2);
@@ -322,7 +313,7 @@ public class DuplicateTest extends TestCase{
          numbersReference,
          new Constant(true));
         
-        QueryResult result1 = dbms.diff(tail, first, q1);
+        QueryResult result1 = tail.diff(first, q1);
         
         assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result1.nextItem(), 1);
@@ -338,23 +329,23 @@ public class DuplicateTest extends TestCase{
         assertEquals(result1.nextItem(), 3);
         assertEquals(result1.nextRow(), QueryResult.Type.End);        
         
-        builder = dbms.builder(first);
+        builder = first.builder();
 
         try{
             builder.apply(insert, 1, "uno", 1);
             fail("Inside testDuplicateInsertsMultiKeyThrow: Expected Duplicate Key Exception...");
         }catch(DuplicateKeyException expected){}
-        builder = dbms.builder(first);
+        builder = first.builder();
         try{
             builder.apply(insert, 2, "dos", 2);
             fail("Inside testDuplicateInsertsMultiKeyThrow: Expected Duplicate Key Exception...");
         }catch(DuplicateKeyException expected){}
-        builder = dbms.builder(first);
+        builder = first.builder();
         try{
             builder.apply(insert, 3, "tres", 3);
             fail("Inside testDuplicateInsertsMultiKeyThrow: Expected Duplicate Key Exception...");
         }catch(DuplicateKeyException expected){}
-        builder = dbms.builder(first);
+        builder = first.builder();
         
         builder.apply(insert, 4, "quatro", 4);
 
@@ -369,7 +360,7 @@ public class DuplicateTest extends TestCase{
            numbersReference,
            new Constant(true));
 
-        QueryResult result2 = dbms.diff(tail, second, any);
+        QueryResult result2 = tail.diff(second, any);
 
         assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result2.nextItem(), 1);
@@ -389,7 +380,7 @@ public class DuplicateTest extends TestCase{
         assertEquals(result2.nextItem(), 4);
         assertEquals(result2.nextRow(), QueryResult.Type.End);
         
-        QueryResult result3 = dbms.diff(first, second, any);
+        QueryResult result3 = first.diff(second, any);
         
         assertEquals(result3.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result3.nextItem(), 4);
@@ -400,14 +391,12 @@ public class DuplicateTest extends TestCase{
     
     @Test
     public void testDuplicateInsertsMultiKeySkip(){
-    	DBMS dbms = new MyDBMS();
-
         Column number = new Column(Integer.class);
         Column key = new Column(Integer.class);
         Column name = new Column(String.class);
         Table numbers = new Table(list(number, key));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
@@ -415,7 +404,7 @@ public class DuplicateTest extends TestCase{
            list((Expression) new Parameter(), new Parameter(),
                 new Parameter()), DuplicateKeyResolution.Skip);
 
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         builder.apply(insert, 1, "one", 1);
         builder.apply(insert, 2, "two", 2);
@@ -431,7 +420,7 @@ public class DuplicateTest extends TestCase{
          numbersReference,
          new Constant(true));
         
-        QueryResult result1 = dbms.diff(tail, first, q1);
+        QueryResult result1 = tail.diff(first, q1);
         
         assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result1.nextItem(), 1);
@@ -447,7 +436,7 @@ public class DuplicateTest extends TestCase{
         assertEquals(result1.nextItem(), 3);
         assertEquals(result1.nextRow(), QueryResult.Type.End);        
         
-        builder = dbms.builder(first);
+        builder = first.builder();
 
         builder.apply(insert, 1, "uno", 1);
         builder.apply(insert, 2, "dos", 2);
@@ -465,7 +454,7 @@ public class DuplicateTest extends TestCase{
            numbersReference,
            new Constant(true));
 
-        QueryResult result2 = dbms.diff(tail, second, any);
+        QueryResult result2 = tail.diff(second, any);
 
         assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result2.nextItem(), 1);
@@ -485,7 +474,7 @@ public class DuplicateTest extends TestCase{
         assertEquals(result2.nextItem(), 4);
         assertEquals(result2.nextRow(), QueryResult.Type.End);
         
-        QueryResult result3 = dbms.diff(first, second, any);
+        QueryResult result3 = first.diff(second, any);
         
         assertEquals(result3.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result3.nextItem(), 4);
@@ -496,14 +485,12 @@ public class DuplicateTest extends TestCase{
     
     @Test
     public void testDuplicateInsertsMultiKeyOverwrite(){
-    	DBMS dbms = new MyDBMS();
-
         Column number = new Column(Integer.class);
         Column key = new Column(Integer.class);
         Column name = new Column(String.class);
         Table numbers = new Table(list(number, key));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
@@ -511,7 +498,7 @@ public class DuplicateTest extends TestCase{
            list((Expression) new Parameter(), new Parameter(),
                 new Parameter()), DuplicateKeyResolution.Overwrite);
 
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         builder.apply(insert, 1, "one", 1);
         builder.apply(insert, 2, "two", 2);
@@ -527,7 +514,7 @@ public class DuplicateTest extends TestCase{
          numbersReference,
          new Constant(true));
         
-        QueryResult result1 = dbms.diff(tail, first, q1);
+        QueryResult result1 = tail.diff(first, q1);
         
         assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result1.nextItem(), 1);
@@ -543,7 +530,7 @@ public class DuplicateTest extends TestCase{
         assertEquals(result1.nextItem(), 3);
         assertEquals(result1.nextRow(), QueryResult.Type.End);        
         
-        builder = dbms.builder(first);
+        builder = first.builder();
 
         builder.apply(insert, 1, "uno", 1);
         builder.apply(insert, 2, "dos", 2);
@@ -561,7 +548,7 @@ public class DuplicateTest extends TestCase{
            numbersReference,
            new Constant(true));
 
-        QueryResult result2 = dbms.diff(tail, second, any);
+        QueryResult result2 = tail.diff(second, any);
 
         assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result2.nextItem(), 1);
@@ -581,7 +568,7 @@ public class DuplicateTest extends TestCase{
         assertEquals(result2.nextItem(), 4);
         assertEquals(result2.nextRow(), QueryResult.Type.End);
         
-        QueryResult result3 = dbms.diff(first, second, any);
+        QueryResult result3 = first.diff(second, any);
         
         assertEquals(result3.nextRow(), QueryResult.Type.Deleted);
         assertEquals(result3.nextItem(), 1);
@@ -617,13 +604,11 @@ public class DuplicateTest extends TestCase{
 
     @Test
     public void testDuplicateUpdates(){
-    	DBMS dbms = new MyDBMS();
-
         Column number = new Column(Integer.class);
         Column name = new Column(String.class);
         Table numbers = new Table(list(number));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
@@ -631,7 +616,7 @@ public class DuplicateTest extends TestCase{
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         builder.apply(insert, 1, "one");
         builder.apply(insert, 2, "two");
@@ -651,16 +636,16 @@ public class DuplicateTest extends TestCase{
            list((Expression) new Parameter()));
 
         try {
-          dbms.builder(first).apply(updateNumberWhereNumberEqual, 1, 2);
+          first.builder().apply(updateNumberWhereNumberEqual, 1, 2);
           throw new RuntimeException();
         } catch (DuplicateKeyException e) { }
 
         try {
-          dbms.builder(first).apply(updateNumberWhereNumberEqual, 2, 3);
+          first.builder().apply(updateNumberWhereNumberEqual, 2, 3);
           throw new RuntimeException();
         } catch (DuplicateKeyException e) { }
 
-        builder = dbms.builder(first);
+        builder = first.builder();
 
         builder.apply(updateNumberWhereNumberEqual, 3, 3);
         builder.apply(updateNumberWhereNumberEqual, 4, 2);
@@ -674,7 +659,7 @@ public class DuplicateTest extends TestCase{
            numbersReference,
            new Constant(true));
 
-        QueryResult result = dbms.diff(tail, second, any);
+        QueryResult result = tail.diff(second, any);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), 1);

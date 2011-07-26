@@ -18,9 +18,9 @@ import static com.readytalk.oss.dbms.ExpressionFactory.greaterThanOrEqual;
 import static com.readytalk.oss.dbms.ExpressionFactory.not;
 import static org.junit.Assert.*;
 
-import com.readytalk.oss.dbms.DBMS;
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.Column;
+import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.Revision;
@@ -34,20 +34,17 @@ import com.readytalk.oss.dbms.Parameter;
 import com.readytalk.oss.dbms.ColumnReference;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
 import com.readytalk.oss.dbms.UnaryOperation;
-import com.readytalk.oss.dbms.imp.MyDBMS;
 
 public class OperationTest extends TestCase{
     
     @Test
     public void testComparisons(){
     	
-        DBMS dbms = new MyDBMS();
-
         Column number = new Column(Integer.class);
         Column name = new Column(String.class);
         Table numbers = new Table(list(number));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
@@ -55,7 +52,7 @@ public class OperationTest extends TestCase{
            list(parameter(), parameter()),
            DuplicateKeyResolution.Throw);
 
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         builder.apply(insert,  1, "one");
         builder.apply(insert,  2, "two");
@@ -80,18 +77,21 @@ public class OperationTest extends TestCase{
            numbersReference,
            lessThan(reference(numbersReference, number),
                     parameter()));
+        Object[] parameters = { 1 };
 
-        QueryResult result = dbms.diff(tail, first, lessThan, 1);
+        QueryResult result = tail.diff(first, lessThan, parameters);
 
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters1 = { 2 };
 
-        result = dbms.diff(tail, first, lessThan, 2);
+        result = tail.diff(first, lessThan, parameters1);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "one");
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters2 = { 6 };
 
-        result = dbms.diff(tail, first, lessThan, 6);
+        result = tail.diff(first, lessThan, parameters2);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "one");
@@ -104,8 +104,9 @@ public class OperationTest extends TestCase{
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "five");
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters3 = { 42 };
 
-        result = dbms.diff(tail, first, lessThan, 42);
+        result = tail.diff(first, lessThan, parameters3);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "one");
@@ -139,18 +140,21 @@ public class OperationTest extends TestCase{
           (list(reference(numbersReference, name)),
            numbersReference,
            greaterThan(reference(numbersReference, number), parameter()));
+        Object[] parameters4 = { 13 };
 
-        result = dbms.diff(tail, first, greaterThan, 13);
+        result = tail.diff(first, greaterThan, parameters4);
 
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters5 = { 12 };
 
-        result = dbms.diff(tail, first, greaterThan, 12);
+        result = tail.diff(first, greaterThan, parameters5);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "thirteen");
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters6 = { 11 };
 
-        result = dbms.diff(tail, first, greaterThan, 11);
+        result = tail.diff(first, greaterThan, parameters6);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "twelve");
@@ -162,18 +166,21 @@ public class OperationTest extends TestCase{
           (list(reference(numbersReference, name)),
            numbersReference,
            lessThanOrEqual(reference(numbersReference, number), parameter()));
+        Object[] parameters7 = { 0 };
 
-        result = dbms.diff(tail, first, lessThanOrEqual, 0);
+        result = tail.diff(first, lessThanOrEqual, parameters7);
 
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters8 = { 1 };
 
-        result = dbms.diff(tail, first, lessThanOrEqual, 1);
+        result = tail.diff(first, lessThanOrEqual, parameters8);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "one");
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters9 = { 2 };
 
-        result = dbms.diff(tail, first, lessThanOrEqual, 2);
+        result = tail.diff(first, lessThanOrEqual, parameters9);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "one");
@@ -186,18 +193,21 @@ public class OperationTest extends TestCase{
            numbersReference,
            greaterThanOrEqual(reference(numbersReference, number),
                               parameter()));
+        Object[] parameters10 = { 14 };
 
-        result = dbms.diff(tail, first, greaterThanOrEqual, 14);
+        result = tail.diff(first, greaterThanOrEqual, parameters10);
 
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters11 = { 13 };
 
-        result = dbms.diff(tail, first, greaterThanOrEqual, 13);
+        result = tail.diff(first, greaterThanOrEqual, parameters11);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "thirteen");
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters12 = { 12 };
 
-        result = dbms.diff(tail, first, greaterThanOrEqual, 12);
+        result = tail.diff(first, greaterThanOrEqual, parameters12);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "twelve");
@@ -209,8 +219,9 @@ public class OperationTest extends TestCase{
           (list(reference(numbersReference, name)),
            numbersReference,
            notEqual(reference(numbersReference, number), parameter()));
+        Object[] parameters13 = { 4 };
 
-        result = dbms.diff(tail, first, notEqual, 4);
+        result = tail.diff(first, notEqual, parameters13);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "one");
@@ -241,13 +252,11 @@ public class OperationTest extends TestCase{
     
     @Test
     public void testBooleanOperators(){
-    	DBMS dbms = new MyDBMS();
-
         Column number = new Column(Integer.class);
         Column name = new Column(String.class);
         Table numbers = new Table(list(number));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
@@ -255,7 +264,7 @@ public class OperationTest extends TestCase{
            list(parameter(), parameter()),
            DuplicateKeyResolution.Throw);
 
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         builder.apply(insert,  1, "one");
         builder.apply(insert,  2, "two");
@@ -280,9 +289,9 @@ public class OperationTest extends TestCase{
            numbersReference,
            and(greaterThan(reference(numbersReference, number), parameter()),
                lessThan(reference(numbersReference, number), parameter())));
+        Object[] parameters = { 8, 12 };
 
-        QueryResult result = dbms.diff
-          (tail, first, greaterThanAndLessThan, 8, 12);
+        QueryResult result = tail.diff(first, greaterThanAndLessThan, parameters);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "nine");
@@ -291,12 +300,14 @@ public class OperationTest extends TestCase{
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "eleven");
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters1 = { 8, 8 };
 
-        result = dbms.diff(tail, first, greaterThanAndLessThan, 8, 8);
+        result = tail.diff(first, greaterThanAndLessThan, parameters1);
 
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters2 = { 12, 8 };
 
-        result = dbms.diff(tail, first, greaterThanAndLessThan, 12, 8);
+        result = tail.diff(first, greaterThanAndLessThan, parameters2);
 
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
@@ -305,8 +316,9 @@ public class OperationTest extends TestCase{
            numbersReference,
            or(lessThan(reference(numbersReference, number), parameter()),
               greaterThan(reference(numbersReference, number), parameter())));
+        Object[] parameters3 = { 8, 12 };
 
-        result = dbms.diff(tail, first, lessThanOrGreaterThan, 8, 12);
+        result = tail.diff(first, lessThanOrGreaterThan, parameters3);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "one");
@@ -325,8 +337,9 @@ public class OperationTest extends TestCase{
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "thirteen");
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters4 = { 8, 8 };
 
-        result = dbms.diff(tail, first, lessThanOrGreaterThan, 8, 8);
+        result = tail.diff(first, lessThanOrGreaterThan, parameters4);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "one");
@@ -353,8 +366,9 @@ public class OperationTest extends TestCase{
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "thirteen");
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters5 = { 12, 8 };
 
-        result = dbms.diff(tail, first, lessThanOrGreaterThan, 12, 8);
+        result = tail.diff(first, lessThanOrGreaterThan, parameters5);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "one");
@@ -388,8 +402,9 @@ public class OperationTest extends TestCase{
           (list(reference(numbersReference, name)),
            numbersReference,
            not(equal(reference(numbersReference, number), parameter())));
+        Object[] parameters6 = { 2 };
 
-        result = dbms.diff(tail, first, notEqual, 2);
+        result = tail.diff(first, notEqual, parameters6);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "one");
@@ -427,9 +442,9 @@ public class OperationTest extends TestCase{
                            parameter())),
               not(lessThanOrEqual(reference(numbersReference, number),
                                   parameter()))));
+        Object[] parameters7 = { 3, 7, 10 };
 
-        result = dbms.diff
-          (tail, first, greaterThanAndLessThanOrNotLessThanOrEqual, 3, 7, 10);
+        result = tail.diff(first, greaterThanAndLessThanOrNotLessThanOrEqual, parameters7);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "four");

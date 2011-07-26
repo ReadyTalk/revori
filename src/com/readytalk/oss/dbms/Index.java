@@ -30,7 +30,7 @@ public final class Index implements Comparable<Index> {
   /**
    * Defines an index which is associated with the specified list of
    * columns.  The order of the list determines the indexing order as
-   * in an SQL DBMS.
+   * in an SQL MyDBMS.
    */
   public Index(Table table, List<Column> columns) {
     this.table = table;

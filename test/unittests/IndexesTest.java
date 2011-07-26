@@ -7,9 +7,9 @@ import org.junit.Test;
 import static com.readytalk.oss.dbms.util.Util.list;
 import static org.junit.Assert.*;
 
-import com.readytalk.oss.dbms.DBMS;
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.Column;
+import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.Revision;
@@ -22,14 +22,11 @@ import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.Parameter;
 import com.readytalk.oss.dbms.ColumnReference;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
-import com.readytalk.oss.dbms.imp.MyDBMS;
 
 public class IndexesTest extends TestCase{
     
     @Test
     public void testMultiLevelIndexes(){
-        DBMS dbms = new MyDBMS();
-
         Column country = new Column(String.class);
         Column state = new Column(String.class);
         Column city = new Column(String.class);
@@ -37,7 +34,7 @@ public class IndexesTest extends TestCase{
         Column color = new Column(String.class);
         Table places = new Table(list(country, state, city));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (places,
@@ -48,7 +45,7 @@ public class IndexesTest extends TestCase{
                 new Parameter(),
                 new Parameter()), DuplicateKeyResolution.Throw);
         
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         builder.apply(insert,
                    "USA", "Colorado", "Denver", 80209, "teal");
@@ -77,9 +74,9 @@ public class IndexesTest extends TestCase{
            (BinaryOperation.Type.Equal,
             new ColumnReference(placesReference, state),
             new Parameter()));
+        Object[] parameters = { "Colorado" };
 
-        QueryResult result = dbms.diff
-          (tail, first, stateEqual, "Colorado");
+        QueryResult result = tail.diff(first, stateEqual, parameters);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "teal");
@@ -88,8 +85,9 @@ public class IndexesTest extends TestCase{
         assertEquals(result.nextItem(), "orange");
         assertEquals(result.nextItem(), 81601);
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters1 = { "Colorado" };
 
-        result = dbms.diff(first, tail, stateEqual, "Colorado");
+        result = first.diff(tail, stateEqual, parameters1);
 
         assertEquals(result.nextRow(), QueryResult.Type.Deleted);
         assertEquals(result.nextItem(), "teal");
@@ -98,8 +96,9 @@ public class IndexesTest extends TestCase{
         assertEquals(result.nextItem(), "orange");
         assertEquals(result.nextItem(), 81601);
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters2 = { "N/A" };
 
-        result = dbms.diff(tail, first, stateEqual, "N/A");
+        result = tail.diff(first, stateEqual, parameters2);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "red");
@@ -123,15 +122,17 @@ public class IndexesTest extends TestCase{
            (BinaryOperation.Type.Equal,
             new ColumnReference(placesReference, country),
             new Parameter()));
+        Object[] parameters3 = { "France" };
 
-        result = dbms.diff(tail, first, countryEqual, "France");
+        result = tail.diff(first, countryEqual, parameters3);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "pink");
         assertEquals(result.nextItem(), "Paris");
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters4 = { "China" };
 
-        result = dbms.diff(tail, first, countryEqual, "China");
+        result = tail.diff(first, countryEqual, parameters4);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "red");
@@ -161,14 +162,14 @@ public class IndexesTest extends TestCase{
             (BinaryOperation.Type.Equal,
              new ColumnReference(placesReference, city),
              new Parameter())));
+        Object[] parameters5 = { "France", "Colorado", "Paris" };
 
-        result = dbms.diff(tail, first, countryStateCityEqual,
-                           "France", "Colorado", "Paris");
+        result = tail.diff(first, countryStateCityEqual, parameters5);
 
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters6 = { "France", "N/A", "Paris" };
 
-        result = dbms.diff(tail, first, countryStateCityEqual,
-                           "France", "N/A", "Paris");
+        result = tail.diff(first, countryStateCityEqual, parameters6);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "pink");

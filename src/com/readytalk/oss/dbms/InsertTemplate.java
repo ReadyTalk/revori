@@ -43,7 +43,7 @@ public final class InsertTemplate implements PatchTemplate {
    * columns.
    *
    * If, when this template is applied, there is already row with a
-   * matching primary key in the table, the DBMS will act according to
+   * matching primary key in the table, the MyDBMS will act according to
    * the specified DuplicateKeyResolution.
    */
   public InsertTemplate(Table table,

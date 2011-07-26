@@ -6,9 +6,9 @@ import org.junit.Test;
 
 import static com.readytalk.oss.dbms.util.Util.list;
 
-import com.readytalk.oss.dbms.DBMS;
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.Column;
+import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Revision;
 import com.readytalk.oss.dbms.RevisionBuilder;
@@ -20,19 +20,16 @@ import com.readytalk.oss.dbms.TableReference;
 import com.readytalk.oss.dbms.ColumnReference;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
-import com.readytalk.oss.dbms.imp.MyDBMS;
 
 
 public class ColumnTypeTest extends TestCase{
    @Test
    public void testColumnTypes(){
-	   DBMS dbms = new MyDBMS();
-
 	    Column number = new Column(Integer.class);
 	    Column name = new Column(String.class);
 	    Table numbers = new Table(list(number));
 
-	    Revision tail = dbms.revision();
+	    Revision tail = Revisions.Empty;
 
 	    PatchTemplate insert = new InsertTemplate
 	      (numbers,
@@ -41,16 +38,16 @@ public class ColumnTypeTest extends TestCase{
                DuplicateKeyResolution.Throw);
 
 	    try {
-	      dbms.builder(tail).apply(insert, "1", "one");
+	      tail.builder().apply(insert, "1", "one");
 	      throw new RuntimeException();
 	    } catch (ClassCastException e) { }
 
 	    try {
-	      dbms.builder(tail).apply(insert, 1, 1);
+	      tail.builder().apply(insert, 1, 1);
 	      throw new RuntimeException();
 	    } catch (ClassCastException e) { }
 
-	    RevisionBuilder builder = dbms.builder(tail);
+	    RevisionBuilder builder = tail.builder();
 
 	    builder.apply(insert, 1, "one");
 
@@ -68,7 +65,7 @@ public class ColumnTypeTest extends TestCase{
 	       list((Expression) new Parameter()));
 
 	    try {
-	      dbms.builder(first).apply(updateNameWhereNumberEqual, 1, 2);
+	      first.builder().apply(updateNameWhereNumberEqual, 1, 2);
 	      throw new RuntimeException();
 	    } catch (ClassCastException e) { }
    }

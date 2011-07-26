@@ -4,7 +4,7 @@ package com.readytalk.oss.dbms;
  * Interface useful for representing types whose values may be
  * implicitly coerced to other types.<p>
  *
- * Ordinarily, the DBMS will only allow, inserts, updates, and
+ * Ordinarily, the MyDBMS will only allow, inserts, updates, and
  * comparisons involving types which match the declared column type.
  * However, it is sometimes desirable to compare e.g. 32-bit integers
  * with 64-bit integers, in which case column types extending Coerceable

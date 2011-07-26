@@ -7,9 +7,9 @@ import org.junit.Test;
 import static com.readytalk.oss.dbms.util.Util.list;
 import static org.junit.Assert.*;
 
-import com.readytalk.oss.dbms.DBMS;
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.Column;
+import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.Revision;
@@ -26,21 +26,18 @@ import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
 import com.readytalk.oss.dbms.Expression;
-import com.readytalk.oss.dbms.imp.MyDBMS;
 
 
 public class GeneralTest extends TestCase{
     @Test
     public void testSimpleInsertDiffs(){
-        DBMS dbms = new MyDBMS();
-        
         Column number = new Column(Integer.class);
         Column name = new Column(String.class);
         Table numbers = new Table(list(number));
         
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
         
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
         
         PatchTemplate insert = new InsertTemplate
         (numbers,
@@ -61,39 +58,40 @@ public class GeneralTest extends TestCase{
                         new ColumnReference(numbersReference, number),
                         new Parameter()));
         
-        QueryResult result = dbms.diff(tail, first, equal, 42);
+        QueryResult result = tail.diff(first, equal, 42);
         
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "forty two");
         assertEquals(result.nextRow(), QueryResult.Type.End);
         
-        result = dbms.diff(first, tail, equal, 42);
+        Object[] parameters = { 42 };
+        result = first.diff(tail, equal, parameters);
         
         assertEquals(result.nextRow(), QueryResult.Type.Deleted);
         assertEquals(result.nextItem(), "forty two");
         assertEquals(result.nextRow(), QueryResult.Type.End);
         
-        result = dbms.diff(tail, first, equal, 43);
+        result = tail.diff(first, equal, 43);
         
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters1 = { 42 };
         
-        result = dbms.diff(tail, tail, equal, 42);
+        result = tail.diff(tail, equal, parameters1);
         
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters2 = { 42 };
         
-        result = dbms.diff(first, first, equal, 42);
+        result = first.diff(first, equal, parameters2);
         
         assertEquals(result.nextRow(), QueryResult.Type.End);
         }
     @Test
     public void testLargerInsertDiffs(){
-        DBMS dbms = new MyDBMS();
-        
         Column number = new Column(Integer.class);
         Column name = new Column(String.class);
         Table numbers = new Table(list(number));
         
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
         
         PatchTemplate insert = new InsertTemplate
         (numbers,
@@ -101,7 +99,7 @@ public class GeneralTest extends TestCase{
          list((Expression) new Parameter(), new Parameter()),
          DuplicateKeyResolution.Throw);
         
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
         
         builder.apply(insert, 42, "forty two");
         builder.apply(insert, 43, "forty three");
@@ -122,30 +120,32 @@ public class GeneralTest extends TestCase{
                         new ColumnReference(numbersReference, number),
                         new Parameter()));
         
-        QueryResult result = dbms.diff(tail, first, equal, 42);
+        QueryResult result = tail.diff(first, equal, 42);
         
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "forty two");
         assertEquals(result.nextRow(), QueryResult.Type.End);
-        result = dbms.diff(first, tail, equal, 42);
+        result = first.diff(tail, equal, 42);
         
         assertEquals(result.nextRow(), QueryResult.Type.Deleted);
         assertEquals(result.nextItem(), "forty two");
         assertEquals(result.nextRow(), QueryResult.Type.End);
-        result = dbms.diff(tail, first, equal, 43);
+        result = tail.diff(first, equal, 43);
         
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "forty three");
         assertEquals(result.nextRow(), QueryResult.Type.End);
-        result = dbms.diff(tail, tail, equal, 42);
+        Object[] parameters = { 42 };
+        result = tail.diff(tail, equal, parameters);
+        
+        assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters1 = { 42 };
+        
+        result = first.diff(first, equal, parameters1);
         
         assertEquals(result.nextRow(), QueryResult.Type.End);
         
-        result = dbms.diff(first, first, equal, 42);
-        
-        assertEquals(result.nextRow(), QueryResult.Type.End);
-        
-        builder = dbms.builder(first);
+        builder = first.builder();
         
         builder.apply(insert, 1, "one");
         builder.apply(insert, 3, "three");
@@ -153,28 +153,33 @@ public class GeneralTest extends TestCase{
         builder.apply(insert, 6, "six");
         
         Revision second = builder.commit();
+        Object[] parameters2 = { 43 };
         
-        result = dbms.diff(tail, second, equal, 43);
+        result = tail.diff(second, equal, parameters2);
         
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "forty three");
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters3 = { 43 };
         
-        result = dbms.diff(first, second, equal, 43);
+        result = first.diff(second, equal, parameters3);
         
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters4 = { 5 };
         
-        result = dbms.diff(first, second, equal, 5);
+        result = first.diff(second, equal, parameters4);
         
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "five");
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters5 = { 5 };
         
-        result = dbms.diff(tail, first, equal, 5);
+        result = tail.diff(first, equal, parameters5);
         
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters6 = { 5 };
         
-        result = dbms.diff(second, first, equal, 5);
+        result = second.diff(first, equal, parameters6);
         
         assertEquals(result.nextRow(), QueryResult.Type.Deleted);
         assertEquals(result.nextItem(), "five");
@@ -184,13 +189,11 @@ public class GeneralTest extends TestCase{
     @Test
     public void testDeleteDiffs(){
     
-    DBMS dbms = new MyDBMS();
-
     Column number = new Column(Integer.class);
     Column name = new Column(String.class);
     Table numbers = new Table(list(number));
 
-    Revision tail = dbms.revision();
+    Revision tail = Revisions.Empty;
 
     PatchTemplate insert = new InsertTemplate
       (numbers,
@@ -198,7 +201,7 @@ public class GeneralTest extends TestCase{
        list((Expression) new Parameter(), new Parameter()),
        DuplicateKeyResolution.Throw);
 
-    RevisionBuilder builder = dbms.builder(tail);
+    RevisionBuilder builder = tail.builder();
 
     builder.apply(insert, 42, "forty two");
     builder.apply(insert, 43, "forty three");
@@ -225,121 +228,139 @@ public class GeneralTest extends TestCase{
         new ColumnReference(numbersReference, number),
         new Parameter()));
 
-    builder = dbms.builder(first);
+    builder = first.builder();
 
     builder.apply(delete, 43);
 
     Revision second = builder.commit();
 
-    QueryResult result = dbms.diff(first, second, equal, 43);
+    Object[] parameters = { 43 };
+    QueryResult result = first.diff(second, equal, parameters);
 
     assertEquals(result.nextRow(), QueryResult.Type.Deleted);
     assertEquals(result.nextItem(), "forty three");
     assertEquals(result.nextRow(), QueryResult.Type.End);
+    Object[] parameters1 = { 43 };
 
-    result = dbms.diff(second, first, equal, 43);
+    result = second.diff(first, equal, parameters1);
 
     assertEquals(result.nextRow(), QueryResult.Type.Inserted);
     assertEquals(result.nextItem(), "forty three");
     assertEquals(result.nextRow(), QueryResult.Type.End);
+    Object[] parameters2 = { 43 };
 
-    result = dbms.diff(tail, second, equal, 43);
-
-    assertEquals(result.nextRow(), QueryResult.Type.End);
-    
-    result = dbms.diff(first, second, equal, 42);
+    result = tail.diff(second, equal, parameters2);
 
     assertEquals(result.nextRow(), QueryResult.Type.End);
+    Object[] parameters3 = { 42 };
     
-    result = dbms.diff(tail, second, equal, 42);
+    result = first.diff(second, equal, parameters3);
+
+    assertEquals(result.nextRow(), QueryResult.Type.End);
+    Object[] parameters4 = { 42 };
+    
+    result = tail.diff(second, equal, parameters4);
 
     assertEquals(result.nextRow(), QueryResult.Type.Inserted);
     assertEquals(result.nextItem(), "forty two");
     assertEquals(result.nextRow(), QueryResult.Type.End);
+    Object[] parameters5 = { 42 };
     
-    result = dbms.diff(second, tail, equal, 42);
+    result = second.diff(tail, equal, parameters5);
 
     assertEquals(result.nextRow(), QueryResult.Type.Deleted);
     assertEquals(result.nextItem(), "forty two");
     assertEquals(result.nextRow(), QueryResult.Type.End);
 
-    builder = dbms.builder(first);
+    builder = first.builder();
 
     builder.apply(delete, 43);
     builder.apply(delete, 42);
     builder.apply(delete, 65);
 
     second = builder.commit();
+    Object[] parameters6 = { 43 };
 
-    result = dbms.diff(first, second, equal, 43);
+    result = first.diff(second, equal, parameters6);
 
     assertEquals(result.nextRow(), QueryResult.Type.Deleted);
     assertEquals(result.nextItem(), "forty three");
     assertEquals(result.nextRow(), QueryResult.Type.End);
+    Object[] parameters7 = { 43 };
 
-    result = dbms.diff(second, first, equal, 43);
+    result = second.diff(first, equal, parameters7);
 
     assertEquals(result.nextRow(), QueryResult.Type.Inserted);
     assertEquals(result.nextItem(), "forty three");
     assertEquals(result.nextRow(), QueryResult.Type.End);
+    Object[] parameters8 = { 42 };
 
-    result = dbms.diff(first, second, equal, 42);
+    result = first.diff(second, equal, parameters8);
 
     assertEquals(result.nextRow(), QueryResult.Type.Deleted);
     assertEquals(result.nextItem(), "forty two");
     assertEquals(result.nextRow(), QueryResult.Type.End);
+    Object[] parameters9 = { 42 };
 
-    result = dbms.diff(second, first, equal, 42);
+    result = second.diff(first, equal, parameters9);
 
     assertEquals(result.nextRow(), QueryResult.Type.Inserted);
     assertEquals(result.nextItem(), "forty two");
     assertEquals(result.nextRow(), QueryResult.Type.End);
+    Object[] parameters10 = { 65 };
 
-    result = dbms.diff(first, second, equal, 65);
+    result = first.diff(second, equal, parameters10);
 
     assertEquals(result.nextRow(), QueryResult.Type.Deleted);
     assertEquals(result.nextItem(), "sixty five");
     assertEquals(result.nextRow(), QueryResult.Type.End);
+    Object[] parameters11 = { 65 };
 
-    result = dbms.diff(second, first, equal, 65);
+    result = second.diff(first, equal, parameters11);
 
     assertEquals(result.nextRow(), QueryResult.Type.Inserted);
     assertEquals(result.nextItem(), "sixty five");
     assertEquals(result.nextRow(), QueryResult.Type.End);
+    Object[] parameters12 = { 2 };
     
-    result = dbms.diff(first, second, equal, 2);
+    result = first.diff(second, equal, parameters12);
 
     assertEquals(result.nextRow(), QueryResult.Type.End);
+    Object[] parameters13 = { 2 };
     
-    result = dbms.diff(second, first, equal, 2);
+    result = second.diff(first, equal, parameters13);
 
     assertEquals(result.nextRow(), QueryResult.Type.End);
 
-    builder = dbms.builder(second);
+    builder = second.builder();
 
     builder.apply(delete, 44);
     builder.apply(delete,  2);
     builder.apply(delete,  8);
 
     Revision third = builder.commit();
+    Object[] parameters14 = { 44 };
 
-    result = dbms.diff(second, third, equal, 44);
+    result = second.diff(third, equal, parameters14);
 
     assertEquals(result.nextRow(), QueryResult.Type.Deleted);
     assertEquals(result.nextItem(), "forty four");
     assertEquals(result.nextRow(), QueryResult.Type.End);
+    Object[] parameters15 = { 44 };
 
-    result = dbms.diff(third, second, equal, 44);
+    result = third.diff(second, equal, parameters15);
 
     assertEquals(result.nextRow(), QueryResult.Type.Inserted);
     assertEquals(result.nextItem(), "forty four");
     assertEquals(result.nextRow(), QueryResult.Type.End);
+    Object[] parameters16 = { 44 };
 
-    result = dbms.diff(tail, third, equal, 44);
+    result = tail.diff(third, equal, parameters16);
 
     assertEquals(result.nextRow(), QueryResult.Type.End);
+    Object[] parameters17 = { 42 };
 
-    result = dbms.diff(tail, third, equal, 42);
+    result = tail.diff(third, equal, parameters17);
 
     assertEquals(result.nextRow(), QueryResult.Type.End);
     	
@@ -347,13 +368,11 @@ public class GeneralTest extends TestCase{
     
     @Test
     public void testUpdateDiffs(){
-        DBMS dbms = new MyDBMS();
-
         Column number = new Column(Integer.class);
         Column name = new Column(String.class);
         Table numbers = new Table(list(number));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
         (numbers,
@@ -361,7 +380,7 @@ public class GeneralTest extends TestCase{
          list((Expression) new Parameter(), new Parameter()),
          DuplicateKeyResolution.Throw);
         
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         builder.apply(insert,  1, "one");
         builder.apply(insert,  2, "two");
@@ -390,7 +409,7 @@ public class GeneralTest extends TestCase{
          list(name),
          list((Expression) new Parameter()));
 
-        builder = dbms.builder(first);
+        builder = first.builder();
 
         builder.apply(update, 1, "ichi");
 
@@ -404,39 +423,44 @@ public class GeneralTest extends TestCase{
                         new ColumnReference(numbersReference, number),
                         new Parameter()));
 
-        QueryResult result = dbms.diff(first, second, equal, 1);
+        Object[] parameters = { 1 };
+        QueryResult result = first.diff(second, equal, parameters);
 
         assertEquals(result.nextRow(), QueryResult.Type.Deleted);
         assertEquals(result.nextItem(), "one");
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "ichi");
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters1 = { 1 };
 
-        result = dbms.diff(second, first, equal, 1);
+        result = second.diff(first, equal, parameters1);
 
         assertEquals(result.nextRow(), QueryResult.Type.Deleted);
         assertEquals(result.nextItem(), "ichi");
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "one");
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters2 = { 2 };
 
-        result = dbms.diff(first, second, equal, 2);
+        result = first.diff(second, equal, parameters2);
 
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters3 = { 1 };
 
-        result = dbms.diff(tail, first, equal, 1);
+        result = tail.diff(first, equal, parameters3);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "one");
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters4 = { 1 };
 
-        result = dbms.diff(tail, second, equal, 1);
+        result = tail.diff(second, equal, parameters4);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "ichi");
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
-        builder = dbms.builder(second);
+        builder = second.builder();
 
         builder.apply(update, 11, "ju ichi");
         builder.apply(update,  6, "roku");
@@ -448,8 +472,9 @@ public class GeneralTest extends TestCase{
         (list((Expression) new ColumnReference(numbersReference, name)),
                 numbersReference,
                 new Constant(true));
+        Object[] parameters5 = {};
 
-        result = dbms.diff(second, third, any);
+        result = second.diff(third, any, parameters5);
 
         assertEquals(result.nextRow(), QueryResult.Type.Deleted);
         assertEquals(result.nextItem(), "six");
@@ -468,13 +493,11 @@ public class GeneralTest extends TestCase{
     
     @Test
     public void testNonIndexedQueries(){
-        DBMS dbms = new MyDBMS();
-
         Column number = new Column(Integer.class);
         Column name = new Column(String.class);
         Table numbers = new Table(list(number));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
@@ -482,7 +505,7 @@ public class GeneralTest extends TestCase{
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         builder.apply(insert,  1, "one");
         builder.apply(insert,  2, "two");
@@ -511,14 +534,16 @@ public class GeneralTest extends TestCase{
             new ColumnReference(numbersReference, name),
             new Parameter()));
 
-        QueryResult result = dbms.diff(tail, first, nameEqual, "nine");
+        Object[] parameters = { "nine" };
+        QueryResult result = tail.diff(first, nameEqual, parameters);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), 9);
         assertEquals(result.nextItem(), "nine");
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters1 = { "nine" };
 
-        result = dbms.diff(first, tail, nameEqual, "nine");
+        result = first.diff(tail, nameEqual, parameters1);
 
         assertEquals(result.nextRow(), QueryResult.Type.Deleted);
         assertEquals(result.nextItem(), 9);
@@ -533,8 +558,9 @@ public class GeneralTest extends TestCase{
            (BinaryOperation.Type.LessThan,
             new ColumnReference(numbersReference, name),
             new Parameter()));
+        Object[] parameters2 = { "nine" };
 
-        result = dbms.diff(tail, first, nameLessThan, "nine");
+        result = tail.diff(first, nameLessThan, parameters2);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), 4);
@@ -553,13 +579,11 @@ public class GeneralTest extends TestCase{
     
     @Test
     public void testIndexedColumnUpdates(){
-    	DBMS dbms = new MyDBMS();
-
         Column number = new Column(Integer.class);
         Column name = new Column(String.class);
         Table numbers = new Table(list(number));
 
-        Revision tail = dbms.revision();
+        Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
@@ -567,7 +591,7 @@ public class GeneralTest extends TestCase{
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
-        RevisionBuilder builder = dbms.builder(tail);
+        RevisionBuilder builder = tail.builder();
 
         builder.apply(insert, 1, "one");
         builder.apply(insert, 2, "two");
@@ -586,7 +610,7 @@ public class GeneralTest extends TestCase{
            list(number),
            list((Expression) new Parameter()));
 
-        builder = dbms.builder(first);
+        builder = first.builder();
 
         builder.apply(updateNumberWhereNumberEqual, 3, 4);
 
@@ -600,13 +624,15 @@ public class GeneralTest extends TestCase{
             new ColumnReference(numbersReference, number),
             new Parameter()));
 
-        QueryResult result = dbms.diff(tail, second, numberEqual, 4);
+        Object[] parameters = { 4 };
+        QueryResult result = tail.diff(second, numberEqual, parameters);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "three");
         assertEquals(result.nextRow(), QueryResult.Type.End);
+        Object[] parameters1 = { 3 };
 
-        result = dbms.diff(tail, second, numberEqual, 3);
+        result = tail.diff(second, numberEqual, parameters1);
 
         assertEquals(result.nextRow(), QueryResult.Type.End);
     }

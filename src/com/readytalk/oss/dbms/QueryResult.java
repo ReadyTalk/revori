@@ -6,8 +6,8 @@ package com.readytalk.oss.dbms;
  * (ResultType.Inserted) and any removed or made obsolete by an update
  * (ResultType.Deleted).<p>
  *
- * See <code>DBMS.diff(Revision, Revision, QueryTemplate, Object[])
- * DBMS.diff(Revision, Revision, QueryTemplate, Object[])</code> for
+ * See <code>MyDBMS.diff(Revision, Revision, QueryTemplate, Object[])
+ * MyDBMS.diff(Revision, Revision, QueryTemplate, Object[])</code> for
  * details on the algorithm used to generate the list.
  */
 public interface QueryResult {

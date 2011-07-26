@@ -7,7 +7,6 @@ import static com.readytalk.oss.dbms.ExpressionFactory.parameter;
 import static com.readytalk.oss.dbms.ExpressionFactory.equal;
 import static com.readytalk.oss.dbms.ExpressionFactory.and;
 
-import com.readytalk.oss.dbms.DBMS;
 import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.Revision;
 import com.readytalk.oss.dbms.Column;
