@@ -16,7 +16,7 @@ class TableIterator implements SourceIterator {
   public final ExpressionAdapter test;
   public final ExpressionContext expressionContext;
   public final boolean visitUnchanged;
-  public final List<ColumnReferenceAdapter> columnReferences = new ArrayList();
+  public final List<ColumnReferenceAdapter> columnReferences = new ArrayList<ColumnReferenceAdapter>();
   public final Plan plan;
   public final DiffPair pair = new DiffPair();
   public NodeStack baseStack;

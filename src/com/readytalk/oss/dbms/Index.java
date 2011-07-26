@@ -35,11 +35,11 @@ public final class Index implements Comparable<Index> {
   public Index(Table table, List<Column> columns) {
     this.table = table;
 
-    List<Column> copy = new ArrayList(columns);
+    List<Column> copy = new ArrayList<Column>(columns);
 
     if (table.primaryKey != null) {
       // pad index with primary key columns to make it unique
-      for (Column c: table.primaryKey.columns) {
+      for (Column<?> c: table.primaryKey.columns) {
         if (! copy.contains(c)) {
           copy.add(c);
         }
@@ -78,7 +78,7 @@ public final class Index implements Comparable<Index> {
 
   public int hashCode() {
     int h = table.hashCode();
-    for (Column c: columns) {
+    for (Column<?> c: columns) {
       h ^= c.hashCode();
     }
     return h;

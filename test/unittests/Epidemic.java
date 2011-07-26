@@ -1,6 +1,7 @@
 package unittests;
 
 import org.junit.Test;
+
 import static org.junit.Assert.assertEquals;
 
 import static com.readytalk.oss.dbms.util.Util.list;
@@ -91,7 +92,7 @@ public class Epidemic extends TestCase{
         throw new RuntimeException("exceeded maximum iteration count");
       }
 
-      List<Message> messages = new ArrayList(network.messages);
+      List<Message> messages = new ArrayList<Message>(network.messages);
       network.messages.clear();
 
       for (Message m: messages) {
@@ -166,8 +167,8 @@ public class Epidemic extends TestCase{
   }
 
   private static class NodeNetwork implements Network {
-    public final Map<NodeID, Node> nodes = new HashMap();
-    public final List<Message> messages = new ArrayList();
+    public final Map<NodeID, Node> nodes = new HashMap<NodeID, Node>();
+    public final List<Message> messages = new ArrayList<Message>();
 
     public void send(NodeID source, NodeID destination, Writable message) {
       messages.add(new Message(source, destination, message));

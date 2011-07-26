@@ -39,8 +39,8 @@ class Merge {
     MyRevisionBuilder builder = new MyRevisionBuilder
       (new Object(), left, new NodeStack());
 
-    List<Index> indexes = new ArrayList();
-    List<Index> newIndexes = new ArrayList();
+    List<Index> indexes = new ArrayList<Index>();
+    List<Index> newIndexes = new ArrayList<Index>();
 
     NodeStack baseStack = new NodeStack();
     NodeStack leftStack = new NodeStack();
@@ -122,7 +122,7 @@ class Merge {
 
             Object result = conflictResolver.resolveConflict
               (table,
-               (Column) triple.left.key,
+               (Column<?>) triple.left.key,
                primaryKeyValues,
                triple.base == null ? null : triple.base.value,
                triple.left.value,
