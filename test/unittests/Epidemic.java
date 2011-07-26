@@ -18,11 +18,11 @@ import com.readytalk.oss.dbms.ForeignKeyResolver;
 import com.readytalk.oss.dbms.ForeignKeyResolvers;
 import com.readytalk.oss.dbms.util.BufferOutputStream;
 import com.readytalk.oss.dbms.server.EpidemicServer;
-import com.readytalk.oss.dbms.server.EpidemicServer.Writable;
-import com.readytalk.oss.dbms.server.EpidemicServer.Readable;
 import com.readytalk.oss.dbms.server.EpidemicServer.NodeID;
 import com.readytalk.oss.dbms.server.EpidemicServer.Network;
 import com.readytalk.oss.dbms.server.EpidemicServer.NodeConflictResolver;
+import com.readytalk.oss.dbms.server.protocol.Writable;
+import com.readytalk.oss.dbms.server.protocol.Readable;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -100,12 +100,11 @@ public class Epidemic extends TestCase{
           Node destination = network.nodes.get(m.destination);
 
           BufferOutputStream buffer = new BufferOutputStream();
-          m.body.writeTo(source.server, buffer);
+          m.body.writeTo(buffer);
 
           Readable result = (Readable) m.body.getClass().newInstance();
           result.readFrom
-            (destination.server,
-             new ByteArrayInputStream(buffer.getBuffer(), 0, buffer.size()));
+            (new ByteArrayInputStream(buffer.getBuffer(), 0, buffer.size()));
 
           destination.server.accept(m.source, result);
         } catch (InstantiationException e) {
