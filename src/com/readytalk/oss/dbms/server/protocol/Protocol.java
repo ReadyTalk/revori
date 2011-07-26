@@ -20,9 +20,9 @@ public class Protocol {
   private static final int ClassReference = 7;
   private static final int Reference = 8;
 
-  private static volatile Map<Class, Serializer> serializers = new HashMap();
+  private static volatile Map<Class, Serializer> serializers = new HashMap<Class, Serializer>();
   private static volatile Map<Class, Deserializer> deserializers
-    = new HashMap();
+    = new HashMap<Class, Deserializer>();
 
   static {
     serializers.put(Integer.class, new Serializer() {
@@ -51,7 +51,7 @@ public class Protocol {
 
     serializers.put(Class.class, new Serializer() {
       public void writeTo(WriteContext context, Object v) throws IOException {
-        write(context, ((Class) v).getName());
+        write(context, ((Class<?>) v).getName());
       }
     });
 
@@ -92,7 +92,7 @@ public class Protocol {
         write(context, t.id);
         List<Column> columns = t.primaryKey.columns;
         writeInteger(context.out, columns.size());
-        for (Column c: columns) {
+        for (Column<?> c: columns) {
           write(context, c);
         }
       }
@@ -102,9 +102,9 @@ public class Protocol {
       public Object readFrom(ReadContext context, Class c) throws IOException {
         String id = (String) read(context);
         int columnCount = readInteger(context.in);
-        List<Column> columns = new ArrayList(columnCount);
+        List<Column> columns = new ArrayList<Column>(columnCount);
         for (int i = 0; i < columnCount; ++i) {
-          columns.add((Column) read(context));
+          columns.add((Column<?>) read(context));
         }
         return new Table(columns, id);
       }
@@ -112,7 +112,7 @@ public class Protocol {
 
     serializers.put(Column.class, new Serializer() {
       public void writeTo(WriteContext context, Object v) throws IOException {
-        Column c = (Column) v;
+        Column<?> c = (Column<?>) v;
         write(context, c.type);
         write(context, c.id);
       }
@@ -120,17 +120,17 @@ public class Protocol {
 
     deserializers.put(Column.class, new Deserializer() {
       public Object readFrom(ReadContext context, Class c) throws IOException {
-        return new Column((Class) read(context), (String) read(context));
+        return new Column<Object>((Class) read(context), (String) read(context));
       }
     });
   }
 
   private static Serializer findSerializer(Class class_) {
-    Class c = find(class_, serializers);
+    Class<?> c = find(class_, serializers);
     Serializer s = serializers.get(c);
     if (c != class_) {
       synchronized (EpidemicServer.class) {
-        Map<Class, Serializer> map = new HashMap(serializers);
+        Map<Class, Serializer> map = new HashMap<Class, Serializer>(serializers);
         map.put(class_, s);
         serializers = map;
       }
@@ -138,12 +138,12 @@ public class Protocol {
     return s;
   }
 
-  private static Deserializer findDeserializer(Class class_) {
-    Class c = find(class_, deserializers);
+  private static Deserializer findDeserializer(Class<?> class_) {
+    Class<?> c = find(class_, deserializers);
     Deserializer d = deserializers.get(c);
     if (c != class_) {
       synchronized (EpidemicServer.class) {
-        Map<Class, Deserializer> map = new HashMap(deserializers);
+        Map<Class, Deserializer> map = new HashMap<Class, Deserializer>(deserializers);
         map.put(class_, d);
         deserializers = map;
       }
@@ -156,7 +156,7 @@ public class Protocol {
   {
     Integer id = context.objectIDs.get(value);
     if (id == null) {
-      Class c = value.getClass();
+      Class<?> c = value.getClass();
       Integer classID = context.classIDs.get(c);
       if (classID == null) {
         int newClassID = context.nextID++;
@@ -201,14 +201,14 @@ public class Protocol {
     out.write(bytes);
   }
 
-  private static Class find(Class class_, Map<Class, ?> map) {
-    for (Class c = class_; c != Object.class; c = c.getSuperclass()) {
+  private static Class<?> find(Class<?> class_, Map<Class, ?> map) {
+    for (Class<?> c = class_; c != Object.class; c = c.getSuperclass()) {
       if (map.containsKey(c)) {
         return c;
       }
     }
 
-    for (Class c: class_.getInterfaces()) {
+    for (Class<?> c: class_.getInterfaces()) {
       if (map.containsKey(c)) {
         return c;
       }
@@ -246,7 +246,7 @@ public class Protocol {
     return new String(array, "UTF-8");
   }
 
-  public static Object readObject(Class c, ReadContext context)
+  public static Object readObject(Class<?> c, ReadContext context)
     throws IOException
   {
     return findDeserializer(c).readFrom(context, c);
@@ -260,7 +260,7 @@ public class Protocol {
     switch (flag) {
     case ClassDefinition: {
       int classID = readInteger(in);
-      Class c;
+      Class<?> c;
       try {
         c = Class.forName(readString(in));
       } catch (ClassNotFoundException e) {
@@ -272,7 +272,7 @@ public class Protocol {
       
     case ClassReference: {
       int id = readInteger(in);
-      Class value = context.classes.get(id);
+      Class<?> value = context.classes.get(id);
       if (value == null) {
         throw new NullPointerException();
       }
@@ -293,7 +293,7 @@ public class Protocol {
     }    
   }
 
-  public static Object readDefinition(Class c,
+  public static Object readDefinition(Class<?> c,
                                       ReadContext context)
     throws IOException
   {

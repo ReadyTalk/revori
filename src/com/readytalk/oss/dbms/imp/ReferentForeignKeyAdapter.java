@@ -33,16 +33,16 @@ public class ReferentForeignKeyAdapter {
 
     Expression refererTest = constant(true);
 
-    for (Column c: constraint.refererColumns) {
+    for (Column<?> c: constraint.refererColumns) {
       refererTest = and
         (equal(reference(referer, c), parameter()), refererTest);
     }
     
     List<Column> refererColumns = referer.table.primaryKey.columns;
     List<Expression> refererColumnReferences
-      = new ArrayList(refererColumns.size());
+      = new ArrayList<Expression>(refererColumns.size());
 
-    for (Column c: refererColumns) {
+    for (Column<?> c: refererColumns) {
       refererColumnReferences.add(reference(referer, c));
     }
 
@@ -53,16 +53,16 @@ public class ReferentForeignKeyAdapter {
 
     Expression referentTest = constant(true);
 
-    for (Column c: constraint.referentColumns) {
+    for (Column<?> c: constraint.referentColumns) {
       referentTest = and
         (equal(reference(referent, c), parameter()), referentTest);
     }
     
     List<Column> referentColumns = referent.table.primaryKey.columns;
     List<Expression> referentColumnReferences
-      = new ArrayList(refererColumns.size());
+      = new ArrayList<Expression>(refererColumns.size());
 
-    for (Column c: referentColumns) {
+    for (Column<?> c: referentColumns) {
       referentColumnReferences.add(reference(referent, c));
     }
 

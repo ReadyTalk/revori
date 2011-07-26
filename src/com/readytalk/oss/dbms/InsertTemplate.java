@@ -52,8 +52,8 @@ public final class InsertTemplate implements PatchTemplate {
                         DuplicateKeyResolution duplicateKeyResolution)
   {
     this.table = table;
-    this.columns = Collections.unmodifiableList(new ArrayList(columns));
-    this.values = Collections.unmodifiableList(new ArrayList(values));
+    this.columns = Collections.unmodifiableList(new ArrayList<Column>(columns));
+    this.values = Collections.unmodifiableList(new ArrayList<Expression>(values));
     this.duplicateKeyResolution = duplicateKeyResolution;
     this.parameterCount = ParameterCounter.countParameters(this.values);
 
@@ -62,7 +62,7 @@ public final class InsertTemplate implements PatchTemplate {
         ("column and value lists must be of equal length");
     }
     
-    Set set = new HashSet(table.primaryKey.columns);
+    Set<?> set = new HashSet<Object>(table.primaryKey.columns);
     for (Object o: this.columns) {
       set.remove(o);
     }

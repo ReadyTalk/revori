@@ -4,6 +4,7 @@ import static com.readytalk.oss.dbms.util.Util.list;
 import static com.readytalk.oss.dbms.util.Util.set;
 
 import com.readytalk.oss.dbms.util.Util;
+import com.readytalk.oss.dbms.BinaryOperation.Type;
 import com.readytalk.oss.dbms.Coerceable;
 import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.Table;
@@ -107,10 +108,10 @@ public class SQLServer {
 
     public final AtomicReference<Revision> dbHead;
     public final Map<String, BinaryOperation.Type> binaryOperationTypes
-      = new HashMap();
+      = new HashMap<String, Type>();
     public final Map<String, UnaryOperation.Type> unaryOperationTypes
-      = new HashMap();
-    public final Map<String, Class> columnTypes = new HashMap();
+      = new HashMap<String, com.readytalk.oss.dbms.UnaryOperation.Type>();
+    public final Map<String, Class> columnTypes = new HashMap<String, Class>();
     public final ConflictResolver rightPreferenceConflictResolver
       = new ConflictResolver() {
           public Object resolveConflict(Table table,
@@ -286,7 +287,7 @@ public class SQLServer {
            new ColumnReference(tagsReference, tagsName),
            new Parameter())));
 
-      this.dbHead = new AtomicReference(Revisions.Empty);
+      this.dbHead = new AtomicReference<Revision>(Revisions.Empty);
 
       binaryOperationTypes.put("and", BinaryOperation.Type.And);
       binaryOperationTypes.put("or", BinaryOperation.Type.Or);
@@ -486,12 +487,12 @@ public class SQLServer {
 
   private static class MyColumn {
     public final String name;
-    public final Column column;
-    public final Class type;
+    public final Column<?> column;
+    public final Class<?> type;
     
     public MyColumn(String name,
-                  Column column,
-                  Class type)
+                  Column<?> column,
+                  Class<?> type)
     {
       this.name = name;
       this.column = column;
@@ -594,7 +595,7 @@ public class SQLServer {
   }
 
   private static class TreeList implements Tree {
-    public final List<Tree> list = new ArrayList();
+    public final List<Tree> list = new ArrayList<Tree>();
     
     public void add(Tree tree) {
       list.add(tree);
@@ -792,7 +793,7 @@ public class SQLServer {
      String columnName)
   {
     TableReference reference = null;
-    Column column = null;
+    Column<?> column = null;
     for (MyTableReference r: tableReferences) {
       if (tableName == null || tableName.equals(r.table.name)) {
         MyColumn c = r.table.columnMap.get(columnName);
@@ -876,7 +877,7 @@ public class SQLServer {
      Tree tree,
      List<MyTableReference> tableReferences)
   {
-    List<Expression> expressions = new ArrayList();
+    List<Expression> expressions = new ArrayList<Expression>();
     if (tree instanceof Terminal) {
       for (MyTableReference tableReference: tableReferences) {
         for (MyColumn column: tableReference.table.columnList) {
@@ -919,8 +920,8 @@ public class SQLServer {
                                                  Tree tree,
                                                  int[] expressionCount)
   {
-    List<MyTableReference> tableReferences = new ArrayList();
-    List<Expression> tests = new ArrayList();
+    List<MyTableReference> tableReferences = new ArrayList<MyTableReference>();
+    List<Expression> tests = new ArrayList<Expression>();
     Source source = makeSource
       (client, tree.get(3), tableReferences, tests);
 
@@ -949,7 +950,7 @@ public class SQLServer {
   private static List<Column> makeColumnList(MyTable table,
                                                   Tree tree)
   {
-    List<Column> columns = new ArrayList(tree.length());
+    List<Column> columns = new ArrayList<Column>(tree.length());
     for (int i = 0; i < tree.length(); ++i) {
       columns.add(findColumn(table, ((Name) tree.get(i)).value).column);
     }
@@ -960,7 +961,7 @@ public class SQLServer {
                                                           Tree tree)
   {
     if (tree == Nothing) {
-      List<Column> columns = new ArrayList(table.columnList.size());
+      List<Column> columns = new ArrayList<Column>(table.columnList.size());
       for (MyColumn c: table.columnList) {
         columns.add(c.column);
       }
@@ -990,8 +991,8 @@ public class SQLServer {
     List<MyTableReference> tableReferences = list(tableReference);
 
     Tree operations = tree.get(3);
-    List<Column> columns = new ArrayList();
-    List<Expression> values = new ArrayList();
+    List<Column> columns = new ArrayList<Column>();
+    List<Expression> values = new ArrayList<Expression>();
     for (int i = 0; i < operations.length(); ++i) {
       Tree operation = operations.get(i);
       columns.add(findColumn(table, ((Name) operation.get(0)).value).column);
@@ -1017,7 +1018,7 @@ public class SQLServer {
        (client.server, tree.get(3), tableReferences));
   }
 
-  private static MyColumn findColumn(MyTable table, Column column) {
+  private static MyColumn findColumn(MyTable table, Column<?> column) {
     for (MyColumn c: table.columnList) {
       if (c.column == column) {
         return c;
@@ -1033,8 +1034,8 @@ public class SQLServer {
     MyTable table = findTable(client, ((Name) tree.get(1)).value);
 
     List<Column> columns = makeOptionalColumnList(table, tree.get(2));
-    List<Expression> values = new ArrayList(columns.size());
-    for (Column c: columns) {
+    List<Expression> values = new ArrayList<Expression>(columns.size());
+    for (Column<?> c: columns) {
       values.add(new Parameter());
       columnTypes.add(findColumn(table, c).type);
     }
@@ -1043,10 +1044,10 @@ public class SQLServer {
       (table.table, columns, values, DuplicateKeyResolution.Throw);
   }
 
-  private static Class findColumnType(Server server,
+  private static Class<?> findColumnType(Server server,
                                       String name)
   {
-    Class type = server.columnTypes.get(name);
+    Class<?> type = server.columnTypes.get(name);
     if (type == null) {
       throw new RuntimeException("no such column type: " + name);
     } else {
@@ -1059,7 +1060,7 @@ public class SQLServer {
   {
     Tree body = tree.get(4);
     Tree primaryKeyTree = null;
-    List<Tree> columns = new ArrayList();
+    List<Tree> columns = new ArrayList<Tree>();
     for (int i = 0; i < body.length(); ++i) {
       Tree item = body.get(i);
       if (item.get(0) instanceof Terminal) {
@@ -1077,8 +1078,8 @@ public class SQLServer {
       throw new RuntimeException("no primary key specified");
     }
 
-    List<MyColumn> columnList = new ArrayList(columns.size());
-    Map<String, MyColumn> columnMap = new HashMap(columns.size());
+    List<MyColumn> columnList = new ArrayList<MyColumn>(columns.size());
+    Map<String, MyColumn> columnMap = new HashMap<String, MyColumn>(columns.size());
     for (Tree column: columns) {
       Class type = findColumnType(server, ((Terminal) column.get(1)).value);
       Column dbmsColumn = new Column(type);
@@ -1090,9 +1091,9 @@ public class SQLServer {
     }
 
     List<MyColumn> myPrimaryKeyColumns
-      = new ArrayList(primaryKeyTree.length());
+      = new ArrayList<MyColumn>(primaryKeyTree.length());
 
-    List<Column> dbmsPrimaryKeyColumns = new ArrayList
+    List<Column> dbmsPrimaryKeyColumns = new ArrayList<Column>
       (primaryKeyTree.length());
 
     for (int i = 0; i < primaryKeyTree.length(); ++i) {
@@ -1340,7 +1341,7 @@ public class SQLServer {
     }
   }
 
-  private static Object convert(Class type,
+  private static Object convert(Class<?> type,
                                 String value)
   {
     if (type == Integer.class
@@ -1436,11 +1437,11 @@ public class SQLServer {
                                     String name)
   {
     if (context.completions == null) {
-      context.completions = new HashMap();
+      context.completions = new HashMap<NameType, Set<String>>();
     }
     Set<String> set = context.completions.get(type);
     if (set == null) {
-      context.completions.put(type, set = new HashSet());
+      context.completions.put(type, set = new HashSet<String>());
     }
     set.add(name);
   }
@@ -1454,7 +1455,7 @@ public class SQLServer {
       QueryResult result = Revisions.Empty.diff
         (dbHead(client), client.server.listDatabases);
 
-      Set<String> set = new HashSet();
+      Set<String> set = new HashSet<String>();
       while (result.nextRow() == QueryResult.Type.Inserted) {
         String name = ((Database) result.nextItem()).name;
         if (name.startsWith(start)) {
@@ -1470,7 +1471,7 @@ public class SQLServer {
           (dbHead(client), client.server.listTables,
            client.database.name);
 
-        Set<String> set = new HashSet();
+        Set<String> set = new HashSet<String>();
         while (result.nextRow() == QueryResult.Type.Inserted) {
           String name = ((MyTable) result.nextItem()).name;
           if (name.startsWith(start)) {
@@ -1490,7 +1491,7 @@ public class SQLServer {
           (dbHead(client), client.server.listTags,
            client.database.name);
 
-        Set<String> set = new HashSet();
+        Set<String> set = new HashSet<String>();
         while (result.nextRow() == QueryResult.Type.Inserted) {
           String name = ((Tag) result.nextItem()).name;
           if (name.startsWith(start)) {
@@ -1521,7 +1522,7 @@ public class SQLServer {
           if (tableSet != null && context.client.database != null) {
             Revision tail = Revisions.Empty;
             Revision head = dbHead(context.client);
-            Set<String> columns = new HashSet();
+            Set<String> columns = new HashSet<String>();
             for (String tableName: tableSet) {
               QueryResult result = tail.diff
                 (head, context.client.server.findTable,
@@ -1539,7 +1540,7 @@ public class SQLServer {
             if (columns.size() == 0) {
               return null;
             } else {
-              return new HashSet(columns);
+              return new HashSet<String>(columns);
             }
           } else {
             return null;
@@ -1669,7 +1670,7 @@ public class SQLServer {
               return result;
             } else if (result.completions != null) {
               if (completions == null) {
-                completions = new HashSet();
+                completions = new HashSet<String>();
               }
               completions.addAll(result.completions);
             }
@@ -2081,7 +2082,7 @@ public class SQLServer {
                            OutputStream out)
              throws IOException
            {
-             List<Class> columnTypes = new ArrayList();
+             List<Class> columnTypes = new ArrayList<Class>();
              client.copyContext = new CopyContext
                (head(client).builder(), makeCopyTemplate
                 (client, tree, columnTypes), columnTypes);

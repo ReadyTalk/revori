@@ -51,7 +51,7 @@ class MyQueryResult implements QueryResult {
       source.visit(finder);
 
       if (finder.foundChanged) {
-        expressions = new ArrayList(template.expressions.size());
+        expressions = new ArrayList<ExpressionAdapter>(template.expressions.size());
 
         ExpressionContext context = new ExpressionContext(parameters);
 
