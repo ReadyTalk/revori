@@ -24,7 +24,7 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
     ExpressionAdapter test = ExpressionAdapterFactory.makeAdapter
       (expressionContext, update.test);
 
-    List<ExpressionAdapter> valueAdapters = new ArrayList
+    List<ExpressionAdapter> valueAdapters = new ArrayList<ExpressionAdapter>
       (update.values.size());
 
     for (Expression e: update.values) {
@@ -58,11 +58,11 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
     List<Column> keyColumns = index.columns;
 
     int[] keyColumnsUpdated;
-    { List<Column> columnList = new ArrayList();
-      for (Column c: keyColumns) {
+    { List<Column> columnList = new ArrayList<Column>();
+      for (Column<?> c: keyColumns) {
         if (update.columns.contains(c)) {
           if (columnList == null) {
-            columnList = new ArrayList();
+            columnList = new ArrayList<Column>();
           }
           columnList.add(c);
         }
@@ -127,18 +127,18 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
           for (; i < keyColumns.size() - 1; ++i) {
             builder.setKey
               (i + Constants.IndexDataBodyDepth,
-               (Comparable) Node.find(original, keyColumns.get(i)).value);
+               (Comparable<?>) Node.find(original, keyColumns.get(i)).value);
           }
 
           builder.delete
             (i + Constants.IndexDataBodyDepth,
-             (Comparable) Node.find(original, keyColumns.get(i)).value);
+             (Comparable<?>) Node.find(original, keyColumns.get(i)).value);
         }
 
         Node tree = original;
 
         for (int i = 0; i < update.columns.size(); ++i) {
-          Column column = update.columns.get(i);
+          Column<?> column = update.columns.get(i);
           Object value = Compare.coerce(values[i], column.type);
 
           if (value == null) {
@@ -154,12 +154,12 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
         for (; i < keyColumns.size() - 1; ++i) {
           builder.setKey
             (i + Constants.IndexDataBodyDepth,
-             (Comparable) Node.find(tree, keyColumns.get(i)).value);
+             (Comparable<?>) Node.find(tree, keyColumns.get(i)).value);
         }
 
         Node n = builder.blaze
           (i + Constants.IndexDataBodyDepth,
-           (Comparable) Node.find(tree, keyColumns.get(i)).value);
+           (Comparable<?>) Node.find(tree, keyColumns.get(i)).value);
 
         if (n.value == Node.Null || (! keyValuesChanged)) {
           n.value = tree;

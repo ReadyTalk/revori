@@ -31,7 +31,7 @@ public interface RevisionBuilder {
     throws IllegalStateException,
            DuplicateKeyException,
            ClassCastException;
-
+  
   /**
    * Deletes any rows matching the specified path.  This is equivalent
    * to delete(path, 0, path.length).
@@ -82,6 +82,14 @@ public interface RevisionBuilder {
                      Object[] path,
                      int pathOffset,
                      int pathLength);
+
+  /**
+   * Prepares a TableBuilder to update the given table.
+   * @return said table builder
+   */
+  public TableBuilder table(Table table);
+
+  public void drop(Table table);
 
   /**
    * Adds the specified index to this builder.  This has no effect if

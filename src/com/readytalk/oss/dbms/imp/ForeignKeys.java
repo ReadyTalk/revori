@@ -155,7 +155,7 @@ class ForeignKeys {
   static List<RefererForeignKeyAdapter> getRefererForeignKeyAdapters
     (Table table, Node root, NodeStack stack)
   {
-    List<RefererForeignKeyAdapter> list = new ArrayList();
+    List<RefererForeignKeyAdapter> list = new ArrayList<RefererForeignKeyAdapter>();
 
     for (NodeIterator keys = new NodeIterator
            (stack, Node.pathFind
@@ -172,7 +172,7 @@ class ForeignKeys {
   static List<ReferentForeignKeyAdapter> getReferentForeignKeyAdapters
     (Table table, Node root, NodeStack stack)
   {
-    List<ReferentForeignKeyAdapter> list = new ArrayList();
+    List<ReferentForeignKeyAdapter> list = new ArrayList<ReferentForeignKeyAdapter>();
 
     for (NodeIterator keys = new NodeIterator
            (stack, Node.pathFind

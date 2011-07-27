@@ -681,7 +681,7 @@ public class EpidemicServer {
     public void send(NodeID source, NodeID destination, Writable message);
   }
 
-  public static class NodeID {
+  public static class NodeID implements Comparable<NodeID> {
     public final String id;
 
     public NodeID(String id) {
@@ -694,6 +694,11 @@ public class EpidemicServer {
 
     public boolean equals(Object o) {
       return o instanceof NodeID && id.equals(((NodeID) o).id);
+    }
+
+    @Override
+    public int compareTo(NodeID o) {
+      return id.compareTo(o.id);
     }
   }
 
