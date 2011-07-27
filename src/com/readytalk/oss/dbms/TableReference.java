@@ -21,4 +21,11 @@ public class TableReference implements Source {
   public TableReference(Table table) {
     this.table = table;
   }
+
+  /**
+   * {@inheritDoc}
+   */
+  public void visit(SourceVisitor visitor) {
+    visitor.visit(this);
+  }
 }

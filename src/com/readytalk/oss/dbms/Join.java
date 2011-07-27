@@ -51,4 +51,13 @@ public class Join implements Source {
     this.left = left;
     this.right = right;
   }
+
+  /**
+   * {@inheritDoc}
+   */
+  public void visit(SourceVisitor visitor) {
+    visitor.visit(this);
+    visitor.visit(left);
+    visitor.visit(right);
+  }
 }
