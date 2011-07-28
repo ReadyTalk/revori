@@ -255,6 +255,9 @@ class MyDiffResult implements DiffResult {
 
         baseStack.popStack();
         forkStack.popStack();
+        
+        baseStack = null; //for safety
+        forkStack = null; // ditto
 
         return DiffResult.Type.End;
 

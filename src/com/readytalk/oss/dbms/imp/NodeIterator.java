@@ -3,7 +3,7 @@ package com.readytalk.oss.dbms.imp;
 import java.util.NoSuchElementException;
 
 class NodeIterator {
-  public final NodeStack stack;
+  public NodeStack stack; // not final only so we can assign to null (for safety)
   public boolean hasNext;
     
   public NodeIterator(NodeStack stack,
@@ -34,6 +34,7 @@ class NodeIterator {
       
     if (stack.top == null) {
       stack.popStack();
+      stack = null; // for safety
       hasNext = false;
     }
 

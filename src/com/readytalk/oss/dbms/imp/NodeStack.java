@@ -8,12 +8,13 @@ class NodeStack {
 
   private static final int Size = 64;
 
-  public final Node[] array;
+  public Node[] array; // not final only so we can assign to null (for safety)
   public final int base;
   public final NodeStack next;
   public NodeStack previous;
   public Node top;
   public int index;
+  public boolean obsolete = false; // only for making sure we don't reuse popped NodeStacks
 
   public NodeStack(Node[] array) {
     this.array = array;
@@ -27,6 +28,7 @@ class NodeStack {
 
   public NodeStack(NodeStack basis) {
     expect(basis.array == null || basis.previous == null);
+    expect(!basis.obsolete); // make sure basis hasn't been popped (sanity check)
 
     this.array = basis.array;
     this.base = basis.index;
@@ -44,6 +46,8 @@ class NodeStack {
 
     NodeStack s = next;
     s.previous = null;
+    array = null; // not needed for correctness
+    obsolete = true; // make  sure nobody reuses this
 
     return s;
   }
@@ -135,5 +139,17 @@ class NodeStack {
     if (top != null && top.left != Node.Null) {
       push(top.left);
     }
+  }
+  
+  public String toString() {
+    StringBuilder b = new StringBuilder();
+    for(int i = base; i < index; i++) {
+      b.append(array[i].key);
+      b.append(',');
+    }
+    if(top != null) {
+      b.append(top.key);
+    }
+    return b.toString();
   }
 }

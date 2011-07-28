@@ -22,6 +22,13 @@ class Merge {
      ConflictResolver conflictResolver,
      ForeignKeyResolver foreignKeyResolver)
   {
+//    System.out.println("base:");
+//    Node.dump(base.root, System.out, 0);
+//    System.out.println("left:");
+//    Node.dump(left.root, System.out, 0);
+//    System.out.println("right:");
+//    Node.dump(right.root, System.out, 0);
+    
     // The merge builds a new revision starting with the specified
     // left revision via a process which consists of the following
     // steps:
@@ -171,8 +178,8 @@ class Merge {
                   }
                 }
 
-                baseStack.popStack();
-                leftStack.popStack();
+                baseStack = baseStack.popStack();
+                leftStack = leftStack.popStack();
               }
             } else if (depth == Constants.IndexDataDepth) {
               Index index = (Index) triple.left.key;

@@ -126,6 +126,9 @@ class TableIterator implements SourceIterator {
 
         baseStack.popStack();
         forkStack.popStack();
+        
+        baseStack = null; // for safety
+        forkStack = null; // ditto
 
         return QueryResult.Type.End;
       } else {
