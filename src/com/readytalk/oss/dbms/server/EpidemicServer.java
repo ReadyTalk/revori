@@ -317,6 +317,13 @@ public class EpidemicServer {
     } else {
       state.head = newRecord;
     }
+    if(state == localNode) {
+      // tell everyone we have updates!
+      // TODO: don't notify people twice for each update.
+      for(Runnable listener : listeners) {
+        listener.run();
+      }
+    }
   }
 
   private void acceptAck(NodeID acknowledger,
