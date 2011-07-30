@@ -7,6 +7,7 @@ import static org.junit.Assert.assertEquals;
 import static com.readytalk.oss.dbms.util.Util.list;
 import static com.readytalk.oss.dbms.util.Util.set;
 import static com.readytalk.oss.dbms.DuplicateKeyResolution.Throw;
+import static com.readytalk.oss.dbms.DuplicateKeyResolution.Overwrite;
 
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Index;
@@ -50,9 +51,11 @@ public class Epidemic extends TestCase{
 
     Node n1 = new Node(emptyRevision, conflictResolver, foreignKeyResolver, network, 1);
     Node n2 = new Node(emptyRevision, conflictResolver, foreignKeyResolver, network, 2);
+    Node observer = new Node(emptyRevision, conflictResolver, foreignKeyResolver, network, 3);
 
-    n1.server.updateView(set(n2.id));
-    n2.server.updateView(set(n1.id));
+    n1.server.updateView(set(n2.id, observer.id));
+    n2.server.updateView(set(n1.id, observer.id));
+    observer.server.updateView(set(n1.id, n2.id));
 
     Column number = new Column(Integer.class);
     Column name = new Column(String.class);
@@ -82,6 +85,22 @@ public class Epidemic extends TestCase{
 
     expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
     expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
+    expectEqual(observer.server.head().query(numbersKey, 1, name), "one");
+
+    base = n2.server.head();
+    builder = base.builder();
+
+    builder.insert(Overwrite, numbers, 1, name, "ichi");
+
+    n2.server.merge(base, builder.commit());
+
+    expectEqual(n2.server.head().query(numbersKey, 1, name), "ichi");
+
+    flush(network);
+
+    expectEqual(n1.server.head().query(numbersKey, 1, name), "ichi");
+    expectEqual(n2.server.head().query(numbersKey, 1, name), "ichi");
+    expectEqual(observer.server.head().query(numbersKey, 1, name), "ichi");
   }
 
   private static void flush(NodeNetwork network) {

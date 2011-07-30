@@ -118,7 +118,9 @@ public class EpidemicServer {
   }
 
   public void accept(NodeID source, Readable message) {
-    ((Message) message).deliver(source, this);
+    synchronized (lock) {
+      ((Message) message).deliver(source, this);
+    }
   }
 
   private static void expect(boolean v) {
@@ -142,11 +144,8 @@ public class EpidemicServer {
       state.head = new Record(node, emptyRevision, 0, null);
 
       for (NodeState s: states.values()) {
-        s.pending.put(state.id, state.head);
-        
-        
-
-        state.pending.put(s.id, s.head);
+        s.acknowledged.put(state.id, state.head);
+        state.acknowledged.put(s.id, s.head);
       }
     }
     return state;
@@ -200,14 +199,14 @@ public class EpidemicServer {
   }
 
   private boolean needsUpdate(NodeState state, Record target) {
-    Record pending = state.pending.get(target.node);
-    if (pending.sequenceNumber < target.sequenceNumber) {
+    Record acknowledged = state.acknowledged.get(target.node);
+    if (acknowledged.sequenceNumber < target.sequenceNumber) {
       Record lastSent = state.connectionState.lastSent.get(target.node);
       if (lastSent == null) {
-        state.connectionState.lastSent.put(target.node, pending);
+        state.connectionState.lastSent.put(target.node, acknowledged);
         return true;
-      } else if (lastSent.sequenceNumber < pending.sequenceNumber) {
-        lastSent = pending;
+      } else if (lastSent.sequenceNumber < acknowledged.sequenceNumber) {
+        lastSent = acknowledged;
         state.connectionState.lastSent.put(target.node, lastSent);
       }
 
@@ -345,7 +344,7 @@ public class EpidemicServer {
   {
     NodeState state = state(acknowledger);
 
-    Record record = state.pending.get(diffOrigin);
+    Record record = state.acknowledged.get(diffOrigin);
 
     if (record.sequenceNumber < diffSequenceNumber) {
       Revision base = record.revision;
@@ -356,15 +355,23 @@ public class EpidemicServer {
       }
 
       if (record != null && record.sequenceNumber == diffSequenceNumber) {
-        insertRevision
-          (state, acknowledgerSequenceNumber, base.merge
-           (state.head.revision, record.revision, new MyConflictResolver
-            (acknowledger, diffOrigin, conflictResolver), foreignKeyResolver),
-           record);
+        if (record.merged == null) {
+          insertRevision
+            (state, acknowledgerSequenceNumber, base.merge
+             (state.head.revision, record.revision, new MyConflictResolver
+              (acknowledger, diffOrigin, conflictResolver),
+              foreignKeyResolver), record);
+        }
 
-        state.pending.put(diffOrigin, record);
+        state.acknowledged.put(diffOrigin, record);
             
         sendNext();
+
+        if (record.merged == null) {
+          acceptAck
+            (localNode.id, nextLocalSequenceNumber++, acknowledger,
+             acknowledgerSequenceNumber);
+        }
       } else {
         throw new RuntimeException("missed a diff");
       }
@@ -376,7 +383,8 @@ public class EpidemicServer {
   private static class NodeState {
     public final NodeID id;
     public Record head;
-    public final Map<NodeID, Record> pending = new HashMap<NodeID, Record>();
+    public final Map<NodeID, Record> acknowledged
+      = new HashMap<NodeID, Record>();
     public ConnectionState connectionState;
 
     public NodeState(NodeID id) {
@@ -718,6 +726,10 @@ public class EpidemicServer {
     @Override
     public int compareTo(NodeID o) {
       return id.compareTo(o.id);
+    }
+
+    public String toString() {
+      return "nodeID[" + id + "]";
     }
   }
 
