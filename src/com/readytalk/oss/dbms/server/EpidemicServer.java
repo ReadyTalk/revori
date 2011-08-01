@@ -27,7 +27,6 @@ import java.util.Set;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class EpidemicServer {
   private static final boolean Debug = true;
@@ -43,8 +42,7 @@ public class EpidemicServer {
   private final NodeConflictResolver conflictResolver;
   private final ForeignKeyResolver foreignKeyResolver;
   private final Network network;
-  //private final Object lock = new Object();
-  private final ReentrantLock lock = new ReentrantLock();
+  private final Object lock = new Object();
   private final Map<NodeID, NodeState> states = new HashMap<NodeID, NodeState>();
   private final Map<NodeID, NodeState> directlyConnectedStates = new HashMap<NodeID, NodeState>();
   private final NodeState localNode;
@@ -64,9 +62,7 @@ public class EpidemicServer {
   }
 
   public void updateView(Set<NodeID> directlyConnectedNodes) {
-    //synchronized (lock) {
-    lock.lock();
-    try {
+    synchronized (lock) {
       for (Iterator<NodeState> it
              = directlyConnectedStates.values().iterator();
            it.hasNext();)
@@ -89,9 +85,6 @@ public class EpidemicServer {
           sendNext(state);
         }
       }
-    //}
-    } finally {
-      lock.unlock();
     }
   }
 
@@ -102,19 +95,23 @@ public class EpidemicServer {
   public void merge(Revision base,
                     Revision fork)
   {
-    //synchronized (lock) {
-    lock.lock();
-    try {
+    synchronized (lock) {
       acceptRevision
         (localNode,
          nextLocalSequenceNumber++,
          base.merge
-         (localNode.head.revision, fork, new MyConflictResolver
-          (localNode.id, localNode.id, conflictResolver), foreignKeyResolver));
-    //}
-    } finally {
-      lock.unlock();
+         (localNode.head.revision, fork, conflictResolver(),
+          foreignKeyResolver));
     }
+  }
+
+  public ConflictResolver conflictResolver() {
+    return new MyConflictResolver
+      (localNode.id, localNode.id, conflictResolver);
+  }
+
+  public ForeignKeyResolver foreignKeyResolver() {
+    return foreignKeyResolver;
   }
 
   public void accept(NodeID source, Readable message) {
@@ -328,7 +325,8 @@ public class EpidemicServer {
     } else {
       state.head = newRecord;
     }
-    if(state == localNode && !lock.hasQueuedThreads()) {
+
+    if(state == localNode) {
       // tell everyone we have updates!
       // TODO: don't notify people twice for each update.
       for(Runnable listener : listeners) {
