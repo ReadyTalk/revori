@@ -104,6 +104,7 @@ public class Epidemic extends TestCase{
   }
 
   private static void flush(NodeNetwork network) {
+    System.out.println("--- flush ---");
     final int MaxIterations = 100;
     int iteration = 0;
     while (network.messages.size() > 0) {
@@ -136,6 +137,7 @@ public class Epidemic extends TestCase{
         }
       }
     }
+    System.out.println("--- done ---");
   }
 
   private static class MyConflictResolver implements NodeConflictResolver {
