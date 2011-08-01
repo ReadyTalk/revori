@@ -730,36 +730,44 @@ class MyRevisionBuilder implements RevisionBuilder {
 
     List<Column> columns = table.primaryKey.columns;
 
-    if (pathLength != columns.size() + 3) {
+    if (pathLength == columns.size() + 1) {
+      Comparable[] myPath = new Comparable[columns.size()];
+      for (int i = 0; i < myPath.length; ++i) {
+        myPath[i] = (Comparable) path[pathOffset + i + 1];
+      }
+
+      insert(duplicateKeyResolution, table, myPath);
+    } else if (pathLength == columns.size() + 3) {
+      Column column;
+      try {
+        column = (Column) path[pathOffset + columns.size() + 1];
+      } catch (ClassCastException e) {
+        throw new IllegalArgumentException
+          ("expected column as second-to-last path element");        
+      }
+
+      Object value = path[pathOffset + columns.size() + 2];
+      if (value != null && ! column.type.isInstance(value)) {
+        throw new ClassCastException
+          (value.getClass() + " cannot be cast to " + column.type);
+      }
+
+      Comparable[] myPath = new Comparable[columns.size()];
+      for (int i = 0; i < myPath.length; ++i) {
+        Comparable c = (Comparable) path[pathOffset + i + 1];
+        if (columns.get(i) == column) {
+          throw new IllegalArgumentException
+            ("cannot use insert to update a primary key column");        
+        }
+        myPath[i] = c;
+      }
+
+      insert(duplicateKeyResolution, table, column, value, myPath);
+    } else {
       throw new IllegalArgumentException
         ("wrong number of parameters for primary key");
     }
 
-    Column column;
-    try {
-      column = (Column) path[pathOffset + columns.size() + 1];
-    } catch (ClassCastException e) {
-      throw new IllegalArgumentException
-        ("expected column as second-to-last path element");        
-    }
-
-    Comparable[] myPath = new Comparable[columns.size()];
-    for (int i = 0; i < myPath.length; ++i) {
-      Comparable c = (Comparable) path[pathOffset + i + 1];
-      if (columns.get(i) == column) {
-        throw new IllegalArgumentException
-          ("cannot use insert to update a primary key column");        
-      }
-      myPath[i] = c;
-    }
-
-    Object value = path[pathOffset + columns.size() + 2];
-    if (value != null && ! column.type.isInstance(value)) {
-      throw new ClassCastException
-        (value.getClass() + " cannot be cast to " + column.type);
-    }
-
-    insert(duplicateKeyResolution, table, column, value, myPath);
   }
 
   public void insert(DuplicateKeyResolution duplicateKeyResolution,
@@ -824,13 +832,17 @@ class MyRevisionBuilder implements RevisionBuilder {
     }
   }
 
+  public boolean committed() {
+    return token != null;
+  }
+
   public Revision commit() {
     return commit(ForeignKeyResolvers.Restrict);
   }
 
   public Revision commit(ForeignKeyResolver foreignKeyResolver) {
     if (token == null) {
-      throw new IllegalStateException("builder already committed");
+      return result;
     }
 
     updateIndexes();

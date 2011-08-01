@@ -67,9 +67,13 @@ public interface RevisionBuilder {
    * inserted</li>
    *
    * <li>path[pathOffset+1..pathOffset+pathLength-3]: primary key values for
-   * the specified table</li>
+   * the specified table</li></ul><p>
    *
-   * <li>path[pathOffset+pathLength-2]: column to insert into or update</li>
+   * If pathLength is greater than the number of primary key values
+   * plus one, the remaining two values are interpreted as follows:
+   *
+   * <ul><li>path[pathOffset+pathLength-2]: column to insert into or
+   * update</li>
    *
    * <li>path[pathOffset+pathLength-1]: column value to insert or
    * update</li></ul><p>
@@ -134,4 +138,9 @@ public interface RevisionBuilder {
    * trigger calls to foreignKeyResolver.handleBrokenReference.
    */
   public Revision commit(ForeignKeyResolver foreignKeyResolver);
+
+  /**
+   * Returns true if this builder has been committed, false otherwise.
+   */
+  public boolean committed();
 }
