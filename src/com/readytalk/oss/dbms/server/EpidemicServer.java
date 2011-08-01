@@ -4,6 +4,7 @@ import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.RevisionBuilder;
 import com.readytalk.oss.dbms.Revision;
+import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.ConflictResolver;
 import com.readytalk.oss.dbms.DiffResult;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
@@ -13,6 +14,7 @@ import com.readytalk.oss.dbms.server.protocol.Readable;
 import com.readytalk.oss.dbms.server.protocol.ReadContext;
 import com.readytalk.oss.dbms.server.protocol.Writable;
 import com.readytalk.oss.dbms.server.protocol.WriteContext;
+import com.readytalk.oss.dbms.server.protocol.Stringable;
 import com.readytalk.oss.dbms.util.BufferOutputStream;
 
 import java.lang.ref.WeakReference;
@@ -29,7 +31,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 public class EpidemicServer {
-  private static final boolean Debug = true;
+  private static final boolean Debug = false;
 
   private static final int End = 0;
   private static final int Descend = 1;
@@ -38,7 +40,7 @@ public class EpidemicServer {
   private static final int Delete = 4;
   private static final int Insert = 5;
 
-  private final Revision emptyRevision;
+  private String id;
   private final NodeConflictResolver conflictResolver;
   private final ForeignKeyResolver foreignKeyResolver;
   private final Network network;
@@ -48,13 +50,11 @@ public class EpidemicServer {
   private final NodeState localNode;
   private long nextLocalSequenceNumber = 1;
 
-  public EpidemicServer(Revision emptyRevision,
-                        NodeConflictResolver conflictResolver,
+  public EpidemicServer(NodeConflictResolver conflictResolver,
                         ForeignKeyResolver foreignKeyResolver,
                         Network network,
                         NodeID self)
   {
-    this.emptyRevision = emptyRevision;
     this.conflictResolver = conflictResolver;
     this.foreignKeyResolver = foreignKeyResolver;
     this.network = network;
@@ -63,11 +63,17 @@ public class EpidemicServer {
 
   private void debugMessage(String message) {
     if(Debug) {
-      System.out.println((localNode != null ? localNode.id : "(null)") + ": " + message);
+      System.out.println(id + ": " + (localNode != null ? localNode.id : "(null)") + ": " + message);
     }
   }
 
+  public void setId(String id) {
+    this.id = id;
+  }
+
   public void updateView(Set<NodeID> directlyConnectedNodes) {
+    debugMessage("update view to " + directlyConnectedNodes);
+
     synchronized (lock) {
       for (Iterator<NodeState> it
              = directlyConnectedStates.values().iterator();
@@ -126,6 +132,7 @@ public class EpidemicServer {
 
   public void accept(NodeID source, Readable message) {
     synchronized (lock) {
+      // debugMessage("accept " + message + " from " + source);
       ((Message) message).deliver(source, this);
     }
   }
@@ -140,6 +147,8 @@ public class EpidemicServer {
     expect(state.connectionState != null);
     expect(state.connectionState.readyToReceive);
 
+    // debugMessage("send " + message + " to " + state.id);
+
     network.send(localNode.id, state.id, message);
   }
 
@@ -148,7 +157,7 @@ public class EpidemicServer {
     if (state == null) {
       states.put(node, state = new NodeState(node));
 
-      state.head = new Record(node, emptyRevision, 0, null);
+      state.head = new Record(node, Revisions.Empty, 0, null);
 
       for (NodeState s: states.values()) {
         debugMessage(s.id + " sees " + node + " at 0");
@@ -157,7 +166,7 @@ public class EpidemicServer {
         if(s.head.sequenceNumber == 0) {
           rec = s.head;
         } else {
-          rec = new Record(s.id, dbms.revision(), 0, null);
+          rec = new Record(s.id, Revisions.Empty, 0, null);
           if(s.head.merged != null && s.head.merged.node == s.id) {
             rec.next = s.head.merged;
           } else {
@@ -205,7 +214,7 @@ public class EpidemicServer {
     }
 
     for (NodeState other: states.values()) {
-      debugMessage("sendNext: other: " + other.id + ", state: " + state.id+ ", nu: " + needsUpdate(state, other.head));
+      // debugMessage("sendNext: other: " + other.id + ", state: " + state.id+ ", nu: " + needsUpdate(state, other.head));
       if (other != state && needsUpdate(state, other.head)) {
         cs.sentSync = false;
         sendUpdate(state, other.head);
@@ -255,12 +264,16 @@ public class EpidemicServer {
           continue;
         }
 
-        debugMessage("ack to " + state.id);
+        debugMessage("ack to " + state.id + ": " + record.node + " "
+                     + record.sequenceNumber + " merged "
+                     + record.merged.node + " "
+                     + record.merged.sequenceNumber);
+
         send(state, new Ack
              (record.node, record.sequenceNumber, record.merged.node,
               record.merged.sequenceNumber));
       } else {
-        debugMessage("diff to " + state.id + ", ssn: " + lastSent.sequenceNumber + ", esn: " + record.sequenceNumber);
+        debugMessage("diff to " + state.id + ": " + target.node + " " + lastSent.sequenceNumber + " " + record.sequenceNumber);
         send(state, new Diff
              (target.node, lastSent.sequenceNumber, record.sequenceNumber,
               new RevisionDiffBody(lastSent.revision, record.revision)));
@@ -295,7 +308,7 @@ public class EpidemicServer {
                           long endSequenceNumber,
                           DiffBody body)
   {
-    debugMessage("diff from " + origin + ", ssn: " + startSequenceNumber + ", esn: " + endSequenceNumber);
+    debugMessage("accept diff " + origin + " " + startSequenceNumber + " " + endSequenceNumber);
     NodeState state = state(origin);
 
     if (startSequenceNumber <= state.head.sequenceNumber) {
@@ -310,7 +323,7 @@ public class EpidemicServer {
       if (record != null) {
         if (endSequenceNumber == record.sequenceNumber) {
           // do nothing -- we already have this revision
-          debugMessage("(ignoring diff from " + origin + ")");
+          debugMessage("ignore diff " + origin + " " + startSequenceNumber + " " + endSequenceNumber);
         } else if (startSequenceNumber == record.sequenceNumber) {
           acceptRevision
             (state, endSequenceNumber, body.apply(this, record.revision));
@@ -360,13 +373,13 @@ public class EpidemicServer {
       next.previous = new WeakReference<Record>(newRecord);
     } else {
       state.head = newRecord;
-    }
 
-    if(state == localNode) {
-      // tell everyone we have updates!
-      // TODO: don't notify people twice for each update.
-      for(Runnable listener : listeners) {
-        listener.run();
+      if (state == localNode) {
+        // tell everyone we have updates!
+        // TODO: don't notify people twice for each update.
+        for (Runnable listener: listeners) {
+          listener.run();
+        }
       }
     }
 
@@ -378,7 +391,7 @@ public class EpidemicServer {
                          NodeID diffOrigin,
                          long diffSequenceNumber)
   {
-    debugMessage("ack from " + acknowledger + ", ackSeqNo: " + acknowledgerSequenceNumber + ", diffSeqNo: " + diffSequenceNumber);
+    debugMessage("accept ack " + acknowledger + " " + acknowledgerSequenceNumber + " diff " + diffOrigin + " " + diffSequenceNumber);
     NodeState state = state(acknowledger);
 
     Record record = state.acknowledged.get(diffOrigin);
@@ -502,6 +515,7 @@ public class EpidemicServer {
     }
 
     public void deliver(NodeID source, EpidemicServer server) {
+      server.debugMessage("ack from " + source);
       server.acceptAck(acknowledger, acknowledgerSequenceNumber, diffOrigin,
                        diffSequenceNumber);
     }
@@ -549,7 +563,12 @@ public class EpidemicServer {
     }
 
     public void deliver(NodeID source, EpidemicServer server) {
+      server.debugMessage("ack from " + source);
       server.acceptDiff(origin, startSequenceNumber, endSequenceNumber, body);
+    }
+
+    public String toString() {
+      return "diff[" + body + "]";
     }
   }
 
@@ -640,6 +659,59 @@ public class EpidemicServer {
         }
       }
     }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append(" *** from\n").append(base).append(" *** to\n").append(fork)
+        .append("\n");
+
+      final int MaxDepth = 16;
+      Object[] path = new Object[MaxDepth];
+      int depth = 0;
+      DiffResult result = base.diff(fork, true);
+      while (true) {
+        DiffResult.Type type = result.next();
+        switch (type) {
+        case End:
+          sb.append("end\n");
+          return sb.toString();
+
+        case Descend: {
+          sb.append("descend\n");
+          ++ depth;
+        } break;
+
+        case Ascend: {
+          sb.append("ascend\n");
+          path[depth--] = null;
+        } break;
+
+        case Key: {
+          Object forkKey = result.fork();
+          if (forkKey != null) {
+            sb.append("key ").append(forkKey).append("\n");
+            path[depth] = forkKey;
+          } else {
+            path[depth] = result.base();
+            sb.append("delete");
+            sb.append(EpidemicServer.toString(path, 0, depth + 1));
+            sb.append("\n");
+            result.skip();
+          }
+        } break;
+
+        case Value: {
+          path[depth] = result.fork();
+          sb.append("insert");
+          sb.append(EpidemicServer.toString(path, 0, depth + 1));
+          sb.append("\n");
+        } break;
+
+        default:
+          throw new RuntimeException("unexpected result type: " + type);
+        }
+      }
+    }
   }
 
   private static String toString(Object[] array, int offset, int length) {
@@ -665,6 +737,7 @@ public class EpidemicServer {
       InputStream in = new ByteArrayInputStream
         (buffer.getBuffer(), 0, buffer.size());
       ReadContext readContext = new ReadContext(in);
+      boolean visitedColumn = true;
 
       try {
         while (true) {
@@ -674,23 +747,39 @@ public class EpidemicServer {
             return builder.commit();
 
           case Descend:
+            visitedColumn = true;
             ++ depth;
             break;
 
           case Ascend:
+            if (! visitedColumn) {
+              visitedColumn = true;
+              builder.insert(DuplicateKeyResolution.Overwrite,
+                             path, 0, depth + 1);
+            }
+
             path[depth--] = null;
             break;
 
           case Key:
+            if (! visitedColumn) {
+              builder.insert(DuplicateKeyResolution.Overwrite,
+                             path, 0, depth + 1);
+            } else {
+              visitedColumn = false;
+            }
+
             path[depth] = Protocol.read(readContext);
             break;
 
           case Delete:
+            visitedColumn = true;
             path[depth] = Protocol.read(readContext);
             builder.delete(path, 0, depth + 1);
             break;
 
           case Insert:
+            visitedColumn = true;
             path[depth + 1] = Protocol.read(readContext);
             builder.insert(DuplicateKeyResolution.Overwrite,
                            path, 0, depth + 2);
@@ -739,13 +828,84 @@ public class EpidemicServer {
         }
       }
     }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      final int MaxDepth = 16;
+      Object[] path = new Object[MaxDepth];
+      int depth = 0;
+      InputStream in = new ByteArrayInputStream
+        (buffer.getBuffer(), 0, buffer.size());
+      ReadContext readContext = new ReadContext(in);
+      boolean visitedColumn = true;
+
+      try {
+        while (true) {
+          int flag = in.read();
+          switch (flag) {
+          case End:
+            return sb.toString();
+
+          case Descend:
+            visitedColumn = true;
+            ++ depth;
+            break;
+
+          case Ascend:
+            if (! visitedColumn) {
+              visitedColumn = true;
+              sb.append("insert");
+              sb.append(EpidemicServer.toString(path, 0, depth + 1));
+              sb.append("\n");
+            }
+
+            path[depth--] = null;
+            break;
+
+          case Key:
+            if (! visitedColumn) {
+              sb.append("insert");
+              sb.append(EpidemicServer.toString(path, 0, depth + 1));
+              sb.append("\n");
+            } else {
+              visitedColumn = false;
+            }
+
+            path[depth] = Protocol.read(readContext);
+            break;
+
+          case Delete:
+            visitedColumn = true;
+            path[depth] = Protocol.read(readContext);
+            sb.append("delete");
+            sb.append(EpidemicServer.toString(path, 0, depth + 1));
+            sb.append("\n");
+            break;
+
+          case Insert:
+            visitedColumn = true;
+            path[depth + 1] = Protocol.read(readContext);
+            sb.append("insert");
+            sb.append(EpidemicServer.toString(path, 0, depth + 2));
+            sb.append("\n");
+            break;
+
+          default:
+            throw new RuntimeException("unexpected flag: " + flag);
+          }
+        }
+      } catch (IOException e) {
+        // shouldn't be possible, since we're reading from a byte array
+        throw new RuntimeException(e);
+      }
+    }
   }
 
   public static interface Network {
     public void send(NodeID source, NodeID destination, Writable message);
   }
 
-  public static class NodeID implements Comparable<NodeID> {
+  public static class NodeID implements Comparable<NodeID>, Stringable {
     public final String id;
 
     public NodeID(String id) {
@@ -767,6 +927,11 @@ public class EpidemicServer {
 
     public String toString() {
       return "nodeID[" + id + "]";
+    }
+
+    public String asString() {
+      return id;
+    }
   }
 
   public static interface NodeConflictResolver {

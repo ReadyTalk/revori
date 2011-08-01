@@ -44,18 +44,16 @@ public class Epidemic extends TestCase{
 
   @Test
   public void testTwoNodeNetwork() {
-    Revision emptyRevision = Revisions.Empty;
     NodeNetwork network = new NodeNetwork();
     NodeConflictResolver conflictResolver = new MyConflictResolver();
     ForeignKeyResolver foreignKeyResolver = ForeignKeyResolvers.Delete;
 
-    Node n1 = new Node(emptyRevision, conflictResolver, foreignKeyResolver, network, 1);
-    Node n2 = new Node(emptyRevision, conflictResolver, foreignKeyResolver, network, 2);
-    Node observer = new Node(emptyRevision, conflictResolver, foreignKeyResolver, network, 3);
+    Node n1 = new Node(conflictResolver, foreignKeyResolver, network, 1);
+    Node n2 = new Node(conflictResolver, foreignKeyResolver, network, 2);
+    Node observer = new Node(conflictResolver, foreignKeyResolver, network, 3);
 
-    n1.server.updateView(set(n2.id, observer.id));
-    n2.server.updateView(set(n1.id, observer.id));
-    observer.server.updateView(set(n1.id, n2.id));
+    n1.server.updateView(set(n2.id));
+    n2.server.updateView(set(n1.id));
 
     Column number = new Column(Integer.class);
     Column name = new Column(String.class);
@@ -85,7 +83,6 @@ public class Epidemic extends TestCase{
 
     expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
     expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(observer.server.head().query(numbersKey, 1, name), "one");
 
     base = n2.server.head();
     builder = base.builder();
@@ -96,11 +93,30 @@ public class Epidemic extends TestCase{
 
     expectEqual(n2.server.head().query(numbersKey, 1, name), "ichi");
 
+    n1.server.updateView(set(n2.id, observer.id));
+    n2.server.updateView(set(n1.id, observer.id));
+    observer.server.updateView(set(n1.id, n2.id));
+
     flush(network);
 
     expectEqual(n1.server.head().query(numbersKey, 1, name), "ichi");
     expectEqual(n2.server.head().query(numbersKey, 1, name), "ichi");
     expectEqual(observer.server.head().query(numbersKey, 1, name), "ichi");
+
+    base = n2.server.head();
+    builder = base.builder();
+
+    builder.insert(Overwrite, numbers, 3);
+
+    n2.server.merge(base, builder.commit());
+
+    expectEqual(n2.server.head().query(numbersKey, 3, number), 3);
+
+    flush(network);
+
+    expectEqual(n1.server.head().query(numbersKey, 3, number), 3);
+    expectEqual(n2.server.head().query(numbersKey, 3, number), 3);
+    expectEqual(observer.server.head().query(numbersKey, 3, number), 3);
   }
 
   private static void flush(NodeNetwork network) {
@@ -162,15 +178,14 @@ public class Epidemic extends TestCase{
     public final NodeID id;
     public final EpidemicServer server;
 
-    public Node(Revision emptyRevision,
-                NodeConflictResolver conflictResolver,
+    public Node(NodeConflictResolver conflictResolver,
                 ForeignKeyResolver foreignKeyResolver,
                 NodeNetwork network,
                 int id)
     {
       this.id = new NodeID(String.valueOf(id));
       this.server = new EpidemicServer
-        (emptyRevision, conflictResolver, foreignKeyResolver, network, this.id);
+        (conflictResolver, foreignKeyResolver, network, this.id);
       network.nodes.put(this.id, this);
     }
   }

@@ -255,6 +255,35 @@ public class LowLevel extends TestCase{
     expectEqual(result.next(), DiffResult.Type.Ascend);
     expectEqual(result.next(), DiffResult.Type.Ascend);
     expectEqual(result.next(), DiffResult.Type.End);
+
+    { builder = tail.builder();
+
+      builder.insert(Throw, numbers, 1);
+      builder.insert(Throw, numbers, 2);
+
+      Revision fork = builder.commit();
+
+      expectEqual(fork.query(numbers.primaryKey, 1, number), 1);
+      expectEqual(fork.query(numbers.primaryKey, 2, number), 2);
+
+      result = tail.diff(fork, false);
+
+      expectEqual(result.next(), DiffResult.Type.Key);
+      expectEqual(result.base(), null);
+      expectEqual(result.fork(), numbers);
+
+      expectEqual(result.next(), DiffResult.Type.Descend);
+      expectEqual(result.next(), DiffResult.Type.Key);
+      expectEqual(result.base(), null);
+      expectEqual(result.fork(), 1);
+
+      expectEqual(result.next(), DiffResult.Type.Key);
+      expectEqual(result.base(), null);
+      expectEqual(result.fork(), 2);
+
+      expectEqual(result.next(), DiffResult.Type.Ascend);
+      expectEqual(result.next(), DiffResult.Type.End);
+    }
   }
 
   private static void apply(RevisionBuilder builder, DiffResult result)

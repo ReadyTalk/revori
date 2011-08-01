@@ -139,4 +139,12 @@ public class MyRevision implements Revision {
     return Merge.mergeRevisions
       (myBase, myLeft, myRight, conflictResolver, foreignKeyResolver);
   }
+
+  public String toString() {
+    java.io.StringWriter sw = new java.io.StringWriter();
+    java.io.PrintWriter pw = new java.io.PrintWriter(sw);
+    Node.dump(root, pw, 0);
+    pw.flush();
+    return sw.toString();
+  }
 }

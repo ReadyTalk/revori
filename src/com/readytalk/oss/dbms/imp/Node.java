@@ -464,6 +464,15 @@ class Node {
   }
 
   public static void dump(Node node, java.io.PrintStream out, int depth) {
+    java.io.PrintWriter pw = new java.io.PrintWriter
+      (new java.io.OutputStreamWriter(out));
+
+    dump(node, pw, depth);
+
+    pw.flush();
+  }
+
+  public static void dump(Node node, java.io.PrintWriter out, int depth) {
     if (node == Null) {
       return;
     } else {

@@ -557,32 +557,38 @@ class MyRevisionBuilder implements RevisionBuilder {
       setKey(i + Constants.IndexDataBodyDepth, path[i]);
     }
 
-    if (column != null) {
-      Node n = blaze(path.length + Constants.IndexDataBodyDepth, column);
+    Node n;
+    if (column == null) {
+      n = blaze((path.length - 1) + Constants.IndexDataBodyDepth);
+    } else {
+      n = blaze(path.length + Constants.IndexDataBodyDepth, column);
+    }
 
-      if (n.value == Node.Null) {
+    if (n.value == Node.Null) {
+      if (column != null) {
         n.value = value;
+      }
+      insert(path.length + Constants.IndexDataBodyDepth,
+             table.primaryKey.columns, path);
+    } else {
+      switch (duplicateKeyResolution) {
+      case Skip:
+        break;
+
+      case Overwrite:
+        if (column != null) {
+          n.value = value;
+        }
         insert(path.length + Constants.IndexDataBodyDepth,
                table.primaryKey.columns, path);
-      } else {
-        switch (duplicateKeyResolution) {
-        case Skip:
-          delete(path.length + Constants.IndexDataBodyDepth, column);
-          break;
+        break;
 
-        case Overwrite:
-          n.value = value;
-          insert(path.length + Constants.IndexDataBodyDepth,
-                 table.primaryKey.columns, path);
-          break;
+      case Throw:
+        throw new DuplicateKeyException();
 
-        case Throw:
-          throw new DuplicateKeyException();
-
-        default:
-          throw new RuntimeException
-            ("unexpected resolution: " + duplicateKeyResolution);
-        }
+      default:
+        throw new RuntimeException
+          ("unexpected resolution: " + duplicateKeyResolution);
       }
     }
   }

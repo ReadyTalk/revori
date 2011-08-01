@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.lang.reflect.InvocationTargetException;
 
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Table;
@@ -25,6 +26,18 @@ public class Protocol {
     = new HashMap<Class<?>, Deserializer<?>>();
 
   static {
+    serializers.put(Boolean.class, new Serializer<Boolean>() {
+      public void writeTo(WriteContext context, Boolean v) throws IOException {
+        writeBoolean(context.out, v);
+      }
+    });
+
+    deserializers.put(Boolean.class, new Deserializer<Boolean>() {
+      public Boolean readFrom(ReadContext context, Class<? extends Boolean> c) throws IOException {
+        return readBoolean(context.in);
+      }
+    });
+
     serializers.put(Integer.class, new Serializer<Integer>() {
       public void writeTo(WriteContext context, Integer v) throws IOException {
         writeInteger(context.out, v);
@@ -34,6 +47,18 @@ public class Protocol {
     deserializers.put(Integer.class, new Deserializer<Integer>() {
       public Integer readFrom(ReadContext context, Class<? extends Integer> c) throws IOException {
         return readInteger(context.in);
+      }
+    });
+
+    serializers.put(Long.class, new Serializer<Long>() {
+      public void writeTo(WriteContext context, Long v) throws IOException {
+        writeLong(context.out, v);
+      }
+    });
+
+    deserializers.put(Long.class, new Deserializer<Long>() {
+      public Long readFrom(ReadContext context, Class<? extends Long> c) throws IOException {
+        return readLong(context.in);
       }
     });
 
@@ -83,6 +108,34 @@ public class Protocol {
         }
         v.readFrom(context.in);
         return v;
+      }
+    });
+
+    serializers.put(Stringable.class, new Serializer<Stringable>() {
+      public void writeTo(WriteContext context, Stringable v)
+        throws IOException
+      {
+        writeString(context.out, v.asString());
+      }
+    });
+
+    deserializers.put(Stringable.class, new Deserializer<Stringable>() {
+      public Stringable readFrom(ReadContext context,
+                                 Class<? extends Stringable> c)
+        throws IOException
+      {
+        try {
+          return (Stringable) c.getConstructor(String.class).newInstance
+            (readString(context.in));
+        } catch (NoSuchMethodException e) {
+          throw new RuntimeException(e);
+        } catch (InvocationTargetException e) {
+          throw new RuntimeException(e);
+        } catch (InstantiationException e) {
+          throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+          throw new RuntimeException(e);
+        }
       }
     });
 
@@ -180,6 +233,12 @@ public class Protocol {
     }
   }
 
+  private static void writeBoolean(OutputStream out, boolean v)
+    throws IOException
+  {
+    out.write(v ? 1 : 0);
+  }
+
   private static void writeInteger(OutputStream out, int v)
     throws IOException
   {
@@ -188,6 +247,17 @@ public class Protocol {
     } else {
       out.write((v & 0x7F) | 0x80);
       writeInteger(out, v >>> 7);
+    }
+  }
+
+  private static void writeLong(OutputStream out, long v)
+    throws IOException
+  {
+    if (v == (v & 0x7F)) {
+      out.write((int) v);
+    } else {
+      out.write((int) ((v & 0x7F) | 0x80));
+      writeLong(out, v >>> 7);
     }
   }
 
@@ -221,6 +291,17 @@ public class Protocol {
     findSerializer((Class<T>)v.getClass()).writeTo(context, v);
   }
 
+  public static boolean readBoolean(InputStream in)
+    throws IOException
+  {
+    int b = in.read();
+    if (b < 0) {
+      throw new EOFException();
+    } else {
+      return b != 0;
+    }
+  }
+
   public static int readInteger(InputStream in)
     throws IOException
   {
@@ -231,6 +312,19 @@ public class Protocol {
       return b;
     } else {
       return (b & 0x7F) | (readInteger(in) << 7);
+    }
+  }
+
+  public static long readLong(InputStream in)
+    throws IOException
+  {
+    int b = in.read();
+    if (b < 0) {
+      throw new EOFException();
+    } else if ((b & 0x80) == 0) {
+      return b;
+    } else {
+      return (b & 0x7F) | (readLong(in) << 7);
     }
   }
 
