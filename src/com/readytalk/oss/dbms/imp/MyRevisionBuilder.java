@@ -557,30 +557,32 @@ class MyRevisionBuilder implements RevisionBuilder {
       setKey(i + Constants.IndexDataBodyDepth, path[i]);
     }
 
-    Node n = blaze(path.length + Constants.IndexDataBodyDepth, column);
+    if (column != null) {
+      Node n = blaze(path.length + Constants.IndexDataBodyDepth, column);
 
-    if (n.value == Node.Null) {
-      n.value = value;
-      insert(path.length + Constants.IndexDataBodyDepth,
-             table.primaryKey.columns, path);
-    } else {
-      switch (duplicateKeyResolution) {
-      case Skip:
-        delete(path.length + Constants.IndexDataBodyDepth, column);
-        break;
-
-      case Overwrite:
+      if (n.value == Node.Null) {
         n.value = value;
         insert(path.length + Constants.IndexDataBodyDepth,
                table.primaryKey.columns, path);
-        break;
+      } else {
+        switch (duplicateKeyResolution) {
+        case Skip:
+          delete(path.length + Constants.IndexDataBodyDepth, column);
+          break;
 
-      case Throw:
-        throw new DuplicateKeyException();
+        case Overwrite:
+          n.value = value;
+          insert(path.length + Constants.IndexDataBodyDepth,
+                 table.primaryKey.columns, path);
+          break;
 
-      default:
-        throw new RuntimeException
-          ("unexpected resolution: " + duplicateKeyResolution);
+        case Throw:
+          throw new DuplicateKeyException();
+
+        default:
+          throw new RuntimeException
+            ("unexpected resolution: " + duplicateKeyResolution);
+        }
       }
     }
   }
@@ -736,7 +738,7 @@ class MyRevisionBuilder implements RevisionBuilder {
         myPath[i] = (Comparable) path[pathOffset + i + 1];
       }
 
-      insert(duplicateKeyResolution, table, myPath);
+      insert(duplicateKeyResolution, table, null, null, myPath);
     } else if (pathLength == columns.size() + 3) {
       Column column;
       try {
