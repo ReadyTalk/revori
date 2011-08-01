@@ -96,12 +96,13 @@ public class EpidemicServer {
                     Revision fork)
   {
     synchronized (lock) {
-      acceptRevision
-        (localNode,
-         nextLocalSequenceNumber++,
-         base.merge
-         (localNode.head.revision, fork, conflictResolver(),
-          foreignKeyResolver));
+      Revision head = base.merge
+        (localNode.head.revision, fork, conflictResolver(),
+         foreignKeyResolver);
+
+      if (head != localNode.head.revision) {
+        acceptRevision(localNode, nextLocalSequenceNumber++, head);
+      }
     }
   }
 
