@@ -28,7 +28,15 @@ class Merge {
     // Node.dump(left.root, System.out, 0);
     // System.out.println("right:");
     // Node.dump(right.root, System.out, 0);
-    
+   
+    if (base.root == left.root) {
+      return right;
+    } else if (base.root == right.root
+               || left.root == right.root)
+    {
+      return left;
+    }
+ 
     // The merge builds a new revision starting with the specified
     // left revision via a process which consists of the following
     // steps:
