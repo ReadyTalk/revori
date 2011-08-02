@@ -55,6 +55,10 @@ public final class Table implements Comparable<Table> {
     return primaryKey.compareColumns(o.primaryKey);
   }
 
+  public int hashCode() {
+    return id.hashCode();
+  }
+
   /**
    * Returns true if and only if the specified object is a Table and
    * its ID and primaryKey are equal to those of this instance.
