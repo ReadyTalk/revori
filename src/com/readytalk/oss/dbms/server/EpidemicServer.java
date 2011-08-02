@@ -375,6 +375,7 @@ public class EpidemicServer {
       state.head = newRecord;
 
       if (state == localNode) {
+        debugMessage("notify listeners");
         // tell everyone we have updates!
         // TODO: don't notify people twice for each update.
         for (Runnable listener: listeners) {
@@ -563,7 +564,7 @@ public class EpidemicServer {
     }
 
     public void deliver(NodeID source, EpidemicServer server) {
-      server.debugMessage("ack from " + source);
+      server.debugMessage("diff from " + source);
       server.acceptDiff(origin, startSequenceNumber, endSequenceNumber, body);
     }
 
@@ -661,9 +662,11 @@ public class EpidemicServer {
     }
 
     public String toString() {
+      // todo: reduce code duplication between this and the writeTo method
+
       StringBuilder sb = new StringBuilder();
-      sb.append(" *** from\n").append(base).append(" *** to\n").append(fork)
-        .append("\n");
+      // sb.append(" *** from\n").append(base).append(" *** to\n").append(fork)
+      //   .append("\n");
 
       final int MaxDepth = 16;
       Object[] path = new Object[MaxDepth];
@@ -830,6 +833,7 @@ public class EpidemicServer {
     }
 
     public String toString() {
+      // todo: reduce code duplication between this and the apply method
       StringBuilder sb = new StringBuilder();
       final int MaxDepth = 16;
       Object[] path = new Object[MaxDepth];
