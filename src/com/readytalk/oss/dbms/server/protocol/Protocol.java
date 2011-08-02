@@ -9,10 +9,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.ByteBuffer;
 
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.server.EpidemicServer;
+import com.readytalk.oss.dbms.server.EpidemicServer.NodeID;
 import com.readytalk.oss.dbms.server.StreamUtil;
 
 public class Protocol {
@@ -174,6 +176,30 @@ public class Protocol {
         return new Column<Object>((Class) read(context), (String) read(context));
       }
     });
+
+    serializers.put(NodeID.class, new Serializer<NodeID>() {
+      public void writeTo(WriteContext context, NodeID n) throws IOException {
+        writeString(context.out, n.id);
+      }
+    });
+
+    deserializers.put(NodeID.class, new Deserializer<NodeID>() {
+      public NodeID readFrom(ReadContext context, Class<? extends NodeID> c) throws IOException {
+        return new NodeID(readString(context.in));
+      }
+    });
+
+    serializers.put(byte[].class, new Serializer<byte[]>() {
+      public void writeTo(WriteContext context, byte[] b) throws IOException {
+        writeByteArray(context.out, b);
+      }
+    });
+
+    deserializers.put(byte[].class, new Deserializer<byte[]>() {
+      public byte[] readFrom(ReadContext context, Class<? extends byte[]> c) throws IOException {
+        return readByteArray(context.in);
+      }
+    });
   }
 
   private static <T> Serializer<T> findSerializer(Class<T> class_) {
@@ -239,7 +265,7 @@ public class Protocol {
     out.write(v ? 1 : 0);
   }
 
-  private static void writeInteger(OutputStream out, int v)
+  public static void writeInteger(OutputStream out, int v)
     throws IOException
   {
     if (v == (v & 0x7F)) {
@@ -250,7 +276,7 @@ public class Protocol {
     }
   }
 
-  private static void writeLong(OutputStream out, long v)
+  public static void writeLong(OutputStream out, long v)
     throws IOException
   {
     if (v == (v & 0x7F)) {
@@ -261,31 +287,50 @@ public class Protocol {
     }
   }
 
-  private static void writeString(OutputStream out, String s)
+  public static void writeByteArray(OutputStream out, byte[] bytes)
     throws IOException
   {
-    byte[] bytes = s.getBytes("UTF-8");
     writeInteger(out, bytes.length);
     out.write(bytes);
   }
 
-  private static Class<?> find(Class<?> class_, Map<Class<?>, ?> map) {
+  public static void writeString(OutputStream out, String s)
+    throws IOException
+  {
+    writeByteArray(out, s.getBytes("UTF-8"));
+  }
+  
+  public static Class<?> findInterface(Class<?> class_, Map<Class<?>, ?> map) {
+
+    for (Class<?> c: class_.getInterfaces()) {
+      if (map.containsKey(c)) {
+        return c;
+      } else {
+        Class<?> ret = findInterface(c, map);
+        if(ret != null) {
+          return ret;
+        }
+      }
+    }
+    return null;
+  }
+
+  public static Class<?> find(Class<?> class_, Map<Class<?>, ?> map) {
     for (Class<?> c = class_; c != Object.class; c = c.getSuperclass()) {
       if (map.containsKey(c)) {
         return c;
       }
     }
-
-    for (Class<?> c: class_.getInterfaces()) {
-      if (map.containsKey(c)) {
-        return c;
-      }
+    
+    Class<?> ret = findInterface(class_, map);
+    if(ret != null) {
+      return ret;
     }
 
     throw new RuntimeException("no value found for " + class_);
   }
 
-  private static <T> void writeObject(WriteContext context, T v)
+  public static <T> void writeObject(WriteContext context, T v)
     throws IOException
   {
     findSerializer((Class<T>)v.getClass()).writeTo(context, v);
@@ -328,16 +373,22 @@ public class Protocol {
     }
   }
 
-  private static String readString(InputStream in)
+  public static byte[] readByteArray(InputStream in)
     throws IOException
   {
     byte[] array = new byte[readInteger(in)];
     if (StreamUtil.readFully(in, array, 0, array.length) != array.length) {
       throw new EOFException();
     }
-    return new String(array, "UTF-8");
+    return array;
   }
 
+  public static String readString(InputStream in)
+    throws IOException
+  {
+    return new String(readByteArray(in), "UTF-8");
+  }
+  
   public static <T> T readObject(Class<T> c, ReadContext context)
     throws IOException
   {
