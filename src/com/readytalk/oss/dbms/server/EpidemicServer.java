@@ -162,17 +162,30 @@ public class EpidemicServer {
       for (NodeState s: states.values()) {
         debugMessage(s.id + " sees " + node + " at 0");
         s.acknowledged.put(state.id, state.head);
+
+        // todo: switch from weak references to reference counting to
+        // ensure that we don't follow the chain of records back
+        // further than we need to.
+        Record tail = s.head;
+        Record previous;
+        while (tail.previous != null
+               && (previous = tail.previous.get()) != null)
+        {
+          tail = previous;
+        }
+        
+        if (tail.merged != null && tail.merged.node == s.id) {
+          tail = tail.merged;
+        }
+        
         Record rec;
-        if(s.head.sequenceNumber == 0) {
-          rec = s.head;
+        if (tail.sequenceNumber == 0) {
+          rec = tail;
         } else {
           rec = new Record(s.id, Revisions.Empty, 0, null);
-          if(s.head.merged != null && s.head.merged.node == s.id) {
-            rec.next = s.head.merged;
-          } else {
-            rec.next = s.head;
-          }
+          rec.next = tail;
         }
+
         state.acknowledged.put(s.id, rec);
       }
     }
