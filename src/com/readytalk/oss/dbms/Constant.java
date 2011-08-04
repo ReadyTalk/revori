@@ -24,4 +24,11 @@ public class Constant implements Expression {
   public void visit(ExpressionVisitor visitor) {
     visitor.visit(this);
   }
+
+  /**
+   * {@inheritDoc}
+   */
+  public Class typeConstraint() {
+    return null;
+  }
 }

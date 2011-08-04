@@ -105,4 +105,18 @@ public class BinaryOperation implements Expression {
     leftOperand.visit(visitor);
     rightOperand.visit(visitor);
   }
+
+  /**
+   * {@inheritDoc}
+   */
+  public Class typeConstraint() {
+    switch (type.operationClass()) {
+    case Boolean:
+    case Comparison:
+      return Boolean.class;
+          
+    default: throw new RuntimeException
+        ("unexpected operation class: " + type.operationClass());
+    }
+  }
 }

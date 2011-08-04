@@ -58,4 +58,17 @@ public class UnaryOperation implements Expression {
     visitor.visit(this);
     operand.visit(visitor);
   }
+
+  /**
+   * {@inheritDoc}
+   */
+  public Class typeConstraint() {
+    switch (type.operationClass()) {
+    case Boolean:
+      return Boolean.class;
+          
+    default: throw new RuntimeException
+        ("unexpected operation class: " + type.operationClass());
+    }
+  }
 }

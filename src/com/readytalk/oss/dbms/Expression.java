@@ -10,4 +10,6 @@ public interface Expression {
    * ExpressionVisitor.visit(Expression) with each.
    */
   public void visit(ExpressionVisitor visitor);
+
+  public Class typeConstraint();
 }

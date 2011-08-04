@@ -29,7 +29,7 @@ class InsertTemplateAdapter implements PatchTemplateAdapter {
         Column column = columnIterator.next();
 
         map.put
-          (column, Compare.coerce
+          (column, Compare.validate
            (ExpressionAdapterFactory.makeAdapter
             (expressionContext, valueIterator.next()).evaluate(false),
             column.type));

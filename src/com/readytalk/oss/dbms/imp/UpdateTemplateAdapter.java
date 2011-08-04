@@ -139,7 +139,7 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
 
         for (int i = 0; i < update.columns.size(); ++i) {
           Column<?> column = update.columns.get(i);
-          Object value = Compare.coerce(values[i], column.type);
+          Object value = Compare.validate(values[i], column.type);
 
           if (value == null) {
             tree = Node.delete(builder.token, builder.stack, tree, column);

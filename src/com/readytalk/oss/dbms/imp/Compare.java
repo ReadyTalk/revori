@@ -1,6 +1,5 @@
 package com.readytalk.oss.dbms.imp;
 
-import com.readytalk.oss.dbms.Coerceable;
 import com.readytalk.oss.dbms.imp.Interval.BoundType;
 
 class Compare {
@@ -24,13 +23,11 @@ class Compare {
       }
     };
 
-  public static Object coerce(Object value, Class type) {
+  public static Object validate(Object value, Class type) {
     if (value == null) {
       return null;
     } else if (type.isInstance(value)) {
       return value;
-    } else if (value instanceof Coerceable) {
-      return ((Coerceable) value).asType(type);
     } else {
       throw new ClassCastException
         (value.getClass() + " cannot be cast to " + type);

@@ -4,8 +4,9 @@ import static com.readytalk.oss.dbms.util.Util.list;
 import static com.readytalk.oss.dbms.util.Util.set;
 
 import com.readytalk.oss.dbms.util.Util;
+import com.readytalk.oss.dbms.util.BufferOutputStream;
+import com.readytalk.oss.dbms.server.protocol.Stringable;
 import com.readytalk.oss.dbms.BinaryOperation.Type;
-import com.readytalk.oss.dbms.Coerceable;
 import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.TableReference;
@@ -55,12 +56,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.net.InetSocketAddress;
 import java.nio.channels.Channels;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.ServerSocketChannel;
 
 public class SQLServer {
+  private static final boolean Verbose = false;
   private static final boolean Debug = true;
 
   private static final Logger log = Logger.getLogger("SQLServer");
@@ -80,6 +83,79 @@ public class SQLServer {
   private static final int ThreadPoolSize = 256;
 
   private static final Tree Nothing = new Leaf();
+
+  private static final Map<Class, Validator> validators = new HashMap();
+
+  static {
+    validators.put(Parameter.class, new Validator<Parameter>() {
+      public Expression validate(Class type, Parameter expression) {
+        // todo
+        throw new UnsupportedOperationException();
+      }
+    });
+
+    validators.put(Constant.class, new Validator<Constant>() {
+      public Expression validate(Class type, Constant expression) {
+        if (type == null
+            || expression.value == null
+            || type.isAssignableFrom(expression.value.getClass()))
+        {
+          return expression;
+        } else {
+          return new Constant(coerce(type, expression.value));
+        }
+      }
+    });
+
+    validators.put(ColumnReference.class, new Validator<Expression>() {
+      public Expression validate(Class type, Expression expression) {
+        return expression;
+      }
+    });
+
+    validators.put(UnaryOperation.class, new Validator<UnaryOperation>() {
+      public Expression validate(Class type, UnaryOperation expression) {
+        switch (expression.type.operationClass()) {
+        case Boolean: {
+          Expression operand = SQLServer.validate
+            (Boolean.class, expression.operand);
+          if (operand == expression.operand) {
+            return expression;
+          } else {
+            return new UnaryOperation(expression.type, operand);
+          }
+        }
+          
+        default: throw new RuntimeException
+            ("unexpected operation class: "
+             + expression.type.operationClass());
+        }
+      }
+    });
+
+    validators.put(BinaryOperation.class, new Validator<BinaryOperation>() {
+      public Expression validate(Class type, BinaryOperation expression) {
+        Expression left = SQLServer.validate(null, expression.leftOperand);
+        Expression right = SQLServer.validate
+          (left.typeConstraint(), expression.rightOperand);
+
+        left = SQLServer.validate
+          (right.typeConstraint(), expression.leftOperand);
+
+        if (left == expression.leftOperand
+            && right == expression.rightOperand)
+        {
+          return expression;
+        } else {
+          return new BinaryOperation(expression.type, left, right);
+        }
+      }
+    });
+  }
+
+  private interface Validator<T extends Expression> {
+    public Expression validate(Class type, T expression);
+  }
 
   private static class Server {
     public final Parser parser = new ParserFactory().parser();
@@ -300,78 +376,9 @@ public class SQLServer {
 
       unaryOperationTypes.put("not", UnaryOperation.Type.Not);
 
-      columnTypes.put("int32", Int32.class);
-      columnTypes.put("int64", Int64.class);
+      columnTypes.put("int32", Integer.class);
+      columnTypes.put("int64", Long.class);
       columnTypes.put("string", String.class);
-    }
-  }
-
-  private static class Int32 implements Coerceable {
-    private final int value;
-
-    public Int32(int value) {
-      this.value = value;
-    }
-
-    public Object asType(Class type) {
-      if (type == Int32.class) {
-        return this;
-      } else if (type == Int64.class) {
-        return new Int64(value);
-      } else {
-        throw new ClassCastException
-          (getClass().getName() + " cannot be coerced to " + type);
-      }
-    }
-
-    public int compareTo(Coerceable o) {
-      return value - ((Int32) o.asType(Int32.class)).value;
-    }
-
-    public boolean equals(Object o) {
-      return o instanceof Coerceable && compareTo((Coerceable) o) == 0;
-    }
-
-    public String toString() {
-      return String.valueOf(value);
-    }
-  }
-
-  private static class Int64 implements Coerceable {
-    private final long value;
-
-    public Int64(long value) {
-      this.value = value;
-    }
-
-    public Object asType(Class type) {
-      if (type == Int32.class) {
-        int v = (int) value;
-        if (v != value) {
-          throw new RuntimeException
-            (value + " cannot be represented as a 32-bit value");
-        }
-        return new Int32(v);
-      } else if (type == Int64.class) {
-        return this;
-      } else {
-        throw new ClassCastException
-          (getClass().getName() + " cannot be coerced to " + type);
-      }
-    }
-
-    public int compareTo(Coerceable o) {
-      Int64 ov = (Int64) o.asType(Int64.class);
-
-      return value > ov.value ? 1 : (value < ov.value ? -1 : 0);
-    }
-
-    public boolean equals(Object o) {
-      return o instanceof Coerceable && compareTo((Coerceable) o) == 0;
-    }
-
-    public String toString() {
-      return String.valueOf(value);
     }
   }
 
@@ -762,6 +769,59 @@ public class SQLServer {
     }
   }
 
+  private static Expression validate(Class type,
+                                     Expression expression)
+  {
+    return validators.get(expression.getClass()).validate(type, expression);
+  }
+
+  private static Object coerce(Class type, Object value) {
+    if (value instanceof String) {
+      if (Stringable.class.isAssignableFrom(type)) {
+        try {
+          return type.getConstructor(String.class).newInstance(value);
+        } catch (NoSuchMethodException e) {
+          throw new RuntimeException(e);
+        } catch (java.lang.reflect.InvocationTargetException e) {
+          throw new RuntimeException(e);
+        } catch (InstantiationException e) {
+          throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+          throw new RuntimeException(e);
+        }
+      }
+      // todo: handle types like byte arrays, enums, etc.
+    } else if (value instanceof Long) {
+      long v = (Long) value;
+      if (type == Integer.class) {
+        int x = (int) v;
+        if (v != x) {
+          throw new RuntimeException
+            (v + " cannot be represented as a 32-bit value");
+        }
+        return x;
+      } else if (type == Short.class) {
+        short x = (short) v;
+        if (v != x) {
+          throw new RuntimeException
+            (v + " cannot be represented as a 16-bit value");
+        }
+        return x;
+      } else if (type == Byte.class) {
+        byte x = (byte) v;
+        if (v != x) {
+          throw new RuntimeException
+            (v + " cannot be represented as an 8-bit value");
+        }
+        return x;
+      }
+    }
+
+    throw new RuntimeException
+      ("instance " + value + " of " + value.getClass().getName()
+       + " cannot be coerced to " + type.getName());
+  }
+
   private static Source makeSource(Client client,
                                    Tree tree,
                                    List<MyTableReference> tableReferences,
@@ -844,7 +904,7 @@ public class SQLServer {
     } else if (tree instanceof StringLiteral) {
       return new Constant(((StringLiteral) tree).value);
     } else if (tree instanceof NumberLiteral) {
-      return new Constant(new Int64(((NumberLiteral) tree).value));
+      return new Constant(((NumberLiteral) tree).value);
     } else if (tree instanceof BooleanLiteral) {
       return new Constant(((BooleanLiteral) tree).value);
     } if (tree.length() == 3) {
@@ -931,9 +991,10 @@ public class SQLServer {
     expressionCount[0] = expressions.size();
 
     return new QueryTemplate
-      (expressions, source, andExpressions
-       (makeExpressionFromWhere
-        (client.server, tree.get(4), tableReferences), tests));
+      (expressions, source, validate
+       (Boolean.class, andExpressions
+        (makeExpressionFromWhere
+         (client.server, tree.get(4), tableReferences), tests)));
   }
 
   private static MyColumn findColumn(MyTable table,
@@ -976,10 +1037,21 @@ public class SQLServer {
   {
     MyTable table = findTable(client, ((Name) tree.get(2)).value);
 
+    List<Column> columns = makeOptionalColumnList(table, tree.get(3));
+    List<Expression> rawValues = makeExpressionList
+      (client.server, tree.get(6), null);
+
+    if (columns.size() != rawValues.size()) {
+      throw new RuntimeException("column count and value count do not match");
+    }
+
+    List<Expression> values = new ArrayList(rawValues.size());
+    for (int i = 0; i < columns.size(); ++i) {
+      values.add(validate(columns.get(i).type, rawValues.get(i)));
+    }
+
     return new InsertTemplate
-      (table.table, makeOptionalColumnList(table, tree.get(3)),
-       makeExpressionList(client.server, tree.get(6), null),
-       DuplicateKeyResolution.Throw);
+      (table.table, columns, values, DuplicateKeyResolution.Throw);
   }
 
   private static PatchTemplate makeUpdateTemplate(Client client,
@@ -995,14 +1067,19 @@ public class SQLServer {
     List<Expression> values = new ArrayList<Expression>();
     for (int i = 0; i < operations.length(); ++i) {
       Tree operation = operations.get(i);
-      columns.add(findColumn(table, ((Name) operation.get(0)).value).column);
+      Column column = findColumn
+        (table, ((Name) operation.get(0)).value).column;
+      columns.add(column);
       values.add
-        (makeExpression(client.server, operation.get(2), tableReferences));
+        (validate
+         (column.type, makeExpression
+          (client.server, operation.get(2), tableReferences)));
     }
 
     return new UpdateTemplate
-      (tableReference.reference, makeExpressionFromWhere
-       (client.server, tree.get(4), tableReferences), columns, values);
+      (tableReference.reference, validate
+       (Boolean.class, makeExpressionFromWhere
+        (client.server, tree.get(4), tableReferences)), columns, values);
   }
 
   private static PatchTemplate makeDeleteTemplate(Client client,
@@ -1014,8 +1091,9 @@ public class SQLServer {
     List<MyTableReference> tableReferences = list(tableReference);
 
     return new DeleteTemplate
-      (tableReference.reference, makeExpressionFromWhere
-       (client.server, tree.get(3), tableReferences));
+      (tableReference.reference, validate
+       (Boolean.class, makeExpressionFromWhere
+        (client.server, tree.get(3), tableReferences)));
   }
 
   private static MyColumn findColumn(MyTable table, Column<?> column) {
@@ -2410,7 +2488,9 @@ public class SQLServer {
     String s = readString(in);
     try {
       if (client.copyContext == null) {
-        log.info("execute \"" + s + "\"");
+        if (Verbose) {
+          log.info("execute \"" + s + "\"");
+        }
         ParseResult result = client.server.parser.parse
           (new ParseContext(client, s), s);
         if (result.task != null) {
@@ -2505,6 +2585,37 @@ public class SQLServer {
     while (true) {
       executor.execute(new Client(server, serverChannel.accept()));
     }
+  }
+
+  private final Server server = new Server();
+
+  public Connection makeConnection() {
+    return new Connection() {
+      private final Client client = new Client(server, null);
+
+      public InputStream execute(String command) {
+        BufferOutputStream buffer = new BufferOutputStream();
+        BufferOutputStream out = new BufferOutputStream();
+
+        try {
+          writeString(buffer, command);
+
+          executeRequest
+            (client, new ByteArrayInputStream
+             (buffer.getBuffer(), 0, buffer.size()), out);
+        } catch (IOException e) {
+          // should not be possible, since we're reading from and
+          // writing to memory
+          throw new RuntimeException(e);
+        }
+
+        return new ByteArrayInputStream(out.getBuffer(), 0, out.size());
+      }      
+    };
+  }
+
+  public interface Connection {
+    public InputStream execute(String command);
   }
 
   public static void main(String[] args) throws IOException {
