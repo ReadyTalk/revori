@@ -98,11 +98,11 @@ public class SQLServer {
       public Expression validate(Class type, Constant expression) {
         if (type == null
             || expression.value == null
-            || type.isAssignableFrom(expression.value.getClass()))
+            || type.isInstance(expression.value))
         {
           return expression;
         } else {
-          return new Constant(coerce(type, expression.value));
+          return new Constant(parse(type, (String) expression.value));
         }
       }
     });
@@ -655,39 +655,15 @@ public class SQLServer {
     }
   }
 
-  private static class StringLiteral extends Leaf {
+  private static class Literal extends Leaf {
     public final String value;
 
-    public StringLiteral(String value) {
+    public Literal(String value) {
       this.value = value;
     }
 
     public String toString() {
-      return "stringLiteral[" + value + "]";
-    }
-  }
-
-  private static class NumberLiteral extends Leaf {
-    public final long value;
-
-    public NumberLiteral(String value) {
-      this.value = Long.parseLong(value);
-    }
-
-    public String toString() {
-      return "numberLiteral[" + value + "]";
-    }
-  }
-
-  private static class BooleanLiteral extends Leaf {
-    public final boolean value;
-
-    public BooleanLiteral(boolean value) {
-      this.value = value;
-    }
-
-    public String toString() {
-      return "booleanLiteral[" + value + "]";
+      return "literal[" + value + "]";
     }
   }
 
@@ -775,51 +751,34 @@ public class SQLServer {
     return validators.get(expression.getClass()).validate(type, expression);
   }
 
-  private static Object coerce(Class type, Object value) {
-    if (value instanceof String) {
-      if (Stringable.class.isAssignableFrom(type)) {
-        try {
-          return type.getConstructor(String.class).newInstance(value);
-        } catch (NoSuchMethodException e) {
-          throw new RuntimeException(e);
-        } catch (java.lang.reflect.InvocationTargetException e) {
-          throw new RuntimeException(e);
-        } catch (InstantiationException e) {
-          throw new RuntimeException(e);
-        } catch (IllegalAccessException e) {
-          throw new RuntimeException(e);
-        }
+  private static Object parse(Class type, String value) {
+    if (Stringable.class.isAssignableFrom(type)) {
+      try {
+        return type.getConstructor(String.class).newInstance(value);
+      } catch (NoSuchMethodException e) {
+        throw new RuntimeException(e);
+      } catch (java.lang.reflect.InvocationTargetException e) {
+        throw new RuntimeException(e);
+      } catch (InstantiationException e) {
+        throw new RuntimeException(e);
+      } catch (IllegalAccessException e) {
+        throw new RuntimeException(e);
       }
-      // todo: handle types like byte arrays, enums, etc.
-    } else if (value instanceof Long) {
-      long v = (Long) value;
-      if (type == Integer.class) {
-        int x = (int) v;
-        if (v != x) {
-          throw new RuntimeException
-            (v + " cannot be represented as a 32-bit value");
-        }
-        return x;
-      } else if (type == Short.class) {
-        short x = (short) v;
-        if (v != x) {
-          throw new RuntimeException
-            (v + " cannot be represented as a 16-bit value");
-        }
-        return x;
-      } else if (type == Byte.class) {
-        byte x = (byte) v;
-        if (v != x) {
-          throw new RuntimeException
-            (v + " cannot be represented as an 8-bit value");
-        }
-        return x;
-      }
+    } else if (type == Long.class) {
+      return Long.parseLong(value);
+    } else if (type == Integer.class) {
+      return Integer.parseInt(value);
+    } else if (type == Short.class) {
+      return Short.parseShort(value);
+    } else if (type == Byte.class) {
+      return Byte.parseByte(value);
+    } else if (type == Boolean.class) {
+      return Boolean.parseBoolean(value);
     }
+    // todo: handle types like byte arrays, enums, etc.
 
     throw new RuntimeException
-      ("instance " + value + " of " + value.getClass().getName()
-       + " cannot be coerced to " + type.getName());
+      ("don't know how to parse \"" + value + "\" as a " + type.getName());
   }
 
   private static Source makeSource(Client client,
@@ -901,12 +860,8 @@ public class SQLServer {
     if (tree instanceof Name) {
       return makeColumnReference
         (tableReferences, null, ((Name) tree).value);
-    } else if (tree instanceof StringLiteral) {
-      return new Constant(((StringLiteral) tree).value);
-    } else if (tree instanceof NumberLiteral) {
-      return new Constant(((NumberLiteral) tree).value);
-    } else if (tree instanceof BooleanLiteral) {
-      return new Constant(((BooleanLiteral) tree).value);
+    } else if (tree instanceof Literal) {
+      return new Constant(((Literal) tree).value);
     } if (tree.length() == 3) {
       if (tree.get(0) instanceof Name
           && ".".equals(((Terminal) tree.get(1)).value))
@@ -1874,7 +1829,7 @@ public class SQLServer {
                     sawEscape = false;
                     sb.append(c);
                   } else {
-                    return success(new StringLiteral(sb.toString()),
+                    return success(new Literal(sb.toString()),
                                    in.substring(i + 1), null);
                   }
                   break;
@@ -1914,7 +1869,7 @@ public class SQLServer {
             }
 
             if (i > start) {
-              return success(new NumberLiteral(in.substring(0, i)),
+              return success(new Literal(in.substring(0, i)),
                              in.substring(i), null);
             } else {
               return fail(null);
@@ -1930,10 +1885,10 @@ public class SQLServer {
         public ParseResult parse(ParseContext context, String in) {
           in = skipSpace(in);
           if (in.startsWith("true")) {
-            return success(new BooleanLiteral(true),
+            return success(new Literal("true"),
                            in.substring(4), null);
           } else if (in.startsWith("false")) {
-            return success(new BooleanLiteral(false),
+            return success(new Literal("false"),
                            in.substring(5), null);
           } else {
             return fail(null);
@@ -2516,23 +2471,31 @@ public class SQLServer {
     throws IOException
   {
     String s = readString(in);
-    log.info("complete \"" + s + "\"");
+    if (Verbose) {
+      log.info("complete \"" + s + "\"");
+    }
     if (client.copyContext == null) {
       ParseResult result = client.server.parser.parse
         (new ParseContext(client, s), s);
       out.write(Response.Success.ordinal());
       if (result.completions == null) {
-        log.info("no completions");
+        if (Verbose) {
+          log.info("no completions");
+        }
         writeInteger(out, 0);
       } else {
-        log.info("completions: " + result.completions);
+        if (Verbose) {
+          log.info("completions: " + result.completions);
+        }
         writeInteger(out, result.completions.size());
         for (String completion: result.completions) {
           writeString(out, completion);
         }
       }
     } else {
-      log.info("no completions in copy mode");
+      if (Verbose) {
+        log.info("no completions in copy mode");
+      }
       out.write(Response.Success.ordinal());
       writeInteger(out, 0);
     }
