@@ -45,7 +45,6 @@ import java.util.HashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 import java.io.Reader;
@@ -62,7 +61,7 @@ import java.nio.channels.Channels;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.ServerSocketChannel;
 
-public class SQLServer {
+public class SQLServer implements RevisionServer {
   private static final boolean Verbose = false;
   private static final boolean Debug = true;
 
@@ -182,7 +181,6 @@ public class SQLServer {
     public final PatchTemplate deleteDatabaseTags;
     public final PatchTemplate deleteTag;
 
-    public final AtomicReference<Revision> dbHead;
     public final Map<String, BinaryOperation.Type> binaryOperationTypes
       = new HashMap<String, Type>();
     public final Map<String, UnaryOperation.Type> unaryOperationTypes
@@ -223,6 +221,8 @@ public class SQLServer {
           }
         }
       };
+    public final RevisionServer server = new SimpleRevisionServer
+      (conflictResolver, ForeignKeyResolvers.Delete);
 
     public Server() {
       Column databasesName = new Column(String.class);
@@ -362,8 +362,6 @@ public class SQLServer {
           (BinaryOperation.Type.Equal,
            new ColumnReference(tagsReference, tagsName),
            new Parameter())));
-
-      this.dbHead = new AtomicReference<Revision>(Revisions.Empty);
 
       binaryOperationTypes.put("and", BinaryOperation.Type.And);
       binaryOperationTypes.put("or", BinaryOperation.Type.Or);
@@ -679,7 +677,7 @@ public class SQLServer {
     if (client.transaction != null) {
       return client.transaction.dbHead;
     } else {
-      return client.server.dbHead.get();
+      return client.server.server.head();
     }
   }
 
@@ -775,7 +773,8 @@ public class SQLServer {
     } else if (type == Boolean.class) {
       return Boolean.parseBoolean(value);
     }
-    // todo: handle types like byte arrays, enums, etc.
+    // todo: handle types like byte arrays, enums, etc., and use a map
+    // of types to parsers instead of a big if/else chain
 
     throw new RuntimeException
       ("don't know how to parse \"" + value + "\" as a " + type.getName());
@@ -1330,23 +1329,13 @@ public class SQLServer {
   private static void pushTransaction(Client client) {
     Transaction next = client.transaction;
     client.transaction = new Transaction
-      (next, next == null ? client.server.dbHead.get() : next.dbHead);
+      (next, next == null ? client.server.server.head() : next.dbHead);
   }
 
   private static void commitTransaction(Client client) {
     if (client.transaction.next == null) {
-      Revision myTail = client.transaction.dbTail;
-      Revision myHead = client.transaction.dbHead;
-      ConflictResolver conflictResolver = client.server.conflictResolver;
-      if (myTail != myHead) {
-        AtomicReference<Revision> dbHead = client.server.dbHead;
-        while (! dbHead.compareAndSet(myTail, myHead)) {
-          Revision fork = dbHead.get();
-          myHead = myTail.merge
-            (fork, myHead, conflictResolver, ForeignKeyResolvers.Delete);
-          myTail = fork;
-        }
-      }
+      client.server.server.merge
+        (client.transaction.dbTail, client.transaction.dbHead);
     } else {
       client.transaction.next.dbHead = client.transaction.dbHead;
     }
@@ -2575,6 +2564,22 @@ public class SQLServer {
         return new ByteArrayInputStream(out.getBuffer(), 0, out.size());
       }      
     };
+  }
+
+  public Revision head() {
+    return server.server.head();
+  }
+
+  public void merge(Revision base, Revision fork) {
+    server.server.merge(base, fork);
+  }
+
+  public void registerListener(Runnable listener) {
+    server.server.registerListener(listener);
+  }
+
+  public void unregisterListener(Runnable listener) {
+    server.server.unregisterListener(listener);
   }
 
   public interface Connection {
