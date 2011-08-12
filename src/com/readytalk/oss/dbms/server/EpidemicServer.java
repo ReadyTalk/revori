@@ -19,7 +19,6 @@ import com.readytalk.oss.dbms.util.BufferOutputStream;
 
 import java.lang.ref.WeakReference;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.IOException;
 import java.io.EOFException;
 import java.io.ByteArrayInputStream;
@@ -521,22 +520,22 @@ public class EpidemicServer implements RevisionServer {
     // for deserialization
     public Ack() { }
 
-    public void writeTo(OutputStream out)
+    public void writeTo(WriteContext context)
       throws IOException
     {
-      StreamUtil.writeString(out, acknowledger.id);
-      StreamUtil.writeLong(out, acknowledgerSequenceNumber);
-      StreamUtil.writeString(out, diffOrigin.id);
-      StreamUtil.writeLong(out, diffSequenceNumber);
+      StreamUtil.writeString(context.out, acknowledger.id);
+      StreamUtil.writeLong(context.out, acknowledgerSequenceNumber);
+      StreamUtil.writeString(context.out, diffOrigin.id);
+      StreamUtil.writeLong(context.out, diffSequenceNumber);
     }
 
-    public void readFrom(InputStream in)
+    public void readFrom(ReadContext context)
       throws IOException
     {
-      acknowledger = new NodeID(StreamUtil.readString(in));
-      acknowledgerSequenceNumber = StreamUtil.readLong(in);
-      diffOrigin = new NodeID(StreamUtil.readString(in));
-      diffSequenceNumber = StreamUtil.readLong(in);
+      acknowledger = new NodeID(StreamUtil.readString(context.in));
+      acknowledgerSequenceNumber = StreamUtil.readLong(context.in);
+      diffOrigin = new NodeID(StreamUtil.readString(context.in));
+      diffSequenceNumber = StreamUtil.readLong(context.in);
     }
 
     public void deliver(NodeID source, EpidemicServer server) {
@@ -567,23 +566,23 @@ public class EpidemicServer implements RevisionServer {
     // for deserialization
     public Diff() { }
 
-    public void writeTo(OutputStream out)
+    public void writeTo(WriteContext context)
       throws IOException
     {
-      StreamUtil.writeString(out, origin.id);
-      StreamUtil.writeLong(out, startSequenceNumber);
-      StreamUtil.writeLong(out, endSequenceNumber);
-      ((Writable) body).writeTo(out);
+      StreamUtil.writeString(context.out, origin.id);
+      StreamUtil.writeLong(context.out, startSequenceNumber);
+      StreamUtil.writeLong(context.out, endSequenceNumber);
+      ((Writable) body).writeTo(context);
     }
 
-    public void readFrom(InputStream in)
+    public void readFrom(ReadContext context)
       throws IOException
     {
-      origin = new NodeID(StreamUtil.readString(in));
-      startSequenceNumber = StreamUtil.readLong(in);
-      endSequenceNumber = StreamUtil.readLong(in);
+      origin = new NodeID(StreamUtil.readString(context.in));
+      startSequenceNumber = StreamUtil.readLong(context.in);
+      endSequenceNumber = StreamUtil.readLong(context.in);
       BufferDiffBody list = new BufferDiffBody();
-      list.readFrom(in);
+      list.readFrom(context);
       body = list;
     }
 
@@ -598,11 +597,11 @@ public class EpidemicServer implements RevisionServer {
   }
 
   private static abstract class Singleton implements Message {
-    public void writeTo(OutputStream out) {
+    public void writeTo(WriteContext context) {
       // ignore
     }
 
-    public void readFrom(InputStream in) {
+    public void readFrom(ReadContext context) {
       // ignore
     }
   }
@@ -642,41 +641,40 @@ public class EpidemicServer implements RevisionServer {
       return fork;
     }
 
-    public void writeTo(OutputStream out)
+    public void writeTo(WriteContext context)
       throws IOException
     {
       DiffResult result = base.diff(fork, true);
-      WriteContext writeContext = new WriteContext(out);
       while (true) {
         DiffResult.Type type = result.next();
         switch (type) {
         case End:
-          out.write(End);
+          context.out.write(End);
           return;
 
         case Descend: {
-          out.write(Descend);
+          context.out.write(Descend);
         } break;
 
         case Ascend: {
-          out.write(Ascend);
+          context.out.write(Ascend);
         } break;
 
         case Key: {
           Object forkKey = result.fork();
           if (forkKey != null) {
-            out.write(Key);
-            Protocol.write(writeContext, forkKey);
+            context.out.write(Key);
+            Protocol.write(context, forkKey);
           } else {
-            out.write(Delete);
-            Protocol.write(writeContext, result.base());
+            context.out.write(Delete);
+            Protocol.write(context, result.base());
             result.skip();
           }
         } break;
 
         case Value: {
-          out.write(Insert);
-          Protocol.write(writeContext, result.fork());
+          context.out.write(Insert);
+          Protocol.write(context, result.fork());
         } break;
 
         default:
@@ -822,14 +820,13 @@ public class EpidemicServer implements RevisionServer {
       }
     }
 
-    public void readFrom(InputStream in)
+    public void readFrom(ReadContext context)
       throws IOException
     {
       buffer = new BufferOutputStream();
-      ReadContext readContext = new ReadContext(in);
       WriteContext writeContext = new WriteContext(buffer);
       while (true) {
-        int flag = in.read();
+        int flag = context.in.read();
         switch (flag) {
         case -1:
           throw new EOFException();
@@ -847,7 +844,7 @@ public class EpidemicServer implements RevisionServer {
         case Delete:
         case Insert:
           buffer.write(flag);
-          Protocol.write(writeContext, Protocol.read(readContext));
+          Protocol.write(writeContext, Protocol.read(context));
           break;
 
         default:

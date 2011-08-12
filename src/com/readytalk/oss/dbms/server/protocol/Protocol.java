@@ -94,7 +94,7 @@ public class Protocol {
 
     serializers.put(Writable.class, new Serializer<Writable>() {
       public void writeTo(WriteContext context, Writable v) throws IOException {
-        v.writeTo(context.out);
+        v.writeTo(context);
       }
     });
 
@@ -108,7 +108,7 @@ public class Protocol {
         } catch (IllegalAccessException e) {
           throw new RuntimeException(e);
         }
-        v.readFrom(context.in);
+        v.readFrom(context);
         return v;
       }
     });
