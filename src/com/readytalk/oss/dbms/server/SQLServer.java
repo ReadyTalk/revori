@@ -45,7 +45,6 @@ import java.util.HashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 import java.io.Reader;
@@ -62,7 +61,7 @@ import java.nio.channels.Channels;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.ServerSocketChannel;
 
-public class SQLServer {
+public class SQLServer implements RevisionServer {
   private static final boolean Verbose = false;
   private static final boolean Debug = true;
 
@@ -98,11 +97,11 @@ public class SQLServer {
       public Expression validate(Class type, Constant expression) {
         if (type == null
             || expression.value == null
-            || type.isAssignableFrom(expression.value.getClass()))
+            || type.isInstance(expression.value))
         {
           return expression;
         } else {
-          return new Constant(coerce(type, expression.value));
+          return new Constant(parse(type, (String) expression.value));
         }
       }
     });
@@ -182,7 +181,6 @@ public class SQLServer {
     public final PatchTemplate deleteDatabaseTags;
     public final PatchTemplate deleteTag;
 
-    public final AtomicReference<Revision> dbHead;
     public final Map<String, BinaryOperation.Type> binaryOperationTypes
       = new HashMap<String, Type>();
     public final Map<String, UnaryOperation.Type> unaryOperationTypes
@@ -223,6 +221,8 @@ public class SQLServer {
           }
         }
       };
+    public final RevisionServer server = new SimpleRevisionServer
+      (conflictResolver, ForeignKeyResolvers.Delete);
 
     public Server() {
       Column databasesName = new Column(String.class);
@@ -362,8 +362,6 @@ public class SQLServer {
           (BinaryOperation.Type.Equal,
            new ColumnReference(tagsReference, tagsName),
            new Parameter())));
-
-      this.dbHead = new AtomicReference<Revision>(Revisions.Empty);
 
       binaryOperationTypes.put("and", BinaryOperation.Type.And);
       binaryOperationTypes.put("or", BinaryOperation.Type.Or);
@@ -655,39 +653,15 @@ public class SQLServer {
     }
   }
 
-  private static class StringLiteral extends Leaf {
+  private static class Literal extends Leaf {
     public final String value;
 
-    public StringLiteral(String value) {
+    public Literal(String value) {
       this.value = value;
     }
 
     public String toString() {
-      return "stringLiteral[" + value + "]";
-    }
-  }
-
-  private static class NumberLiteral extends Leaf {
-    public final long value;
-
-    public NumberLiteral(String value) {
-      this.value = Long.parseLong(value);
-    }
-
-    public String toString() {
-      return "numberLiteral[" + value + "]";
-    }
-  }
-
-  private static class BooleanLiteral extends Leaf {
-    public final boolean value;
-
-    public BooleanLiteral(boolean value) {
-      this.value = value;
-    }
-
-    public String toString() {
-      return "booleanLiteral[" + value + "]";
+      return "literal[" + value + "]";
     }
   }
 
@@ -703,7 +677,7 @@ public class SQLServer {
     if (client.transaction != null) {
       return client.transaction.dbHead;
     } else {
-      return client.server.dbHead.get();
+      return client.server.server.head();
     }
   }
 
@@ -775,51 +749,35 @@ public class SQLServer {
     return validators.get(expression.getClass()).validate(type, expression);
   }
 
-  private static Object coerce(Class type, Object value) {
-    if (value instanceof String) {
-      if (Stringable.class.isAssignableFrom(type)) {
-        try {
-          return type.getConstructor(String.class).newInstance(value);
-        } catch (NoSuchMethodException e) {
-          throw new RuntimeException(e);
-        } catch (java.lang.reflect.InvocationTargetException e) {
-          throw new RuntimeException(e);
-        } catch (InstantiationException e) {
-          throw new RuntimeException(e);
-        } catch (IllegalAccessException e) {
-          throw new RuntimeException(e);
-        }
+  private static Object parse(Class type, String value) {
+    if (Stringable.class.isAssignableFrom(type)) {
+      try {
+        return type.getConstructor(String.class).newInstance(value);
+      } catch (NoSuchMethodException e) {
+        throw new RuntimeException(e);
+      } catch (java.lang.reflect.InvocationTargetException e) {
+        throw new RuntimeException(e);
+      } catch (InstantiationException e) {
+        throw new RuntimeException(e);
+      } catch (IllegalAccessException e) {
+        throw new RuntimeException(e);
       }
-      // todo: handle types like byte arrays, enums, etc.
-    } else if (value instanceof Long) {
-      long v = (Long) value;
-      if (type == Integer.class) {
-        int x = (int) v;
-        if (v != x) {
-          throw new RuntimeException
-            (v + " cannot be represented as a 32-bit value");
-        }
-        return x;
-      } else if (type == Short.class) {
-        short x = (short) v;
-        if (v != x) {
-          throw new RuntimeException
-            (v + " cannot be represented as a 16-bit value");
-        }
-        return x;
-      } else if (type == Byte.class) {
-        byte x = (byte) v;
-        if (v != x) {
-          throw new RuntimeException
-            (v + " cannot be represented as an 8-bit value");
-        }
-        return x;
-      }
+    } else if (type == Long.class) {
+      return Long.parseLong(value);
+    } else if (type == Integer.class) {
+      return Integer.parseInt(value);
+    } else if (type == Short.class) {
+      return Short.parseShort(value);
+    } else if (type == Byte.class) {
+      return Byte.parseByte(value);
+    } else if (type == Boolean.class) {
+      return Boolean.parseBoolean(value);
     }
+    // todo: handle types like byte arrays, enums, etc., and use a map
+    // of types to parsers instead of a big if/else chain
 
     throw new RuntimeException
-      ("instance " + value + " of " + value.getClass().getName()
-       + " cannot be coerced to " + type.getName());
+      ("don't know how to parse \"" + value + "\" as a " + type.getName());
   }
 
   private static Source makeSource(Client client,
@@ -901,12 +859,8 @@ public class SQLServer {
     if (tree instanceof Name) {
       return makeColumnReference
         (tableReferences, null, ((Name) tree).value);
-    } else if (tree instanceof StringLiteral) {
-      return new Constant(((StringLiteral) tree).value);
-    } else if (tree instanceof NumberLiteral) {
-      return new Constant(((NumberLiteral) tree).value);
-    } else if (tree instanceof BooleanLiteral) {
-      return new Constant(((BooleanLiteral) tree).value);
+    } else if (tree instanceof Literal) {
+      return new Constant(((Literal) tree).value);
     } if (tree.length() == 3) {
       if (tree.get(0) instanceof Name
           && ".".equals(((Terminal) tree.get(1)).value))
@@ -1375,23 +1329,13 @@ public class SQLServer {
   private static void pushTransaction(Client client) {
     Transaction next = client.transaction;
     client.transaction = new Transaction
-      (next, next == null ? client.server.dbHead.get() : next.dbHead);
+      (next, next == null ? client.server.server.head() : next.dbHead);
   }
 
   private static void commitTransaction(Client client) {
     if (client.transaction.next == null) {
-      Revision myTail = client.transaction.dbTail;
-      Revision myHead = client.transaction.dbHead;
-      ConflictResolver conflictResolver = client.server.conflictResolver;
-      if (myTail != myHead) {
-        AtomicReference<Revision> dbHead = client.server.dbHead;
-        while (! dbHead.compareAndSet(myTail, myHead)) {
-          Revision fork = dbHead.get();
-          myHead = myTail.merge
-            (fork, myHead, conflictResolver, ForeignKeyResolvers.Delete);
-          myTail = fork;
-        }
-      }
+      client.server.server.merge
+        (client.transaction.dbTail, client.transaction.dbHead);
     } else {
       client.transaction.next.dbHead = client.transaction.dbHead;
     }
@@ -1874,7 +1818,7 @@ public class SQLServer {
                     sawEscape = false;
                     sb.append(c);
                   } else {
-                    return success(new StringLiteral(sb.toString()),
+                    return success(new Literal(sb.toString()),
                                    in.substring(i + 1), null);
                   }
                   break;
@@ -1914,7 +1858,7 @@ public class SQLServer {
             }
 
             if (i > start) {
-              return success(new NumberLiteral(in.substring(0, i)),
+              return success(new Literal(in.substring(0, i)),
                              in.substring(i), null);
             } else {
               return fail(null);
@@ -1930,10 +1874,10 @@ public class SQLServer {
         public ParseResult parse(ParseContext context, String in) {
           in = skipSpace(in);
           if (in.startsWith("true")) {
-            return success(new BooleanLiteral(true),
+            return success(new Literal("true"),
                            in.substring(4), null);
           } else if (in.startsWith("false")) {
-            return success(new BooleanLiteral(false),
+            return success(new Literal("false"),
                            in.substring(5), null);
           } else {
             return fail(null);
@@ -2516,37 +2460,47 @@ public class SQLServer {
     throws IOException
   {
     String s = readString(in);
-    log.info("complete \"" + s + "\"");
+    if (Verbose) {
+      log.info("complete \"" + s + "\"");
+    }
     if (client.copyContext == null) {
       ParseResult result = client.server.parser.parse
         (new ParseContext(client, s), s);
       out.write(Response.Success.ordinal());
       if (result.completions == null) {
-        log.info("no completions");
+        if (Verbose) {
+          log.info("no completions");
+        }
         writeInteger(out, 0);
       } else {
-        log.info("completions: " + result.completions);
+        if (Verbose) {
+          log.info("completions: " + result.completions);
+        }
         writeInteger(out, result.completions.size());
         for (String completion: result.completions) {
           writeString(out, completion);
         }
       }
     } else {
-      log.info("no completions in copy mode");
+      if (Verbose) {
+        log.info("no completions in copy mode");
+      }
       out.write(Response.Success.ordinal());
       writeInteger(out, 0);
     }
   }
 
-  private static void handleRequest(Client client,
-                                    InputStream in,
-                                    OutputStream out)
+  private static boolean handleRequest(Client client,
+                                       InputStream in,
+                                       OutputStream out)
     throws IOException
   {
     int requestType = in.read();
     if (requestType == -1) {
-      client.channel.close();
-      return;
+      if (client.channel != null) {
+        client.channel.close();
+      }
+      return false;
     }
 
     switch (Request.values()[requestType]) {
@@ -2563,6 +2517,8 @@ public class SQLServer {
     default:
       throw new RuntimeException("unexpected request type: " + requestType);
     }
+
+    return true;
   }
 
   private static void listen(String address,
@@ -2588,6 +2544,11 @@ public class SQLServer {
   }
 
   private final Server server = new Server();
+  private final String database;
+
+  public SQLServer(String database) {
+    this.database = database;
+  }
 
   public Connection makeConnection() {
     return new Connection() {
@@ -2612,6 +2573,82 @@ public class SQLServer {
         return new ByteArrayInputStream(out.getBuffer(), 0, out.size());
       }      
     };
+  }
+
+  private Revision head(Revision dbHead) {
+    QueryResult result = Revisions.Empty.diff
+      (dbHead, server.findTag, database, "head");
+
+    if (result.nextRow() == QueryResult.Type.Inserted) {
+      return ((Tag) result.nextItem()).revision;
+    } else {
+      return Revisions.Empty;
+    }
+  }
+
+  public Revision head() {
+    return head(server.server.head());
+  }
+
+  public void merge(Revision base, Revision fork) {
+    Revision dbHead = server.server.head();
+    RevisionBuilder builder = dbHead.builder();
+    builder.apply
+      (server.insertOrUpdateTag, database, "head", new Tag
+       ("head", head(dbHead).merge
+        (base, fork, server.rightPreferenceConflictResolver,
+         ForeignKeyResolvers.Delete)));
+
+    server.server.merge(dbHead, builder.commit());
+  }
+
+  public void registerListener(Runnable listener) {
+    server.server.registerListener(listener);
+  }
+
+  public void unregisterListener(Runnable listener) {
+    server.server.unregisterListener(listener);
+  }
+
+  public void add(Table table, List<Column> columns) {
+    Map<String, MyColumn> map = new HashMap(columns.size());
+    List<MyColumn> myColumns = new ArrayList(columns.size());
+    for (Column c: columns) {
+      MyColumn myColumn = new MyColumn(c.id, c, c.type);
+      map.put(c.id, myColumn);
+      myColumns.add(myColumn);
+    }
+
+    List<Column> primaryKey = table.primaryKey.columns;
+    List<MyColumn> myPrimaryKey = new ArrayList(primaryKey.size());
+    for (Column c: primaryKey) {
+      myPrimaryKey.add(new MyColumn(c.id, c, c.type));
+    }
+
+    Revision base = server.server.head();
+    RevisionBuilder builder = base.builder();
+
+    builder.apply
+      (server.insertOrUpdateDatabase, database, new Database(database));
+
+    builder.apply
+      (server.insertOrUpdateTable, database, table.id,
+       new MyTable(table.id, myColumns, map, myPrimaryKey, table));
+
+    server.server.merge(base, builder.commit());
+  }
+
+  public void accept(InputStream in,
+                     OutputStream out)
+    throws IOException
+  {
+    Client client = new Client(server, null);
+    try {
+      while (handleRequest(client, in, out)) { }
+    } finally {
+      in.close();
+      out.close();
+    }
   }
 
   public interface Connection {

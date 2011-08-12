@@ -514,7 +514,8 @@ execute(Context* context, const char* command)
 void
 usage(const char* name)
 {
-  fprintf(stderr, "usage: %s [batch]\n", name);  
+  fprintf(stderr, "usage: %s [--batch] <hostname> <port> [<database>]\n",
+          name);  
 }
 
 } // namespace
@@ -522,6 +523,30 @@ usage(const char* name)
 int
 main(int argumentCount, const char** arguments)
 {
+  bool interactive = true;
+  const char* hostname = 0;
+  int port = -1;
+  const char* database = 0;
+  for (int i = 1; i < argumentCount; ++i) {
+    if (strcmp("--batch", arguments[i]) == 0) {
+      interactive = false;
+    } else if (hostname == 0) {
+      hostname = arguments[i];
+    } else if (port == -1) {
+      port = atoi(arguments[i]);
+    } else if (database == 0) {
+      database = arguments[i];
+    } else {
+      usage(arguments[0]);
+      return -1;
+    }
+  }
+
+  if (hostname == 0 or port == -1) {
+    usage(arguments[0]);
+    return -1;
+  }
+
   Context context;
   globalContext = &context;
 
@@ -530,29 +555,20 @@ main(int argumentCount, const char** arguments)
     return -1;
   }
 
-  context.socket = connect("localhost", 8017);
+  context.socket = connect(hostname, port);
   if (context.socket < 0) {
     return -1;
   }
-  
-  bool interactive;
-  switch (argumentCount) {
-  case 1:
-    interactive = true;
-    break;
 
-  case 2:
-    if (strcmp("batch", arguments[1]) == 0) {
-      interactive = false;
-    } else {
-      usage(arguments[0]);
+  if (database) {
+    const int BufferSize = 256;
+    char buffer[BufferSize];
+    snprintf(buffer, BufferSize, "use database %s", database);
+    execute(&context, buffer);
+
+    if (context.trouble) {
       return -1;
     }
-    break;
-
-  default:
-    usage(arguments[0]);
-    return -1;    
   }
 
   if (interactive) {
@@ -563,7 +579,7 @@ main(int argumentCount, const char** arguments)
 
     rl_completion_entry_function = completionGenerator;
 
-    while (not (context.trouble || context.exit)) {
+    while (not (context.trouble or context.exit)) {
       char* line;
       if (context.databaseName) {
         int length = strlen(context.databaseName) + 4;

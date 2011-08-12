@@ -22,7 +22,7 @@ public class SQL extends TestCase {
 
   @Test
   public void testLiterals() throws IOException {
-    Connection connection = new SQLServer().makeConnection();
+    Connection connection = new SQLServer("test").makeConnection();
 
     expectEqual
       (connection.execute("create database test").read(),

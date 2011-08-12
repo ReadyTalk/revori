@@ -26,11 +26,12 @@ import java.io.ByteArrayInputStream;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-public class EpidemicServer {
+public class EpidemicServer implements RevisionServer {
   private static final boolean Debug = false;
 
   private static final int End = 0;
@@ -41,6 +42,7 @@ public class EpidemicServer {
   private static final int Insert = 5;
 
   private String id;
+  private final Set<Runnable> listeners = new HashSet<Runnable>();
   private final NodeConflictResolver conflictResolver;
   private final ForeignKeyResolver foreignKeyResolver;
   private final Network network;
@@ -65,6 +67,15 @@ public class EpidemicServer {
     if(Debug) {
       System.out.println(id + ": " + (localNode != null ? localNode.id : "(null)") + ": " + message);
     }
+  }
+
+  public synchronized void registerListener(Runnable listener) {
+    listeners.add(listener);
+    listener.run();
+  }
+
+  public synchronized void unregisterListener(Runnable listener) {
+    listeners.remove(listener);
   }
 
   public void setId(String id) {
@@ -987,11 +998,5 @@ public class EpidemicServer {
         (leftNode, rightNode, table, column, primaryKeyValues, baseValue,
          leftValue, rightValue);
     }
-  }
-  
-  private List<Runnable> listeners = new ArrayList<Runnable>();
-
-  public void listen(Runnable listener) {
-    listeners.add(listener);
   }
 }

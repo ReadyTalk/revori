@@ -138,7 +138,7 @@ class MyRevisionBuilder implements RevisionBuilder {
         Node originalRoot = (Node) find(index - 1).value;
 
         if (original == Node.Null) {
-          throw new RuntimeException();
+          return;
         } else if (original == originalRoot
                    && original.left == Node.Null
                    && original.right == Node.Null)
