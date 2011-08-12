@@ -17,15 +17,26 @@ import java.util.HashSet;
 public class Bridge {
   private static final int MaxDepth = 16;
 
+  private static final TaskHandler DirectTaskHandler = new TaskHandler() {
+      public void handleTask(Runnable task) { task.run(); }
+    };
+
+  private final TaskHandler taskHandler;
   private final Map<RevisionServer, Listener> listeners = new HashMap();
+
+  public Bridge(TaskHandler taskHandler) {
+    this.taskHandler = taskHandler;
+  }
+
+  public Bridge() {
+    this(DirectTaskHandler);
+  }
 
   public Token register(RevisionServer leftServer,
                         Path leftPath,
                         RevisionServer rightServer,
                         Path rightPath)
   {
-    if (leftPath.body[0] == null) throw new NullPointerException();
-
     Mapping left = new Mapping
       (listener(leftServer), leftPath.body, rightServer, rightPath.body);
     
@@ -45,8 +56,6 @@ public class Bridge {
   }
 
   private void register(Mapping mapping) {
-    if (mapping.leftPath[0] == null) throw new NullPointerException();
-
     mappings(blaze(mapping.leftListener.tree, mapping.leftPath)).add(mapping);
   }
 
@@ -68,7 +77,7 @@ public class Bridge {
   private Listener listener(RevisionServer server) {
     Listener listener = listeners.get(server);
     if (listener == null) {
-      listeners.put(server, listener = new Listener(server));
+      listeners.put(server, listener = new Listener(taskHandler, server));
       server.registerListener(listener);
     }
     return listener;
@@ -84,7 +93,6 @@ public class Bridge {
   private Node blaze(Map<Comparable, Node> tree, Comparable[] path) {
     Node n = null;
     for (Comparable c: path) {
-      if (c == null) throw new NullPointerException();
       n = tree.get(c);
       if (n == null) {
         tree.put(c, n = new Node(c));
@@ -150,7 +158,6 @@ public class Bridge {
     private final Comparable[] body;
 
     public Path(Table table, Comparable ... primaryKeyValues) {
-      if (table == null) throw new NullPointerException();
       body = new Comparable[primaryKeyValues.length + 1];
       body[0] = table;
       System.arraycopy(primaryKeyValues, 0, body, 1, primaryKeyValues.length);
@@ -187,6 +194,10 @@ public class Bridge {
   }
 
   private static class Listener implements Runnable {
+    public final Runnable task = new Runnable() {
+        public void run() { iterate(); }
+      };
+    public final TaskHandler taskHandler;
     public final RevisionServer server;
     public final Map<Comparable, Node> tree = new HashMap();
     public Revision base = Revisions.Empty;
@@ -277,7 +288,8 @@ public class Bridge {
       return sb.toString();
     }
     
-    public Listener(RevisionServer server) {
+    public Listener(TaskHandler taskHandler, RevisionServer server) {
+      this.taskHandler = taskHandler;
       this.server = server;
     }
 
@@ -294,6 +306,10 @@ public class Bridge {
     }
 
     public void run() {
+      taskHandler.handleTask(task);
+    }
+
+    private void iterate() {
       if (active) {
         return;
       }
@@ -415,5 +431,9 @@ public class Bridge {
     public Node(Comparable key) {
       this.key = key;
     }
+  }
+
+  public interface TaskHandler {
+    public void handleTask(Runnable task);
   }
 }
