@@ -144,6 +144,7 @@ public class Protocol {
     serializers.put(Table.class, new Serializer<Table>() {
       public void writeTo(WriteContext context, Table t) throws IOException {
         write(context, t.id);
+        write(context, t.order);
         List<Column> columns = t.primaryKey.columns;
         writeInteger(context.out, columns.size());
         for (Column<?> c: columns) {
@@ -155,6 +156,7 @@ public class Protocol {
     deserializers.put(Table.class, new Deserializer<Table>() {
       public Table readFrom(ReadContext context, Class<? extends Table> c) throws IOException {
         String id = (String) read(context);
+        int order = readInteger(context.in);
         int columnCount = readInteger(context.in);
         List<Column> columns = new ArrayList<Column>(columnCount);
         for (int i = 0; i < columnCount; ++i) {

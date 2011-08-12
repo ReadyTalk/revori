@@ -18,6 +18,11 @@ public final class Table implements Comparable<Table> {
    * The primary key specified when this table was defined.
    */
   public final Index primaryKey;
+  
+  /**
+   * The order, to provide an absolute order on tables independent of id
+   */
+  public final int order;
 
   /**
    * The ID specified when this table was defined.
@@ -28,12 +33,51 @@ public final class Table implements Comparable<Table> {
    * Defines a table using the specified list of columns as the
    * primary key.<p>
    *
-   * Instances of Table are considered equal if and only if their IDs
+   * Instances of Table are considered equal if and only if their orders, IDs
    * and primary keys are equal.
    */
   public Table(List<Column> primaryKey, String id) {
     this.primaryKey = new Index(this, primaryKey);
+    this.order = 0;
     this.id = id;
+
+    if (id == null) throw new NullPointerException();
+  }
+
+  /**
+   * Defines a table using the specified list of columns as the
+   * primary key.<p>
+   *
+   * Instances of Table are considered equal if and only if their orders, IDs
+   * and primary keys are equal.
+   */
+  public Table(List<Column> primaryKey, String id, int order) {
+    this.primaryKey = new Index(this, primaryKey);
+    this.order = order;
+    this.id = id;
+
+    if (id == null) throw new NullPointerException();
+  }
+
+  /**
+   * Defines a table using the specified list of columns as the
+   * primary key.  The order is initialized to be greater than the order
+   * of any of the <code>comesAfter</code> tables.<p>
+   *
+   * Instances of Table are considered equal if and only if their orders, IDs
+   * and primary keys are equal.
+   */
+  public Table(List<Column> primaryKey, String id, List<Table> comesAfter) {
+    this.primaryKey = new Index(this, primaryKey);
+    this.id = id;
+    
+    int o = 0;
+    for(Table t : comesAfter) {
+      if(t.order >= o) {
+        o = t.order + 1;
+      }
+    }
+    this.order = o;
 
     if (id == null) throw new NullPointerException();
   }
@@ -47,7 +91,11 @@ public final class Table implements Comparable<Table> {
   }
 
   public int compareTo(Table o) {
-    int d = id.compareTo(o.id);
+    int d = order - o.order;
+    if (d != 0) {
+      return d;
+    }
+    d = id.compareTo(o.id);
     if (d != 0) {
       return d;
     }
