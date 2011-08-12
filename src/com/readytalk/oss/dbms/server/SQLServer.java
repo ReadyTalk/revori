@@ -2490,15 +2490,17 @@ public class SQLServer implements RevisionServer {
     }
   }
 
-  private static void handleRequest(Client client,
-                                    InputStream in,
-                                    OutputStream out)
+  private static boolean handleRequest(Client client,
+                                       InputStream in,
+                                       OutputStream out)
     throws IOException
   {
     int requestType = in.read();
     if (requestType == -1) {
-      client.channel.close();
-      return;
+      if (client.channel != null) {
+        client.channel.close();
+      }
+      return false;
     }
 
     switch (Request.values()[requestType]) {
@@ -2515,6 +2517,8 @@ public class SQLServer implements RevisionServer {
     default:
       throw new RuntimeException("unexpected request type: " + requestType);
     }
+
+    return true;
   }
 
   private static void listen(String address,
@@ -2540,6 +2544,11 @@ public class SQLServer implements RevisionServer {
   }
 
   private final Server server = new Server();
+  private final String database;
+
+  public SQLServer(String database) {
+    this.database = database;
+  }
 
   public Connection makeConnection() {
     return new Connection() {
@@ -2566,12 +2575,31 @@ public class SQLServer implements RevisionServer {
     };
   }
 
+  private Revision head(Revision dbHead) {
+    QueryResult result = Revisions.Empty.diff
+      (dbHead, server.findTag, database, "head");
+
+    if (result.nextRow() == QueryResult.Type.Inserted) {
+      return ((Tag) result.nextItem()).revision;
+    } else {
+      return Revisions.Empty;
+    }
+  }
+
   public Revision head() {
-    return server.server.head();
+    return head(server.server.head());
   }
 
   public void merge(Revision base, Revision fork) {
-    server.server.merge(base, fork);
+    Revision dbHead = server.server.head();
+    RevisionBuilder builder = dbHead.builder();
+    builder.apply
+      (server.insertOrUpdateTag, database, "head", new Tag
+       ("head", head(dbHead).merge
+        (base, fork, server.rightPreferenceConflictResolver,
+         ForeignKeyResolvers.Delete)));
+
+    server.server.merge(dbHead, builder.commit());
   }
 
   public void registerListener(Runnable listener) {
@@ -2580,6 +2608,47 @@ public class SQLServer implements RevisionServer {
 
   public void unregisterListener(Runnable listener) {
     server.server.unregisterListener(listener);
+  }
+
+  public void add(Table table, List<Column> columns) {
+    Map<String, MyColumn> map = new HashMap(columns.size());
+    List<MyColumn> myColumns = new ArrayList(columns.size());
+    for (Column c: columns) {
+      MyColumn myColumn = new MyColumn(c.id, c, c.type);
+      map.put(c.id, myColumn);
+      myColumns.add(myColumn);
+    }
+
+    List<Column> primaryKey = table.primaryKey.columns;
+    List<MyColumn> myPrimaryKey = new ArrayList(primaryKey.size());
+    for (Column c: primaryKey) {
+      myPrimaryKey.add(new MyColumn(c.id, c, c.type));
+    }
+
+    Revision base = server.server.head();
+    RevisionBuilder builder = base.builder();
+
+    builder.apply
+      (server.insertOrUpdateDatabase, database, new Database(database));
+
+    builder.apply
+      (server.insertOrUpdateTable, database, table.id,
+       new MyTable(table.id, myColumns, map, myPrimaryKey, table));
+
+    server.server.merge(base, builder.commit());
+  }
+
+  public void accept(InputStream in,
+                     OutputStream out)
+    throws IOException
+  {
+    Client client = new Client(server, null);
+    try {
+      while (handleRequest(client, in, out)) { }
+    } finally {
+      in.close();
+      out.close();
+    }
   }
 
   public interface Connection {
