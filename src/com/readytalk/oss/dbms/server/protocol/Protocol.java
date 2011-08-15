@@ -8,10 +8,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 
 import com.readytalk.oss.dbms.Column;
+import com.readytalk.oss.dbms.ForeignKey;
+import com.readytalk.oss.dbms.Index;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.server.EpidemicServer;
 import com.readytalk.oss.dbms.server.EpidemicServer.NodeID;
@@ -144,7 +147,7 @@ public class Protocol {
     serializers.put(Table.class, new Serializer<Table>() {
       public void writeTo(WriteContext context, Table t) throws IOException {
         write(context, t.id);
-        write(context, t.order);
+        writeInteger(context.out, t.order);
         List<Column> columns = t.primaryKey.columns;
         writeInteger(context.out, columns.size());
         for (Column<?> c: columns) {
@@ -179,6 +182,60 @@ public class Protocol {
       }
     });
 
+    serializers.put(ForeignKey.class, new Serializer<ForeignKey>() {
+      public void writeTo(WriteContext context, ForeignKey k) throws IOException {
+        write(context, k.refererTable);
+        write(context, k.referentTable);
+        int size = k.referentColumns.size();
+        writeInteger(context.out, size);
+        for(int i = 0; i < size; i++) {
+          write(context, k.refererColumns.get(i));
+          write(context, k.referentColumns.get(i));
+        }
+      }
+    });
+
+    deserializers.put(ForeignKey.class, new Deserializer<ForeignKey>() {
+      public ForeignKey readFrom(ReadContext context, Class<? extends ForeignKey> c) throws IOException {
+        Table referer = (Table) read(context);
+        Table referent = (Table) read(context);
+        int size = readInteger(context.in);
+        ArrayList<Column> refererColumns = new ArrayList<Column>();
+        ArrayList<Column> referentColumns = new ArrayList<Column>();
+        for(int i = 0; i < size; i++) {
+          refererColumns.add((Column)read(context));
+          referentColumns.add((Column)read(context));
+        }
+        return new ForeignKey(
+            referer,
+            refererColumns,
+            referent,
+            referentColumns);
+      }
+    });
+
+    serializers.put(Index.class, new Serializer<Index>() {
+      public void writeTo(WriteContext context, Index index) throws IOException {
+        write(context, index.table);
+        writeInteger(context.out, index.columns.size());
+        for(Column col : index.columns) {
+          write(context, col);
+        }
+      }
+    });
+
+    deserializers.put(Index.class, new Deserializer<Index>() {
+      public Index readFrom(ReadContext context, Class<? extends Index> c) throws IOException {
+        Table table = (Table) read(context);
+        int size = readInteger(context.in);
+        ArrayList<Column> cols = new ArrayList<Column>();
+        for(int i = 0; i < size; i++) {
+          cols.add((Column)read(context));
+        }
+        return new Index(table, cols);
+      }
+    });
+
     serializers.put(NodeID.class, new Serializer<NodeID>() {
       public void writeTo(WriteContext context, NodeID n) throws IOException {
         writeString(context.out, n.id);
@@ -200,6 +257,61 @@ public class Protocol {
     deserializers.put(byte[].class, new Deserializer<byte[]>() {
       public byte[] readFrom(ReadContext context, Class<? extends byte[]> c) throws IOException {
         return readByteArray(context.in);
+      }
+    });
+
+    serializers.put(Map.class, new Serializer<Map>() {
+      public void writeTo(WriteContext context, Map m) throws IOException {
+        writeInteger(context.out, m.size());
+        for(Map.Entry e : (Set<Map.Entry>)m.entrySet()) {
+          write(context, e.getKey());
+          write(context, e.getValue());
+        }
+      }
+    });
+
+    deserializers.put(Map.class, new Deserializer<Map>() {
+      public Map readFrom(ReadContext context, Class<? extends Map> c) throws IOException {
+        Map m;
+        try {
+          m = c.newInstance();
+        } catch (InstantiationException e) {
+          throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+          throw new RuntimeException(e);
+        }
+        int size = readInteger(context.in);
+        for(int i = 0; i < size; i++) {
+          m.put(read(context), read(context));
+        }
+        return m;
+      }
+    });
+
+    serializers.put(List.class, new Serializer<List>() {
+      public void writeTo(WriteContext context, List l) throws IOException {
+        writeInteger(context.out, l.size());
+        for(Object e : l) {
+          write(context, e);
+        }
+      }
+    });
+
+    deserializers.put(List.class, new Deserializer<List>() {
+      public List readFrom(ReadContext context, Class<? extends List> c) throws IOException {
+        List l;
+        try {
+          l = c.newInstance();
+        } catch (InstantiationException e) {
+          throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+          throw new RuntimeException(e);
+        }
+        int size = readInteger(context.in);
+        for(int i = 0; i < size; i++) {
+          l.add(read(context));
+        }
+        return l;
       }
     });
   }
