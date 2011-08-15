@@ -44,6 +44,10 @@ public final class Column<T> implements Comparable<Column<?>> {
     this(type, makeId());
   }
 
+  public int hashCode() {
+    return id.hashCode();
+  }
+
   public int compareTo(Column<?> o) {
     int d = id.compareTo(o.id);
     if (d != 0) {
