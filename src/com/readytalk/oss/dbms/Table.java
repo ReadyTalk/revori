@@ -116,6 +116,6 @@ public final class Table implements Comparable<Table> {
   }
       
   public String toString() {
-    return "table[" + id + " " + primaryKey.columns + "]";
+    return "table[" + order + " " + id + " " + primaryKey.columns + "]";
   }
 }
