@@ -61,6 +61,7 @@ class MyRevisionBuilder implements RevisionBuilder {
   public final Node[] blazedLeaves;
   public final Node[] found;
   public final Node.BlazeResult blazeResult = new Node.BlazeResult();
+  public NodeStack indexUpdateIterateStack;
   public NodeStack indexUpdateBaseStack;
   public NodeStack indexUpdateForkStack;
   public MyRevision base;
@@ -295,7 +296,8 @@ class MyRevisionBuilder implements RevisionBuilder {
 
   private void updateIndexes() {
     if (dirtyIndexes && indexBase != result) {
-      if (indexUpdateBaseStack == null) {
+      if (indexUpdateIterateStack == null) {
+        indexUpdateIterateStack = new NodeStack();
         indexUpdateBaseStack = new NodeStack();
         indexUpdateForkStack = new NodeStack();
       }
@@ -310,7 +312,7 @@ class MyRevisionBuilder implements RevisionBuilder {
       while (iterator.next(pair)) {
         if (pair.fork != null) {
           for (NodeIterator indexes = new NodeIterator
-                 (indexUpdateBaseStack, Node.pathFind
+                 (indexUpdateIterateStack, Node.pathFind
                   (result.root, Constants.IndexTable,
                    Constants.IndexTable.primaryKey, (Table) pair.fork.key));
                indexes.hasNext();)
