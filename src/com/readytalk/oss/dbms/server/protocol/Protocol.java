@@ -165,7 +165,7 @@ public class Protocol {
         for (int i = 0; i < columnCount; ++i) {
           columns.add((Column<?>) read(context));
         }
-        return new Table(columns, id);
+        return new Table(columns, id, order);
       }
     });
 
