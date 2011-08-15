@@ -245,15 +245,15 @@ class Merge {
       (rightStack, right, baseStack, builder, leftStack, foreignKeyResolver,
        null);
 
-//     System.out.println("merge base");
-//     dump(base.root, System.out, 1);
-//     System.out.println("merge left");
-//     dump(left.root, System.out, 1);
-//     System.out.println("merge right");
-//     dump(right.root, System.out, 1);
-//     System.out.println("merge result");
-//     dump(builder.result.root, System.out, 1);
-//     System.out.println();
+    // System.out.println("merge base");
+    // Node.dump(base.root, System.out, 1);
+    // System.out.println("merge left");
+    // Node.dump(left.root, System.out, 1);
+    // System.out.println("merge right");
+    // Node.dump(right.root, System.out, 1);
+    // System.out.println("merge result");
+    // Node.dump(builder.result.root, System.out, 1);
+    // System.out.println();
 
     return builder.result;
   }
