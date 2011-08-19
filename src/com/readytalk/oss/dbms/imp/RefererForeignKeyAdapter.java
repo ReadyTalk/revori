@@ -40,32 +40,36 @@ public class RefererForeignKeyAdapter {
        referentTest);
   }
 
-  private Object[] parameters(List<Column> columns, Node tree) {
+  private Object[] parametersOrNull(List<Column> columns, Node tree) {
     Object[] parameters = new Object[columns.size()];
     for (int i = 0; i < parameters.length; ++i) {
       Node n = Node.find(tree, columns.get(i));
-      parameters[i] = n == Node.Null ? null : n.value;
+      if(n == Node.Null) {
+        return null;
+      }
+      parameters[i] = n.value;
     }
     return parameters;
   }
 
-  private QueryResult query(QueryTemplate query,
+  private boolean queryEmptyAndNotNull(QueryTemplate query,
                             Revision revision, List<Column> columns, Node tree)
   {
+    Object[] params = parametersOrNull(columns, tree);
+    if(params == null) {
+      return false;
+    }
     return MyRevision.Empty.diff
-      (revision, query, parameters(columns, tree));
+      (revision, query, params).nextRow() == QueryResult.Type.End;
   }
 
   public void handleInsert(MyRevisionBuilder builder, Node tree) {
-    if (query(query, builder.result, constraint.refererColumns, tree).nextRow()
-        == QueryResult.Type.End)
-    {
+    if (queryEmptyAndNotNull(query, builder.result, constraint.refererColumns, tree)) {
       throw new ForeignKeyException();
     }
   }
 
   public boolean isBrokenReference(Revision revision, Node tree) {
-    return query(query, revision, constraint.refererColumns, tree).nextRow()
-      == QueryResult.Type.End;
+    return queryEmptyAndNotNull(query, revision, constraint.refererColumns, tree);
   }
 }
