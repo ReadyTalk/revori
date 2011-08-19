@@ -32,7 +32,7 @@ public class RefererForeignKeyAdapter {
 
     for (Column c: constraint.referentColumns) {
       referentTest = and
-        (equal(reference(referent, c), parameter()), referentTest);
+        (referentTest, equal(reference(referent, c), parameter()));
     }
 
     query = new QueryTemplate

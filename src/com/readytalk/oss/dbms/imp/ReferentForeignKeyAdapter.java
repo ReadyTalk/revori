@@ -35,7 +35,7 @@ public class ReferentForeignKeyAdapter {
 
     for (Column<?> c: constraint.refererColumns) {
       refererTest = and
-        (equal(reference(referer, c), parameter()), refererTest);
+        (refererTest, equal(reference(referer, c), parameter()));
     }
     
     List<Column> refererColumns = referer.table.primaryKey.columns;
@@ -55,7 +55,7 @@ public class ReferentForeignKeyAdapter {
 
     for (Column<?> c: constraint.referentColumns) {
       referentTest = and
-        (equal(reference(referent, c), parameter()), referentTest);
+        (referentTest, equal(reference(referent, c), parameter()));
     }
     
     List<Column> referentColumns = referent.table.primaryKey.columns;

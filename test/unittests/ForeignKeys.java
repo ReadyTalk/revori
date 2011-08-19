@@ -357,4 +357,83 @@ public class ForeignKeys extends TestCase {
     testDiff(true);
     testDiff(false);
   }
+
+  @Test
+  public void testBlocksAndWindows() {
+    Column screenId = new Column(String.class, "screenId");
+    Column windowId = new Column(Integer.class, "windowId");
+    Column blockId = new Column(Integer.class, "blockId");
+
+    Table screens = new Table(list(screenId), "screens");
+    Table windows = new Table
+      (list(screenId, windowId), "windows", list(screens));
+    Table blocks = new Table
+      (list(screenId, windowId, blockId), "blocks", list(windows));
+
+    RevisionBuilder builder = Revisions.Empty.builder();
+    builder.add
+      (new ForeignKey(windows, list(screenId), screens, list(screenId)));
+    builder.add
+      (new ForeignKey
+       (blocks, list(screenId, windowId), windows, list(screenId, windowId)));
+
+    Revision base = builder.commit();
+    builder = base.builder();
+
+    builder.insert(Throw, screens, "screen 1");
+    builder.insert(Throw, windows, "screen 1", 1);
+    builder.insert(Throw, blocks, "screen 1", 1, 1);
+
+    DiffResult result = base.diff(builder.commit(), true);
+
+    assertEquals(result.next(), DiffResult.Type.Key);
+    assertEquals(result.base(), null);
+    assertEquals(result.fork(), screens);
+
+    assertEquals(result.next(), DiffResult.Type.Descend);
+    assertEquals(result.next(), DiffResult.Type.Key);
+    assertEquals(result.base(), null);
+    assertEquals(result.fork(), "screen 1");
+
+    assertEquals(result.next(), DiffResult.Type.Ascend);
+    assertEquals(result.next(), DiffResult.Type.Key);
+    assertEquals(result.base(), null);
+    assertEquals(result.fork(), windows);
+
+    assertEquals(result.next(), DiffResult.Type.Descend);
+    assertEquals(result.next(), DiffResult.Type.Key);
+    assertEquals(result.base(), null);
+    assertEquals(result.fork(), "screen 1");
+
+    assertEquals(result.next(), DiffResult.Type.Descend);
+    assertEquals(result.next(), DiffResult.Type.Key);
+    assertEquals(result.base(), null);
+    assertEquals(result.fork(), 1);
+
+    assertEquals(result.next(), DiffResult.Type.Ascend);
+    assertEquals(result.next(), DiffResult.Type.Ascend);
+    assertEquals(result.next(), DiffResult.Type.Key);
+    assertEquals(result.base(), null);
+    assertEquals(result.fork(), blocks);
+
+    assertEquals(result.next(), DiffResult.Type.Descend);
+    assertEquals(result.next(), DiffResult.Type.Key);
+    assertEquals(result.base(), null);
+    assertEquals(result.fork(), "screen 1");
+
+    assertEquals(result.next(), DiffResult.Type.Descend);
+    assertEquals(result.next(), DiffResult.Type.Key);
+    assertEquals(result.base(), null);
+    assertEquals(result.fork(), 1);
+
+    assertEquals(result.next(), DiffResult.Type.Descend);
+    assertEquals(result.next(), DiffResult.Type.Key);
+    assertEquals(result.base(), null);
+    assertEquals(result.fork(), 1);
+
+    assertEquals(result.next(), DiffResult.Type.Ascend);
+    assertEquals(result.next(), DiffResult.Type.Ascend);
+    assertEquals(result.next(), DiffResult.Type.Ascend);
+    assertEquals(result.next(), DiffResult.Type.End);
+  }
 }
