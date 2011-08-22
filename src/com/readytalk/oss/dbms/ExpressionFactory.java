@@ -1,5 +1,7 @@
 package com.readytalk.oss.dbms;
 
+import static com.readytalk.oss.dbms.util.Util.list;
+
 /**
  * This class contains static convenience methods for concisely
  * defining expression trees.
@@ -121,5 +123,12 @@ public class ExpressionFactory {
 
   public static Expression isNull(Expression operand) {
     return new UnaryOperation(UnaryOperation.Type.IsNull, operand);
+  }
+
+  public static <T> Expression aggregate(Class<T> type,
+                                         Foldable<T> function,
+                                         Expression ... expressions)
+  {
+    return new Aggregate(type, function, list(expressions));
   }
 }

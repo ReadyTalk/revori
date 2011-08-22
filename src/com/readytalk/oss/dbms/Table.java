@@ -7,7 +7,7 @@ import java.util.List;
  * any data; they're used only to identify a collection of rows of
  * interest in a query or update.
  */
-public final class Table implements Comparable<Table> {
+public class Table implements Comparable<Table> {
   private static long nextId = 1;
 
   private synchronized static String makeId() {
@@ -91,10 +91,13 @@ public final class Table implements Comparable<Table> {
   }
 
   public int compareTo(Table o) {
+    if (o == this) return 0;
+
     int d = order - o.order;
     if (d != 0) {
       return d;
     }
+
     d = id.compareTo(o.id);
     if (d != 0) {
       return d;

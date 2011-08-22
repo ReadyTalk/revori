@@ -98,7 +98,8 @@ public class MyRevision implements Revision {
          + parameters.length + ")");
     }
 
-    return new MyQueryResult(myBase, myFork, template, copy(parameters));
+    return new MyQueryResult
+      (myBase, null, myFork, null, template, copy(parameters));
   }
 
   public DiffResult diff(Revision fork, boolean skipBrokenReferences)

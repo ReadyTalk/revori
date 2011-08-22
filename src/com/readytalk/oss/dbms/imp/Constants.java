@@ -6,6 +6,7 @@ import com.readytalk.oss.dbms.Constant;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Index;
+import com.readytalk.oss.dbms.View;
 import com.readytalk.oss.dbms.ForeignKey;
 
 class Constants {
@@ -27,6 +28,14 @@ class Constants {
   public static final Table IndexTable
     = new Table(list(TableColumn, IndexColumn),
                 "IndexTable.Constants.imp.dbms.oss.readytalk.com");
+
+  public static final Column ViewColumn
+    = new Column(View.class,
+                 "ViewColumn.Constants.imp.dbms.oss.readytalk.com");
+
+  public static final Table ViewTable
+    = new Table(list(TableColumn, ViewColumn),
+                "ViewTable.Constants.imp.dbms.oss.readytalk.com");
 
   public static final Column ForeignKeyRefererColumn
     = new Column

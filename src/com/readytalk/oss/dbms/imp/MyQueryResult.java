@@ -38,7 +38,9 @@ class MyQueryResult implements QueryResult {
   public int nextItemIndex;
 
   public MyQueryResult(MyRevision base,
+                       NodeStack baseStack,
                        MyRevision fork,
+                       NodeStack forkStack,
                        QueryTemplate template,
                        Object[] parameters)
   {
@@ -59,8 +61,11 @@ class MyQueryResult implements QueryResult {
           expressions.add(ExpressionAdapterFactory.makeAdapter(context, e));
         }
 
+        if (baseStack == null) baseStack = new NodeStack();
+        if (forkStack == null) forkStack = new NodeStack();
+
         iterator = source.iterator
-          (base, new NodeStack(), fork, new NodeStack(),
+          (base, baseStack, fork, forkStack,
            ExpressionAdapterFactory.makeAdapter(context, template.test),
            context, false);
       } else {

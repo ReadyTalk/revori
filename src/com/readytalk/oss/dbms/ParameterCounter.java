@@ -2,7 +2,7 @@ package com.readytalk.oss.dbms;
 
 import java.util.Set;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Collection;
 
 /**
  * This is an expression visitor to count the number of unique
@@ -45,7 +45,7 @@ public class ParameterCounter implements ExpressionVisitor {
    * Returns the number of unique parameter instances in the specified
    * list of expressions and their subexpressions.
    */
-  public static int countParameters(List<Expression> expressions) {
+  public static int countParameters(Collection<Expression> expressions) {
     ParameterCounter counter = new ParameterCounter();
     for (Expression e: expressions) {
       e.visit(counter);

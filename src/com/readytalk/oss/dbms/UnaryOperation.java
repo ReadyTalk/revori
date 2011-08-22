@@ -1,5 +1,7 @@
 package com.readytalk.oss.dbms;
 
+import static com.readytalk.oss.dbms.util.Util.list;
+
 /**
  * Expression which, when evaluated, applies the specified operation
  * to its operand.
@@ -70,5 +72,33 @@ public class UnaryOperation implements Expression {
     default: throw new RuntimeException
         ("unexpected operation class: " + type.operationClass());
     }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public Iterable<Expression> children() {
+    return list(operand);
+  }
+
+  public int compareTo(Expression e) {
+    if (this == e) return 0;
+
+    if (e instanceof UnaryOperation) {
+      UnaryOperation o = (UnaryOperation) e;
+
+      int d = type.compareTo(o.type);
+      if (d != 0) {
+        return d;
+      }
+
+      return operand.compareTo(o.operand);
+    } else {
+      return getClass().getName().compareTo(e.getClass().getName());
+    }
+  }
+
+  public boolean equals(Object o) {
+    return o instanceof UnaryOperation && compareTo((UnaryOperation) o) == 0;
   }
 }

@@ -49,6 +49,8 @@ public final class Column<T> implements Comparable<Column<?>> {
   }
 
   public int compareTo(Column<?> o) {
+    if (o == this) return 0;
+
     int d = id.compareTo(o.id);
     if (d != 0) {
       return d;

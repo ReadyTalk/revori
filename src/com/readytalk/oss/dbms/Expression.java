@@ -4,7 +4,7 @@ package com.readytalk.oss.dbms;
  * Type representing an expression (e.g. constant, column reference,
  * or query predicate) for use in queries and updates.
  */
-public interface Expression {
+public interface Expression extends Comparable<Expression> {
   /**
    * Visit this expression and any subexpressions by calling
    * ExpressionVisitor.visit(Expression) with each.
@@ -12,4 +12,6 @@ public interface Expression {
   public void visit(ExpressionVisitor visitor);
 
   public Class typeConstraint();
+
+  public Iterable<Expression> children();
 }

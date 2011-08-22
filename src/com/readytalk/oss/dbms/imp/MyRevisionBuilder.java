@@ -15,6 +15,7 @@ import com.readytalk.oss.dbms.RevisionBuilder;
 import com.readytalk.oss.dbms.TableBuilder;
 import com.readytalk.oss.dbms.RowBuilder;
 import com.readytalk.oss.dbms.Index;
+import com.readytalk.oss.dbms.View;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Revision;
@@ -35,6 +36,8 @@ import com.readytalk.oss.dbms.ForeignKeyResolvers;
 import com.readytalk.oss.dbms.ForeignKeyException;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.QueryTemplate;
+import com.readytalk.oss.dbms.SourceVisitor;
+import com.readytalk.oss.dbms.Source;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -53,6 +56,8 @@ class MyRevisionBuilder implements RevisionBuilder {
     adapters.put(InsertTemplate.class, new InsertTemplateAdapter());
     adapters.put(DeleteTemplate.class, new DeleteTemplateAdapter());
   }
+
+  private static final Object[] EmptyArray = new Object[0];
 
   public Object token;
   public final NodeStack stack;
@@ -236,8 +241,6 @@ class MyRevisionBuilder implements RevisionBuilder {
   {
     expect(! index.equals(index.table.primaryKey));
 
-    List<Column> keyColumns = index.columns;
-
     TableIterator iterator
       = new TableIterator
       (reference(index.table), base, baseStack, result, forkStack,
@@ -246,13 +249,13 @@ class MyRevisionBuilder implements RevisionBuilder {
     setKey(Constants.TableDataDepth, index.table);
     setKey(Constants.IndexDataDepth, index);
 
-    boolean done = false;
-    while (! done) {
+    List<Column> keyColumns = index.columns;
+
+    while (true) {
       QueryResult.Type type = iterator.nextRow();
       switch (type) {
       case End:
-        done = true;
-        break;
+        return;
       
       case Inserted: {
         Node tree = (Node) iterator.pair.fork.value;
@@ -294,13 +297,158 @@ class MyRevisionBuilder implements RevisionBuilder {
     }
   }
 
+  private Node makeTree(NodeStack stack,
+                        List<Column> columns,
+                        List<ExpressionAdapter> expressions)
+  {
+    Node.BlazeResult result = new Node.BlazeResult();
+    Node n = Node.Null;
+    for (int i = 0; i < columns.size(); ++i) {
+      n = Node.blaze(result, token, stack, n, columns.get(i));
+      result.node.value = expressions.get(i).evaluate(true);
+    }
+    return n;
+  }
+
+  public void updateViewTree(View view,
+                             MyRevision base,
+                             NodeStack baseStack,
+                             NodeStack forkStack)
+  {
+    MyQueryResult qr = new MyQueryResult
+      (base, baseStack, result, forkStack, view.query, EmptyArray);
+
+    setKey(Constants.TableDataDepth, view.table);
+    setKey(Constants.IndexDataDepth, view.table.primaryKey);
+
+    List<Column> keyColumns = view.table.primaryKey.columns;
+    final List<ExpressionAdapter> expressions = qr.expressions;
+
+    boolean grouping = ! view.query.groupingExpressions.isEmpty();
+
+    final List<AggregateAdapter> aggregates;
+    int valueLength;
+    if (grouping) {
+      aggregates = new ArrayList();
+
+      final int[] max = new int[1];
+      ExpressionAdapterVisitor visitor = new ExpressionAdapterVisitor() {
+          public void visit(ExpressionAdapter adapter) {
+            if (adapter instanceof AggregateAdapter) {
+              AggregateAdapter aa = (AggregateAdapter) adapter;
+              if (max[0] < aa.aggregate.expressions.size()) {
+                max[0] = aa.aggregate.expressions.size();
+              }
+              aggregates.add(aa);
+            }
+          }
+        };
+
+      for (ExpressionAdapter e: expressions) {
+        e.visit(visitor);
+      }
+
+      valueLength = max[0];
+    } else {
+      valueLength = 0;
+      aggregates = Collections.emptyList();
+    }
+
+    Object[] values = new Object[valueLength];
+    NodeStack stack = new NodeStack();
+
+    while (true) {
+      QueryResult.Type type = qr.nextRow();
+      switch (type) {
+      case End:
+        return;
+      
+      case Inserted: {
+        int i = 0;
+        for (; i < keyColumns.size() - 1; ++i) {
+          setKey
+            (i + Constants.IndexDataBodyDepth,
+             (Comparable) expressions.get
+             (view.primaryKeyOffset + i).evaluate(true));
+        }
+
+        Node n = blaze
+          (i + Constants.IndexDataBodyDepth,
+           (Comparable) expressions.get
+           (view.primaryKeyOffset + i).evaluate(true));
+
+        if (grouping) {
+          int columnOffset = view.aggregateOffset;
+          int expressionOffset = view.aggregateExpressionOffset;
+          for (AggregateAdapter a: aggregates) {
+            for (int j = 0; j < a.aggregate.expressions.size(); ++j) {
+              values[j] = expressions.get(expressionOffset++).evaluate(true);
+            }
+            a.add
+              (Node.find
+               ((Node) n.value, view.columns.get(columnOffset++)).value,
+               values);
+          }
+        } else {
+          expect(n.value == Node.Null);
+        }
+      
+        n.value = makeTree(stack, view.columns, expressions);
+      } break;
+
+      case Deleted: {
+        for (int i = 0; i < keyColumns.size(); ++i) {
+          setKey
+            (i + Constants.IndexDataBodyDepth,
+             (Comparable) expressions.get
+             (view.primaryKeyOffset + i).evaluate(true));
+        }
+
+        int index = keyColumns.size() + Constants.IndexDataBodyDepth;
+
+        if (grouping) {
+          Node n = find(index);
+
+          int columnOffset = view.aggregateOffset;
+          int expressionOffset = view.aggregateOffset;
+          for (AggregateAdapter a: aggregates) {
+            for (int j = 0; j < a.aggregate.expressions.size(); ++j) {
+              values[j] = expressions.get(expressionOffset++).evaluate(true);
+            }
+            a.subtract
+              (Node.find
+               ((Node) n.value, view.columns.get(columnOffset++)).value,
+               values);
+          }
+        }
+
+        if (grouping
+            && ((Integer) expressions.get(view.aggregateOffset).evaluate(true))
+            > 0)
+        {
+          blaze(index).value = makeTree(stack, view.columns, expressions);
+        } else {
+          delete(index);
+        }
+      } break;
+      
+      default:
+        throw new RuntimeException("unexpected result type: " + type);
+      }
+    }
+  }
+
+  private void checkStacks() {
+    if (indexUpdateIterateStack == null) {
+      indexUpdateIterateStack = new NodeStack();
+      indexUpdateBaseStack = new NodeStack();
+      indexUpdateForkStack = new NodeStack();
+    }
+  }
+
   private void updateIndexes() {
     if (dirtyIndexes && indexBase != result) {
-      if (indexUpdateIterateStack == null) {
-        indexUpdateIterateStack = new NodeStack();
-        indexUpdateBaseStack = new NodeStack();
-        indexUpdateForkStack = new NodeStack();
-      }
+      checkStacks();
 
       DiffIterator iterator = new DiffIterator
         (indexBase.root, indexUpdateBaseStack,
@@ -319,6 +467,19 @@ class MyRevisionBuilder implements RevisionBuilder {
           {
             updateIndexTree
               ((Index) indexes.next().key, indexBase,
+               indexUpdateBaseStack, indexUpdateForkStack);
+          }
+
+          // todo: a given view may be associated with more than one
+          // table, but we must only attempt to update it once.
+          for (NodeIterator views = new NodeIterator
+                 (indexUpdateIterateStack, Node.pathFind
+                  (result.root, Constants.ViewTable,
+                   Constants.ViewTable.primaryKey, (Table) pair.fork.key));
+               views.hasNext();)
+          {
+            updateViewTree
+              ((View) views.next().key, indexBase,
                indexUpdateBaseStack, indexUpdateForkStack);
           }
         }
@@ -358,47 +519,6 @@ class MyRevisionBuilder implements RevisionBuilder {
 
       if (indexBase == result) {
         setToken(new Object());
-      }
-    }
-  }
-
-  public void buildIndexTree(Index index)
-  {
-    TableIterator iterator = new TableIterator
-      (reference(index.table), MyRevision.Empty, NodeStack.Null,
-       result, new NodeStack(), ConstantAdapter.True,
-       new ExpressionContext(null), false);
-
-    setKey(Constants.TableDataDepth, index.table);
-    setKey(Constants.IndexDataDepth, index);
-
-    List<Column> keyColumns = index.columns;
-
-    boolean done = false;
-    while (! done) {
-      QueryResult.Type type = iterator.nextRow();
-      switch (type) {
-      case End:
-        done = true;
-        break;
-      
-      case Inserted: {
-        Node tree = (Node) iterator.pair.fork.value;
-
-        int i = 0;
-        for (; i < keyColumns.size() - 1; ++i) {
-          setKey
-            (i + Constants.IndexDataBodyDepth,
-             (Comparable) Node.find(tree, keyColumns.get(i)).value);
-        }
-
-        insertOrUpdate
-          (i + Constants.IndexDataBodyDepth,
-           (Comparable) Node.find(tree, keyColumns.get(i)).value, tree);
-      } break;
-      
-      default:
-        throw new RuntimeException("unexpected result type: " + type);
       }
     }
   }
@@ -452,7 +572,10 @@ class MyRevisionBuilder implements RevisionBuilder {
     // some aren't:
     updateIndexes();
 
-    buildIndexTree(index);
+    checkStacks();
+
+    updateIndexTree
+      (index, MyRevision.Empty, indexUpdateBaseStack, indexUpdateForkStack);
 
     pathInsert(Constants.IndexTable, index.table, index);
   }
@@ -467,6 +590,52 @@ class MyRevisionBuilder implements RevisionBuilder {
 
     setKey(Constants.TableDataDepth, index.table);
     delete(Constants.IndexDataDepth, index);
+  }
+
+  private void addView(final View view)
+  {
+    view.query.source.visit(new SourceVisitor() {
+        public void visit(Source source) {
+          if (source instanceof TableReference) {
+            Table table = ((TableReference) source).table;
+
+            if (Node.pathFind
+                (result.root, Constants.ViewTable,
+                 Constants.ViewTable.primaryKey, table, view) != Node.Null)
+            {
+              // the specified view is already present -- ignore
+              return;
+            }
+
+            pathInsert(Constants.ViewTable, table, view);
+          }
+        }
+      });
+
+    // flush any changes out to the existing indexes, since we don't
+    // want to get confused later when some indexes are up-to-date and
+    // some aren't:
+    updateIndexes();
+
+    checkStacks();
+
+    updateViewTree
+      (view, MyRevision.Empty, indexUpdateBaseStack, indexUpdateForkStack);
+  }
+
+  private void removeView(final View view)
+  {
+    view.query.source.visit(new SourceVisitor() {
+        public void visit(Source source) {
+          if (source instanceof TableReference) {
+            Table table = ((TableReference) source).table;
+
+            pathDelete(Constants.ViewTable, table, view);
+          }
+        }
+      });
+
+    delete(Constants.TableDataDepth, view.table);
   }
 
   private void addForeignKey(ForeignKey constraint)
@@ -808,6 +977,34 @@ class MyRevisionBuilder implements RevisionBuilder {
 
     try {
       removeIndex(index);
+    } catch (RuntimeException e) {
+      token = null;
+      throw e;
+    }
+  }
+
+  public void add(View view)
+  {
+    if (token == null) {
+      throw new IllegalStateException("builder already committed");
+    }
+
+    try {
+      addView(view);
+    } catch (RuntimeException e) {
+      token = null;
+      throw e;
+    }
+  }
+
+  public void remove(View view)
+  {
+    if (token == null) {
+      throw new IllegalStateException("builder already committed");
+    }
+
+    try {
+      removeView(view);
     } catch (RuntimeException e) {
       token = null;
       throw e;

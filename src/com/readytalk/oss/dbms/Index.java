@@ -30,7 +30,7 @@ public final class Index implements Comparable<Index> {
   /**
    * Defines an index which is associated with the specified list of
    * columns.  The order of the list determines the indexing order as
-   * in an SQL MyDBMS.
+   * in an SQL DBMS.
    */
   public Index(Table table, List<Column> columns) {
     this.table = table;
@@ -68,6 +68,8 @@ public final class Index implements Comparable<Index> {
   }
 
   public int compareTo(Index o) {
+    if (o == this) return 0;
+
     int d = table.compareTo(o.table);
     if (d != 0) {
       return d;

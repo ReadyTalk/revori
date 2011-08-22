@@ -6,6 +6,7 @@ import com.readytalk.oss.dbms.Parameter;
 import com.readytalk.oss.dbms.ColumnReference;
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.UnaryOperation;
+import com.readytalk.oss.dbms.Aggregate;
 
 import java.util.Map;
 import java.util.HashMap;
@@ -92,6 +93,14 @@ class ExpressionAdapterFactory {
         default:
           throw new RuntimeException();
         }
+      }
+    });
+
+    factories.put(Aggregate.class, new Factory() {
+      public ExpressionAdapter make(ExpressionContext context,
+                                    Expression expression)
+      {
+        return new AggregateAdapter((Aggregate) expression);
       }
     });
   }

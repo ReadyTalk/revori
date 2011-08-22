@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.Collection;
+import java.util.Iterator;
 
 public class Util {
   private static final boolean Debug = true;
@@ -39,6 +41,14 @@ public class Util {
     return set;
   }
 
+  public static <T> Set<T> union(Collection<T> ... sets) {
+    Set<T> set = new HashSet();
+    for (Collection<T> s: sets) {
+      set.addAll(s);
+    }
+    return set;
+  }
+
   public static void expect(boolean v) {
     if (Debug && ! v) {
       throw new RuntimeException();
@@ -49,5 +59,25 @@ public class Util {
     Object[] copy = new Object[array.length];
     System.arraycopy(array, 0, copy, 0, array.length);
     return copy;
+  }
+
+  public static int compare(Collection<? extends Comparable> a,
+                            Collection<? extends Comparable> b)
+  {
+    int d = a.size() - b.size();
+    if (d != 0) {
+      return d;
+    }
+
+    Iterator<? extends Comparable> ai = a.iterator();
+    Iterator<? extends Comparable> bi = b.iterator();
+    while (ai.hasNext()) {
+      d = ai.next().compareTo(bi.next());
+      if (d != 0) {
+        return d;
+      }
+    }
+
+    return 0;
   }
 }

@@ -42,6 +42,12 @@ class TableIterator implements SourceIterator {
     this.visitUnchanged = visitUnchanged;
     this.plan = plan;
 
+    // System.out.println("base:");
+    // Node.dump(this.base, System.out, 1);
+    // System.out.println("fork:");
+    // Node.dump(this.fork, System.out, 1);
+    // System.out.println("intervals: " + plan.scans[0].evaluate());
+
     plan.iterators[0] = new DiffIterator
       (Node.pathFind(this.base, plan.index),
        this.baseStack = new NodeStack(baseStack),

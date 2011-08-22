@@ -1,5 +1,7 @@
 package com.readytalk.oss.dbms;
 
+import java.util.Collections;
+
 /**
  * Type representing a specific reference to a column.  A query may
  * make multiple references to the same column (e.g. when joining a
@@ -42,5 +44,33 @@ public final class ColumnReference implements Expression {
    */
   public Class typeConstraint() {
     return column.type;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public Iterable<Expression> children() {
+    return Collections.emptyList();
+  }
+
+  public int compareTo(Expression e) {
+    if (this == e) return 0;
+
+    if (e instanceof ColumnReference) {
+      ColumnReference o = (ColumnReference) e;
+
+      int d = column.compareTo(o.column);
+      if (d != 0) {
+        return d;
+      }
+
+      return tableReference.compareTo(o.tableReference);
+    } else {
+      return getClass().getName().compareTo(e.getClass().getName());
+    }
+  }
+
+  public boolean equals(Object o) {
+    return o instanceof ColumnReference && compareTo((ColumnReference) o) == 0;
   }
 }

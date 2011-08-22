@@ -2,7 +2,7 @@ package com.readytalk.oss.dbms.imp;
 
 import com.readytalk.oss.dbms.imp.Interval.BoundType;
 
-class Compare {
+public class Compare {
   public static final Comparable Undefined = new Comparable() {
       public int compareTo(Object o) {
         throw new UnsupportedOperationException();

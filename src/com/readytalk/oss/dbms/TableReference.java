@@ -1,5 +1,7 @@
 package com.readytalk.oss.dbms;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Type representing a specific reference to a table.  A query may
  * make multiple references to the same table (e.g. when joining a
@@ -7,10 +9,14 @@ package com.readytalk.oss.dbms;
  * references unambiguously as separate objects.
  */
 public class TableReference implements Source {
+  private static final AtomicInteger nextOrder = new AtomicInteger();
+
   /**
    * The table specified when this instance was defined.
    */
   public final Table table;
+
+  public final int order;
 
   /**
    * Defines a table reference which may be used to unambiguously
@@ -20,6 +26,7 @@ public class TableReference implements Source {
    */
   public TableReference(Table table) {
     this.table = table;
+    this.order = nextOrder.getAndIncrement();
   }
 
   /**
@@ -27,5 +34,21 @@ public class TableReference implements Source {
    */
   public void visit(SourceVisitor visitor) {
     visitor.visit(this);
+  }
+
+  public int compareTo(Source s) {
+    if (this == s) return 0;
+
+    if (s instanceof TableReference) {
+      TableReference o = (TableReference) s;
+
+      return order - o.order;
+    } else {
+      return getClass().getName().compareTo(s.getClass().getName());
+    }
+  }
+
+  public boolean equals(Object o) {
+    return o instanceof TableReference && compareTo((TableReference) o) == 0;
   }
 }

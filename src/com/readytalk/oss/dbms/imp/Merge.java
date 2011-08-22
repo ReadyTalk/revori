@@ -233,7 +233,7 @@ class Merge {
 
     // build data trees for any new index keys
     for (Index index: newIndexes) {
-      builder.buildIndexTree(index);
+      builder.updateIndexTree(index, MyRevision.Empty, leftStack, baseStack);
     }
 
     // verify all foreign key constraints

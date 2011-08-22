@@ -37,6 +37,11 @@ class Interval {
     this(low, BoundType.Inclusive, high, BoundType.Inclusive);
   }
 
+  public String toString() {
+    return "interval[" + low + ":" + lowBoundType
+      + " " + high + ":" + highBoundType + "]";
+  }
+
   public static Interval intersection(Interval left,
                                       Interval right)
   {

@@ -473,23 +473,36 @@ class Node {
   }
 
   public static void dump(Node node, java.io.PrintWriter out, int depth) {
+    dump(node, out, depth, 0);
+  }
+
+  public static void dump(Node node, java.io.PrintWriter out, int depth,
+                          int subtreeDepth)
+  {
     if (node == Null) {
       return;
     } else {
-      dump(node.left, out, depth + 1);
+      if (node.left != Null && node.key.compareTo(node.left.key) <= 0)
+        throw new RuntimeException(node.key + " <= " + node.left.key);
+
+      dump(node.left, out, depth + 1, subtreeDepth);
 
       for (int i = 0; i < depth; ++i) {
         out.print("  ");
       }
+      out.print(subtreeDepth + " ");
       out.print(node.red ? "(r) " : "(b) ");
       if (node.value instanceof Node) {
-        out.println(node.key + ": subtree");
-        dump((Node) node.value, out, depth + 2);
+        out.println(node.key + " left " + node.left.key + " right " + node.right.key + ": subtree");
+        dump((Node) node.value, out, depth + 2, subtreeDepth + 1);
       } else {
-        out.println(node.key + ": " + node.value);
+        out.println(node.key + ": " + node.value + " left " + node.left.key + " right " + node.right.key);
       }
 
-      dump(node.right, out, depth + 1);
+      if (node.right != Null && node.key.compareTo(node.right.key) >= 0)
+        throw new RuntimeException(node.key + " >= " + node.right.key);
+
+      dump(node.right, out, depth + 1, subtreeDepth);
     }
   }
 }

@@ -60,4 +60,30 @@ public class Join implements Source {
     visitor.visit(left);
     visitor.visit(right);
   }
+
+  public int compareTo(Source s) {
+    if (this == s) return 0;
+
+    if (s instanceof Join) {
+      Join o = (Join) s;
+
+      int d = type.compareTo(o.type);
+      if (d != 0) {
+        return d;
+      }
+      
+      d = left.compareTo(o.left);
+      if (d != 0) {
+        return d;
+      }
+
+      return right.compareTo(o.right);
+    } else {
+      return getClass().getName().compareTo(s.getClass().getName());
+    }
+  }
+
+  public boolean equals(Object o) {
+    return o instanceof Join && compareTo((Join) o) == 0;
+  }
 }
