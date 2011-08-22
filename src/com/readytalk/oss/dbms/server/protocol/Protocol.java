@@ -447,12 +447,12 @@ public class Protocol {
     for (Class<?> c = class_; c != Object.class; c = c.getSuperclass()) {
       if (map.containsKey(c)) {
         return c;
+      } else {
+        Class<?> ret = findInterface(c, map);
+        if(ret != null) {
+          return ret;
+        }
       }
-    }
-    
-    Class<?> ret = findInterface(class_, map);
-    if(ret != null) {
-      return ret;
     }
 
     throw new RuntimeException("no value found for " + class_);
