@@ -314,6 +314,20 @@ public class Protocol {
         return l;
       }
     });
+
+    serializers.put(Enum.class, new Serializer<Enum>() {
+      public void writeTo(WriteContext context, Enum e) throws IOException {
+        // TODO: use the ordinal instead of the name
+        writeString(context.out, e.name());
+      }
+    });
+
+    deserializers.put(Enum.class, new Deserializer<Enum>() {
+      public Enum readFrom(ReadContext context, Class<? extends Enum> c) throws IOException {
+        // TODO: use the ordinal instead of the name
+        return (Enum) Enum.valueOf(c, readString(context.in));
+      }
+    });
   }
 
   private static <T> Serializer<T> findSerializer(Class<T> class_) {
@@ -433,12 +447,12 @@ public class Protocol {
     for (Class<?> c = class_; c != Object.class; c = c.getSuperclass()) {
       if (map.containsKey(c)) {
         return c;
+      } else {
+        Class<?> ret = findInterface(c, map);
+        if(ret != null) {
+          return ret;
+        }
       }
-    }
-    
-    Class<?> ret = findInterface(class_, map);
-    if(ret != null) {
-      return ret;
     }
 
     throw new RuntimeException("no value found for " + class_);
