@@ -314,6 +314,20 @@ public class Protocol {
         return l;
       }
     });
+
+    serializers.put(Enum.class, new Serializer<Enum>() {
+      public void writeTo(WriteContext context, Enum e) throws IOException {
+        // TODO: use the ordinal instead of the name
+        writeString(context.out, e.name());
+      }
+    });
+
+    deserializers.put(Enum.class, new Deserializer<Enum>() {
+      public Enum readFrom(ReadContext context, Class<? extends Enum> c) throws IOException {
+        // TODO: use the ordinal instead of the name
+        return (Enum) Enum.valueOf(c, readString(context.in));
+      }
+    });
   }
 
   private static <T> Serializer<T> findSerializer(Class<T> class_) {
