@@ -2,8 +2,8 @@ package com.readytalk.oss.dbms.imp;
 
 import static com.readytalk.oss.dbms.util.Util.copy;
 
-
 import com.readytalk.oss.dbms.Index;
+import com.readytalk.oss.dbms.View;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Revision;
 import com.readytalk.oss.dbms.RevisionBuilder;
@@ -12,8 +12,13 @@ import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.DiffResult;
 import com.readytalk.oss.dbms.ConflictResolver;
 import com.readytalk.oss.dbms.ForeignKeyResolver;
+import com.readytalk.oss.dbms.TableReference;
+import com.readytalk.oss.dbms.ColumnReference;
+import com.readytalk.oss.dbms.Constant;
+import com.readytalk.oss.dbms.Expression;
 
 import java.util.List;
+import java.util.ArrayList;
 
 public class MyRevision implements Revision {
   public static final MyRevision Empty = new MyRevision
@@ -82,7 +87,6 @@ public class MyRevision implements Revision {
                           QueryTemplate template,
                           Object ... parameters)
   {
-    MyRevision myBase = this;
     MyRevision myFork;
     try {
       myFork = (MyRevision) fork;
@@ -98,8 +102,27 @@ public class MyRevision implements Revision {
          + parameters.length + ")");
     }
 
-    return new MyQueryResult
-      (myBase, null, myFork, null, template, copy(parameters));
+    if (template.hasAggregates) {
+      View view = new View(template, parameters);
+      MyRevisionBuilder builder = new MyRevisionBuilder
+        (new Object(), myFork, new NodeStack());
+
+      builder.addView(view, this);
+
+      TableReference tableReference = new TableReference(view.table);
+      List<Expression> expressions = new ArrayList(view.primaryKeyOffset);
+      for (int i = 0; i < view.primaryKeyOffset; ++i) {
+        expressions.add
+          (new ColumnReference(tableReference, view.columns.get(i)));
+      }
+
+      return myFork.diff
+        (builder.commit(), new QueryTemplate
+         (expressions, tableReference, new Constant(true)));
+    } else {
+      return new MyQueryResult
+        (this, null, myFork, null, template, copy(parameters));
+    }
   }
 
   public DiffResult diff(Revision fork, boolean skipBrokenReferences)

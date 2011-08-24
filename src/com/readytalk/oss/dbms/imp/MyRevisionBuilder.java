@@ -324,37 +324,27 @@ class MyRevisionBuilder implements RevisionBuilder {
     List<Column> keyColumns = view.table.primaryKey.columns;
     final List<ExpressionAdapter> expressions = qr.expressions;
 
-    boolean grouping = ! view.query.groupingExpressions.isEmpty();
-
-    final List<AggregateAdapter> aggregates;
-    int valueLength;
-    if (grouping) {
+    List<AggregateAdapter> aggregates;
+    int maxValues;
+    if (view.query.hasAggregates) {
       aggregates = new ArrayList();
 
-      final int[] max = new int[1];
-      ExpressionAdapterVisitor visitor = new ExpressionAdapterVisitor() {
-          public void visit(ExpressionAdapter adapter) {
-            if (adapter instanceof AggregateAdapter) {
-              AggregateAdapter aa = (AggregateAdapter) adapter;
-              if (max[0] < aa.aggregate.expressions.size()) {
-                max[0] = aa.aggregate.expressions.size();
-              }
-              aggregates.add(aa);
-            }
-          }
-        };
-
-      for (ExpressionAdapter e: expressions) {
-        e.visit(visitor);
+      maxValues = 0;
+      for (int i = view.aggregateOffset; i < view.aggregateExpressionOffset;
+           ++i)
+      {
+        AggregateAdapter aa = (AggregateAdapter) qr.expressions.get(i);
+        if (maxValues < aa.aggregate.expressions.size()) {
+          maxValues = aa.aggregate.expressions.size();
+        }
+        aggregates.add(aa);
       }
-
-      valueLength = max[0];
     } else {
-      valueLength = 0;
-      aggregates = Collections.emptyList();
+      maxValues = 0;
+      aggregates = null;
     }
 
-    Object[] values = new Object[valueLength];
+    Object[] values = new Object[maxValues];
     NodeStack stack = new NodeStack();
 
     while (true) {
@@ -377,7 +367,7 @@ class MyRevisionBuilder implements RevisionBuilder {
            (Comparable) expressions.get
            (view.primaryKeyOffset + i).evaluate(true));
 
-        if (grouping) {
+        if (view.query.hasAggregates) {
           int columnOffset = view.aggregateOffset;
           int expressionOffset = view.aggregateExpressionOffset;
           for (AggregateAdapter a: aggregates) {
@@ -406,7 +396,7 @@ class MyRevisionBuilder implements RevisionBuilder {
 
         int index = keyColumns.size() + Constants.IndexDataBodyDepth;
 
-        if (grouping) {
+        if (view.query.hasAggregates) {
           Node n = find(index);
 
           int columnOffset = view.aggregateOffset;
@@ -422,7 +412,7 @@ class MyRevisionBuilder implements RevisionBuilder {
           }
         }
 
-        if (grouping
+        if (view.query.hasAggregates
             && ((Integer) expressions.get(view.aggregateOffset).evaluate(true))
             > 0)
         {
@@ -592,7 +582,12 @@ class MyRevisionBuilder implements RevisionBuilder {
     delete(Constants.IndexDataDepth, index);
   }
 
-  private void addView(final View view)
+  private void addView(View view)
+  {
+    addView(view, MyRevision.Empty);
+  }
+
+  void addView(final View view, MyRevision base)
   {
     view.query.source.visit(new SourceVisitor() {
         public void visit(Source source) {
@@ -620,7 +615,7 @@ class MyRevisionBuilder implements RevisionBuilder {
     checkStacks();
 
     updateViewTree
-      (view, MyRevision.Empty, indexUpdateBaseStack, indexUpdateForkStack);
+      (view, base, indexUpdateBaseStack, indexUpdateForkStack);
   }
 
   private void removeView(final View view)

@@ -42,6 +42,8 @@ public final class QueryTemplate implements Comparable<QueryTemplate> {
 
   public final Set<Expression> groupingExpressions;
 
+  public final boolean hasAggregates;
+
   /**
    * Defines a query template with the specified expressions to be
    * evaluated, the source from which any column references in the
@@ -80,6 +82,8 @@ public final class QueryTemplate implements Comparable<QueryTemplate> {
     if ((! allBasic) || (! groupingExpressions.isEmpty())) {
       groupingExpressions.addAll(basics);
     }
+
+    this.hasAggregates = ! allBasic;
 
     this.groupingExpressions = Collections.unmodifiableSet
       (groupingExpressions);

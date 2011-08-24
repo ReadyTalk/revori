@@ -1,5 +1,6 @@
 package com.readytalk.oss.dbms;
 
+import static com.readytalk.oss.dbms.util.Util.list;
 import static com.readytalk.oss.dbms.util.Util.compare;
 
 import java.util.Collections;
@@ -8,6 +9,7 @@ import java.util.ArrayList;
 
 public final class View implements Comparable<View> {
   public final QueryTemplate query;
+  public final List<Object> parameters;
   public final List<Column> columns;
   public final Table table;
   public final int primaryKeyOffset;
@@ -15,6 +17,7 @@ public final class View implements Comparable<View> {
   public final int aggregateExpressionOffset;
 
   public View(QueryTemplate query,
+              List<Object> parameters,
               List<Column> columns,
               List<Column> primaryKey,
               final List<Expression> primaryKeyExpressions,
@@ -26,7 +29,17 @@ public final class View implements Comparable<View> {
 
     myExpressions.addAll(primaryKeyExpressions);
 
-    if (query.groupingExpressions.isEmpty()) {
+    if (query.hasAggregates) {
+      for (Expression e: query.groupingExpressions) {
+        if (! primaryKeyExpressions.contains(e)) {
+          Class type = e.typeConstraint();
+          if (type == null) throw new NullPointerException();
+
+          myPrimaryKey.add(new Column(type));
+          myExpressions.add(e);
+        }
+      }
+    } else {
       query.source.visit(new SourceVisitor() {
           public void visit(Source source) {
             if (source instanceof TableReference) {
@@ -43,16 +56,11 @@ public final class View implements Comparable<View> {
             }
           }
         });
-    } else {
-      for (Expression e: query.groupingExpressions) {
-        if (! primaryKeyExpressions.contains(e)) {
-          Class type = e.typeConstraint();
-          if (type == null) throw new NullPointerException();
+    }
 
-          myPrimaryKey.add(new Column(type));
-          myExpressions.add(e);
-        }
-      }
+    if (myPrimaryKey.isEmpty()) {
+      myPrimaryKey.add(new Column(Singleton.class));
+      myExpressions.add(new Constant(Singleton.Instance));
     }
 
     myColumns.addAll(myPrimaryKey);
@@ -61,13 +69,13 @@ public final class View implements Comparable<View> {
     this.primaryKeyOffset = query.expressions.size();
     this.aggregateOffset = myExpressions.size();
 
-    if (! query.groupingExpressions.isEmpty()) {
+    if (query.hasAggregates) {
       myColumns.add(new Column(Integer.class));
       myExpressions.add
         (new Aggregate
          (Integer.class, Foldables.Count, Collections.emptyList()));
 
-      { ExpressionVisitor visitor = new ExpressionVisitor() {
+      ExpressionVisitor visitor = new ExpressionVisitor() {
           public void visit(Expression e) {
             if (e instanceof Aggregate) {
               myColumns.add(new Column(((Aggregate) e).type));
@@ -76,16 +84,15 @@ public final class View implements Comparable<View> {
           }
         };
 
-        for (Expression e: query.expressions) {
-          e.visit(visitor);
-        }
+      for (Expression e: query.expressions) {
+        e.visit(visitor);
       }
     }
 
     this.aggregateExpressionOffset = myExpressions.size();
 
-    if (! query.groupingExpressions.isEmpty()) {
-      { ExpressionVisitor visitor = new ExpressionVisitor() {
+    if (query.hasAggregates) {
+      ExpressionVisitor visitor = new ExpressionVisitor() {
           public void visit(Expression e) {
             if (e instanceof Aggregate) {
               for (Expression ae:
@@ -97,15 +104,31 @@ public final class View implements Comparable<View> {
           }
         };
 
-        for (Expression e: query.expressions) {
-          e.visit(visitor);
-        }
+      for (Expression e: query.expressions) {
+        e.visit(visitor);
       }
     }
 
-     this.query = new QueryTemplate
+    this.query = new QueryTemplate
       (myExpressions, query.source, query.test, query.groupingExpressions);
+    this.parameters = Collections.unmodifiableList(parameters);
     this.columns = Collections.unmodifiableList(myColumns);
+  }
+
+  public View(QueryTemplate query,
+              Object[] parameters)
+  {
+    this(query, list(parameters), makeColumnList(query.expressions.size()),
+         (List<Column>) (List) Collections.emptyList(),
+         (List<Expression>) (List) Collections.emptyList(), Table.makeId());
+  }
+
+  private static List<Column> makeColumnList(int size) {
+    List<Column> columns = new ArrayList(size);
+    for (int i = 0; i < size; ++i) {
+      columns.add(new Column(Object.class));
+    }
+    return columns;
   }
 
   public int compareTo(View o) {

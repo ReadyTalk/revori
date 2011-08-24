@@ -100,7 +100,13 @@ class ExpressionAdapterFactory {
       public ExpressionAdapter make(ExpressionContext context,
                                     Expression expression)
       {
-        return new AggregateAdapter((Aggregate) expression);
+        ExpressionAdapter adapter = context.adapters.get(expression);
+        if (adapter == null) {
+          context.adapters.put
+            (expression,
+             adapter = new AggregateAdapter((Aggregate) expression));
+        }
+        return adapter;
       }
     });
   }

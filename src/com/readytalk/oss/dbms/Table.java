@@ -10,7 +10,7 @@ import java.util.List;
 public class Table implements Comparable<Table> {
   private static long nextId = 1;
 
-  private synchronized static String makeId() {
+  public synchronized static String makeId() {
     return (nextId++) + "." + Table.class.getName() + ".id";
   }
 
@@ -37,11 +37,7 @@ public class Table implements Comparable<Table> {
    * and primary keys are equal.
    */
   public Table(List<Column> primaryKey, String id) {
-    this.primaryKey = new Index(this, primaryKey);
-    this.order = 0;
-    this.id = id;
-
-    if (id == null) throw new NullPointerException();
+    this(primaryKey, id, 0);
   }
 
   /**
@@ -68,18 +64,7 @@ public class Table implements Comparable<Table> {
    * and primary keys are equal.
    */
   public Table(List<Column> primaryKey, String id, List<Table> comesAfter) {
-    this.primaryKey = new Index(this, primaryKey);
-    this.id = id;
-    
-    int o = 0;
-    for(Table t : comesAfter) {
-      if(t.order >= o) {
-        o = t.order + 1;
-      }
-    }
-    this.order = o;
-
-    if (id == null) throw new NullPointerException();
+    this(primaryKey, id, makeOrder(comesAfter));
   }
 
   /**
@@ -88,6 +73,16 @@ public class Table implements Comparable<Table> {
    */
   public Table(List<Column> primaryKey) {
     this(primaryKey, makeId());
+  }
+
+  private static int makeOrder(List<Table> comesAfter) {
+    int o = 0;
+    for(Table t : comesAfter) {
+      if(t.order >= o) {
+        o = t.order + 1;
+      }
+    }
+    return o;
   }
 
   public int compareTo(Table o) {
