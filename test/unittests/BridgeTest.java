@@ -149,8 +149,6 @@ public class BridgeTest extends TestCase {
     expectEqual
       (right.head().query(originNumbers.primaryKey, 2, 2, name), "two");
 
-    System.out.println("--- break ---");
-
     { Revision base = left2.head();
       RevisionBuilder builder = base.builder();
 

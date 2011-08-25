@@ -15,6 +15,9 @@ import java.util.TreeSet;
  * specific parameters, analogous to a prepared statement in JDBC.
  */
 public final class QueryTemplate implements Comparable<QueryTemplate> {
+  private static final int AggregateFlag = 1 << 0;
+  private static final int ColumnReferenceFlag = 1 << 1;
+
   /**
    * The number of parameter expressions present in the the expression
    * list and test expression, including any parameters referenced
@@ -71,40 +74,45 @@ public final class QueryTemplate implements Comparable<QueryTemplate> {
       (union(append(this.expressions, test), groupingExpressions));
 
     groupingExpressions = new TreeSet(groupingExpressions);
-    boolean allBasic = true;
+    int mask = 0;
     final Set<Expression> basics = new TreeSet();
     for (Expression e: this.expressions) {
-      if (! addBasics(basics, e)) {
-        allBasic = false;
-      }
+      mask |= addBasics(basics, e);
     }
 
-    if ((! allBasic) || (! groupingExpressions.isEmpty())) {
+    mask |= addBasics(basics, test);
+
+    if (((mask & AggregateFlag) != 0) || (! groupingExpressions.isEmpty())) {
       groupingExpressions.addAll(basics);
     }
 
-    this.hasAggregates = ! allBasic;
+    this.hasAggregates = (mask & AggregateFlag) != 0;
 
     this.groupingExpressions = Collections.unmodifiableSet
       (groupingExpressions);
   }
 
-  private static boolean addBasics(Set<Expression> basics,
-                                   Expression expression)
+  private static int addBasics(Set<Expression> basics,
+                               Expression expression)
   {
-    boolean basic = true;
+    int mask = 0;
     for (Expression e: expression.children()) {
-      if (! addBasics(basics, e)) {
-        basic = false;
-      }
+      mask |= addBasics(basics, e);
     }
 
-    if (basic && (! (expression instanceof Aggregate))) {
-      basics.add(expression);
-      return true;
-    } else {
-      return false;
+    if (expression instanceof Aggregate) {
+      mask |= AggregateFlag;
     }
+
+    if (expression instanceof ColumnReference) {
+      mask |= ColumnReferenceFlag;
+    }
+
+    if ((mask & AggregateFlag) == 0 && (mask & ColumnReferenceFlag) != 0) {
+      basics.add(expression);
+    }
+
+    return mask;
   }
 
   public int compareTo(QueryTemplate o) {

@@ -7,7 +7,7 @@ package com.readytalk.oss.dbms;
 public final class Column<T> implements Comparable<Column<?>> {
   private static long nextId = 1;
 
-  private synchronized static String makeId() {
+  public synchronized static String makeId() {
     return (nextId++) + "." + Column.class.getName() + ".id";
   }
 

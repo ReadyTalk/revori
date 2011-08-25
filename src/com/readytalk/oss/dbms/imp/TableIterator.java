@@ -156,14 +156,21 @@ class TableIterator implements SourceIterator {
       Node tree = (Node) node.value;
         
       for (ColumnReferenceAdapter r: columnReferences) {
-        r.value = Node.find(tree, r.column).value();
+        Object v = Node.find(tree, r.column).value();
+        if (v != null && ! r.column.type.isInstance(v)) {
+          throw new ClassCastException
+            (v.getClass().getName() + " cannot be cast to "
+             + r.column.type.getName());
+        }
+        r.value = v;
       }
 
       Object result = test.evaluate(false);
 
       if (Verbose) {
+        System.out.print("test: ");
         for (ColumnReferenceAdapter r: expressionContext.columnReferences) {
-          System.out.print(r.value + " ");
+          System.out.print(r.column + ":" + r.value + " ");
         }
         System.out.println(": " + result);
       }

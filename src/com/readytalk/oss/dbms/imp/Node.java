@@ -493,10 +493,10 @@ class Node {
       out.print(subtreeDepth + " ");
       out.print(node.red ? "(r) " : "(b) ");
       if (node.value instanceof Node) {
-        out.println(node.key + " left " + node.left.key + " right " + node.right.key + ": subtree");
+        out.println(node.key + ": subtree");
         dump((Node) node.value, out, depth + 2, subtreeDepth + 1);
       } else {
-        out.println(node.key + ": " + node.value + " left " + node.left.key + " right " + node.right.key);
+        out.println(node.key + ": " + node.value);
       }
 
       if (node.right != Null && node.key.compareTo(node.right.key) >= 0)

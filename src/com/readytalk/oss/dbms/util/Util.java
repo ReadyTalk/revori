@@ -80,4 +80,17 @@ public class Util {
 
     return 0;
   }
+
+  public static String toString(Object[] array, int offset, int length) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("[");
+    for (int i = offset; i < offset + length; ++i) {
+      sb.append(array[i]);
+      if (i < offset + length - 1) {
+        sb.append(", ");
+      }
+    }
+    sb.append("]");
+    return sb.toString();
+  }
 }

@@ -32,6 +32,8 @@ class ComparisonAdapter implements ExpressionAdapter {
     Object leftValue = left.evaluate(convertDummyToNull);
     Object rightValue = right.evaluate(convertDummyToNull);
 
+    // System.out.println("evaluate " + type + " left " + leftValue + " right " + rightValue);
+
     if (leftValue == null || rightValue == null) {
       return false;
     } else if (leftValue == Compare.Undefined

@@ -31,9 +31,9 @@ public class Aggregates extends TestCase {
 
   @Test
   public void testCount() {
-    Column number = new Column(Integer.class);
-    Column name = new Column(String.class);
-    Table things = new Table(list(number));
+    Column number = new Column(Integer.class, "number");
+    Column name = new Column(String.class, "name");
+    Table things = new Table(list(number), "things");
     
     RevisionBuilder builder = Revisions.Empty.builder();
 

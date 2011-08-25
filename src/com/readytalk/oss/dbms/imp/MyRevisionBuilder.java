@@ -38,11 +38,14 @@ import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.SourceVisitor;
 import com.readytalk.oss.dbms.Source;
+import com.readytalk.oss.dbms.util.Util;
 
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Collections;
@@ -316,24 +319,26 @@ class MyRevisionBuilder implements RevisionBuilder {
                              NodeStack forkStack)
   {
     MyQueryResult qr = new MyQueryResult
-      (base, baseStack, result, forkStack, view.query, EmptyArray);
+      (base, baseStack, result, forkStack, view.query,
+       view.parameters.toArray(new Object[view.parameters.size()]));
 
     setKey(Constants.TableDataDepth, view.table);
     setKey(Constants.IndexDataDepth, view.table.primaryKey);
 
     List<Column> keyColumns = view.table.primaryKey.columns;
+
     final List<ExpressionAdapter> expressions = qr.expressions;
 
-    List<AggregateAdapter> aggregates;
+    Set<AggregateAdapter> aggregates;
     int maxValues;
     if (view.query.hasAggregates) {
-      aggregates = new ArrayList();
+      aggregates = new HashSet();
 
       maxValues = 0;
       for (int i = view.aggregateOffset; i < view.aggregateExpressionOffset;
            ++i)
       {
-        AggregateAdapter aa = (AggregateAdapter) qr.expressions.get(i);
+        AggregateAdapter aa = (AggregateAdapter) expressions.get(i);
         if (maxValues < aa.aggregate.expressions.size()) {
           maxValues = aa.aggregate.expressions.size();
         }
@@ -347,11 +352,13 @@ class MyRevisionBuilder implements RevisionBuilder {
     Object[] values = new Object[maxValues];
     NodeStack stack = new NodeStack();
 
-    while (true) {
+    boolean done = false;
+    while (! done) {
       QueryResult.Type type = qr.nextRow();
       switch (type) {
       case End:
-        return;
+        done = true;
+        break;
       
       case Inserted: {
         int i = 0;
@@ -384,6 +391,10 @@ class MyRevisionBuilder implements RevisionBuilder {
         }
       
         n.value = makeTree(stack, view.columns, expressions);
+
+        for (AggregateAdapter a: aggregates) {
+          a.value = Compare.Undefined;
+        }
       } break;
 
       case Deleted: {
@@ -394,7 +405,7 @@ class MyRevisionBuilder implements RevisionBuilder {
              (view.primaryKeyOffset + i).evaluate(true));
         }
 
-        int index = keyColumns.size() + Constants.IndexDataBodyDepth;
+        int index = keyColumns.size() - 1 + Constants.IndexDataBodyDepth;
 
         if (view.query.hasAggregates) {
           Node n = find(index);
@@ -418,12 +429,73 @@ class MyRevisionBuilder implements RevisionBuilder {
         {
           blaze(index).value = makeTree(stack, view.columns, expressions);
         } else {
-          delete(index);
+          delete(index - 1);
+        }
+
+        for (AggregateAdapter a: aggregates) {
+          a.value = Compare.Undefined;
         }
       } break;
       
       default:
         throw new RuntimeException("unexpected result type: " + type);
+      }
+    }
+
+    if (view.query.hasAggregates) {
+      // todo: only do this if the query test has aggregates
+
+      qr.reset();
+
+      while (true) {
+        QueryResult.Type type = qr.nextRow();
+        switch (type) {
+        case End:
+          return;
+
+        case Inserted:
+        case Deleted: {
+          for (int i = 0; i < keyColumns.size(); ++i) {
+            setKey
+              (i + Constants.IndexDataBodyDepth,
+               (Comparable) expressions.get
+               (view.primaryKeyOffset + i).evaluate(true));
+          }
+
+          int index = keyColumns.size() - 1 + Constants.IndexDataBodyDepth;
+
+          int columnOffset = view.aggregateOffset;
+          for (AggregateAdapter a: aggregates) {
+            a.value = Node.find
+              ((Node) find(index).value,
+               view.columns.get(columnOffset++)).value;
+          }
+
+          // System.out.print("filter: ");
+          // for (ColumnReferenceAdapter r: qr.expressionContext.columnReferences)
+          // {
+          //   System.out.print(r.column + ":" + r.value + " ");
+          // }
+          // System.out.println(": " + qr.test.evaluate(false));
+
+          if (qr.test.evaluate(false) == Boolean.FALSE) {
+            // todo: rather than delete this row from the view we
+            // should actually just undo whatever operation we did in
+            // the first pass, now that we know this query row should
+            // not be included.  Note that we'll need to operate on a
+            // copy of the view rather than the tentative one we just
+            // built to make this work.
+            delete(index);
+          }
+
+          for (AggregateAdapter a: aggregates) {
+            a.value = Compare.Undefined;
+          }
+        } break;
+      
+        default:
+          throw new RuntimeException("unexpected result type: " + type);
+        }
       }
     }
   }

@@ -23,7 +23,7 @@ public final class View implements Comparable<View> {
               final List<Expression> primaryKeyExpressions,
               String id)
   {
-    final List<Column> myPrimaryKey = new ArrayList();
+    final List<Column> myPrimaryKey = new ArrayList(primaryKey);
     final List<Column> myColumns = new ArrayList(columns);
     final List<Expression> myExpressions = new ArrayList(query.expressions);
 
@@ -32,10 +32,7 @@ public final class View implements Comparable<View> {
     if (query.hasAggregates) {
       for (Expression e: query.groupingExpressions) {
         if (! primaryKeyExpressions.contains(e)) {
-          Class type = e.typeConstraint();
-          if (type == null) throw new NullPointerException();
-
-          myPrimaryKey.add(new Column(type));
+          myPrimaryKey.add(makeColumn(e, Comparable.class));
           myExpressions.add(e);
         }
       }
@@ -49,7 +46,7 @@ public final class View implements Comparable<View> {
                   (tableReference, c);
 
                 if (! primaryKeyExpressions.contains(columnReference)) {
-                  myPrimaryKey.add(new Column(c.type));
+                  myPrimaryKey.add(makeColumn(columnReference, null));
                   myExpressions.add(columnReference);
                 }
               }
@@ -59,7 +56,8 @@ public final class View implements Comparable<View> {
     }
 
     if (myPrimaryKey.isEmpty()) {
-      myPrimaryKey.add(new Column(Singleton.class));
+      myPrimaryKey.add
+        (new Column(Singleton.class, "singleton." + Column.makeId()));
       myExpressions.add(new Constant(Singleton.Instance));
     }
 
@@ -70,7 +68,7 @@ public final class View implements Comparable<View> {
     this.aggregateOffset = myExpressions.size();
 
     if (query.hasAggregates) {
-      myColumns.add(new Column(Integer.class));
+      myColumns.add(new Column(Integer.class, "count." + Column.makeId()));
       myExpressions.add
         (new Aggregate
          (Integer.class, Foldables.Count, Collections.emptyList()));
@@ -78,7 +76,8 @@ public final class View implements Comparable<View> {
       ExpressionVisitor visitor = new ExpressionVisitor() {
           public void visit(Expression e) {
             if (e instanceof Aggregate) {
-              myColumns.add(new Column(((Aggregate) e).type));
+              myColumns.add(makeColumn(e, null));
+
               myExpressions.add(e);
             }
           }
@@ -118,15 +117,40 @@ public final class View implements Comparable<View> {
   public View(QueryTemplate query,
               Object[] parameters)
   {
-    this(query, list(parameters), makeColumnList(query.expressions.size()),
+    this(query, list(parameters), makeColumnList(query.expressions),
          (List<Column>) (List) Collections.emptyList(),
-         (List<Expression>) (List) Collections.emptyList(), Table.makeId());
+         (List<Expression>) (List) Collections.emptyList(),
+         makeId(query.source));
   }
 
-  private static List<Column> makeColumnList(int size) {
-    List<Column> columns = new ArrayList(size);
-    for (int i = 0; i < size; ++i) {
-      columns.add(new Column(Object.class));
+  private static String makeId(Source source) {
+    String id = Table.makeId();
+    if (source instanceof TableReference) {
+      id = ((TableReference) source).table.id + "." + id;
+    }
+    return "view." + id;
+  }
+
+  private static Column makeColumn(Expression e, Class defaultType) {
+    Class type;
+    String id = Column.makeId();
+    if (e instanceof ColumnReference) {
+      Column c = ((ColumnReference) e).column;
+      type = c.type;
+      id = c.id + "." + id;
+    } else if (e instanceof Aggregate) {
+      type = ((Aggregate) e).type;
+      id = "aggregate." + id;
+    } else {
+      type = defaultType;
+    }
+    return new Column(type, id);
+  }
+
+  private static List<Column> makeColumnList(List<Expression> expressions) {
+    List<Column> columns = new ArrayList(expressions.size());
+    for (int i = 0; i < expressions.size(); ++i) {
+      columns.add(makeColumn(expressions.get(i), Object.class));
     }
     return columns;
   }

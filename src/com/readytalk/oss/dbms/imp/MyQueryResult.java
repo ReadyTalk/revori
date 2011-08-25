@@ -33,8 +33,15 @@ class MyQueryResult implements QueryResult {
     }
   }
 
+  public final SourceAdapter source;
   public final List<ExpressionAdapter> expressions;
-  public final SourceIterator iterator;
+  public final ExpressionContext expressionContext;
+  public final ExpressionAdapter test;
+  public final MyRevision base;
+  public final MyRevision fork;
+  public final NodeStack baseStack;
+  public final NodeStack forkStack;
+  public SourceIterator iterator;
   public int nextItemIndex;
 
   public MyQueryResult(MyRevision base,
@@ -45,33 +52,53 @@ class MyQueryResult implements QueryResult {
                        Object[] parameters)
   {
     if (base == fork) {
+      source = null;
       expressions = null;
-      iterator = null;
+      expressionContext = null;
+      test = null;
     } else {
       ChangeFinder finder = new ChangeFinder(base, fork);
       SourceAdapter source = SourceAdapterFactory.makeAdapter(template.source);
       source.visit(finder);
 
       if (finder.foundChanged) {
-        expressions = new ArrayList<ExpressionAdapter>(template.expressions.size());
+        expressions = new ArrayList<ExpressionAdapter>
+          (template.expressions.size());
 
-        ExpressionContext context = new ExpressionContext(parameters);
+        expressionContext = new ExpressionContext(parameters);
 
         for (Expression e: template.expressions) {
-          expressions.add(ExpressionAdapterFactory.makeAdapter(context, e));
+          expressions.add
+            (ExpressionAdapterFactory.makeAdapter(expressionContext, e));
         }
 
         if (baseStack == null) baseStack = new NodeStack();
         if (forkStack == null) forkStack = new NodeStack();
 
-        iterator = source.iterator
-          (base, baseStack, fork, forkStack,
-           ExpressionAdapterFactory.makeAdapter(context, template.test),
-           context, false);
+        test = ExpressionAdapterFactory.makeAdapter
+          (expressionContext, template.test);
+
+        this.source = source;
       } else {
+        this.source = null;
         expressions = null;
-        iterator = null;
+        expressionContext = null;
+        test = null;
       }
+    }
+
+    this.base = base;
+    this.fork = fork;
+    this.baseStack = baseStack;
+    this.forkStack = forkStack;
+
+    reset();
+  }
+
+  public void reset() {
+    if (source != null) {
+      iterator = source.iterator
+        (base, baseStack, fork, forkStack, test, expressionContext, false);
     }
   }
 
