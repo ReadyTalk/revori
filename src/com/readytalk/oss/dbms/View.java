@@ -6,6 +6,8 @@ import static com.readytalk.oss.dbms.util.Util.compare;
 import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.TreeSet;
 
 public final class View implements Comparable<View> {
   public final QueryTemplate query;
@@ -27,7 +29,15 @@ public final class View implements Comparable<View> {
     final List<Column> myColumns = new ArrayList(columns);
     final List<Expression> myExpressions = new ArrayList(query.expressions);
 
+    if (myColumns.size() != myExpressions.size()) {
+      throw new IllegalArgumentException();
+    }
+
     myExpressions.addAll(primaryKeyExpressions);
+
+    if (myColumns.size() + myPrimaryKey.size() != myExpressions.size()) {
+      throw new IllegalArgumentException();
+    }
 
     if (query.hasAggregates) {
       for (Expression e: query.groupingExpressions) {
@@ -67,18 +77,19 @@ public final class View implements Comparable<View> {
     this.primaryKeyOffset = query.expressions.size();
     this.aggregateOffset = myExpressions.size();
 
+    final Set<Aggregate> aggregates;
     if (query.hasAggregates) {
       myColumns.add(new Column(Integer.class, "count." + Column.makeId()));
       myExpressions.add
         (new Aggregate
          (Integer.class, Foldables.Count, Collections.emptyList()));
 
+      aggregates = new TreeSet();
+
       ExpressionVisitor visitor = new ExpressionVisitor() {
           public void visit(Expression e) {
             if (e instanceof Aggregate) {
-              myColumns.add(makeColumn(e, null));
-
-              myExpressions.add(e);
+              aggregates.add((Aggregate) e);
             }
           }
         };
@@ -86,25 +97,22 @@ public final class View implements Comparable<View> {
       for (Expression e: query.expressions) {
         e.visit(visitor);
       }
+
+      for (Aggregate a: aggregates) {
+        myColumns.add(makeColumn(a, null));
+        myExpressions.add(a);
+      }
+    } else {
+      aggregates = null;
     }
 
     this.aggregateExpressionOffset = myExpressions.size();
 
     if (query.hasAggregates) {
-      ExpressionVisitor visitor = new ExpressionVisitor() {
-          public void visit(Expression e) {
-            if (e instanceof Aggregate) {
-              for (Expression ae:
-                     ((List<Expression>) ((Aggregate) e).expressions))
-              {
-                myExpressions.add(ae);
-              }
-            }
-          }
-        };
-
-      for (Expression e: query.expressions) {
-        e.visit(visitor);
+      for (Aggregate a: aggregates) {
+        for (Expression e: (List<Expression>) (List) a.expressions) {
+          myExpressions.add(e);
+        }
       }
     }
 

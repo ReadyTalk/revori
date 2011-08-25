@@ -307,8 +307,14 @@ class MyRevisionBuilder implements RevisionBuilder {
     Node.BlazeResult result = new Node.BlazeResult();
     Node n = Node.Null;
     for (int i = 0; i < columns.size(); ++i) {
-      n = Node.blaze(result, token, stack, n, columns.get(i));
-      result.node.value = expressions.get(i).evaluate(true);
+      Column c = columns.get(i);
+      Object v = expressions.get(i).evaluate(true);
+      if (v != null && ! c.type.isInstance(v)) {
+        throw new ClassCastException
+          (v.getClass().getName() + " cannot be cast to " + c.type.getName());
+      }
+      n = Node.blaze(result, token, stack, n, c);
+      result.node.value = v;
     }
     return n;
   }
@@ -329,10 +335,10 @@ class MyRevisionBuilder implements RevisionBuilder {
 
     final List<ExpressionAdapter> expressions = qr.expressions;
 
-    Set<AggregateAdapter> aggregates;
+    List<AggregateAdapter> aggregates;
     int maxValues;
     if (view.query.hasAggregates) {
-      aggregates = new HashSet();
+      aggregates = new ArrayList();
 
       maxValues = 0;
       for (int i = view.aggregateOffset; i < view.aggregateExpressionOffset;
@@ -374,6 +380,8 @@ class MyRevisionBuilder implements RevisionBuilder {
            (Comparable) expressions.get
            (view.primaryKeyOffset + i).evaluate(true));
 
+        // System.out.println("inserted " + Util.toString(keys, 0, Constants.IndexDataBodyDepth + i + 1));
+
         if (view.query.hasAggregates) {
           int columnOffset = view.aggregateOffset;
           int expressionOffset = view.aggregateExpressionOffset;
@@ -381,6 +389,7 @@ class MyRevisionBuilder implements RevisionBuilder {
             for (int j = 0; j < a.aggregate.expressions.size(); ++j) {
               values[j] = expressions.get(expressionOffset++).evaluate(true);
             }
+
             a.add
               (Node.find
                ((Node) n.value, view.columns.get(columnOffset++)).value,
@@ -404,8 +413,9 @@ class MyRevisionBuilder implements RevisionBuilder {
              (Comparable) expressions.get
              (view.primaryKeyOffset + i).evaluate(true));
         }
-
         int index = keyColumns.size() - 1 + Constants.IndexDataBodyDepth;
+
+        // System.out.println("deleted " + Util.toString(keys, 0, index + 1));
 
         if (view.query.hasAggregates) {
           Node n = find(index);
@@ -425,11 +435,11 @@ class MyRevisionBuilder implements RevisionBuilder {
 
         if (view.query.hasAggregates
             && ((Integer) expressions.get(view.aggregateOffset).evaluate(true))
-            > 0)
+            != 0)
         {
           blaze(index).value = makeTree(stack, view.columns, expressions);
         } else {
-          delete(index - 1);
+          delete(index);
         }
 
         for (AggregateAdapter a: aggregates) {
@@ -485,6 +495,7 @@ class MyRevisionBuilder implements RevisionBuilder {
             // not be included.  Note that we'll need to operate on a
             // copy of the view rather than the tentative one we just
             // built to make this work.
+
             delete(index);
           }
 
@@ -519,6 +530,7 @@ class MyRevisionBuilder implements RevisionBuilder {
 
       DiffIterator.DiffPair pair = new DiffIterator.DiffPair();
 
+      Set<View> viewSet = new HashSet();
       while (iterator.next(pair)) {
         if (pair.fork != null) {
           for (NodeIterator indexes = new NodeIterator
@@ -532,19 +544,20 @@ class MyRevisionBuilder implements RevisionBuilder {
                indexUpdateBaseStack, indexUpdateForkStack);
           }
 
-          // todo: a given view may be associated with more than one
-          // table, but we must only attempt to update it once.
           for (NodeIterator views = new NodeIterator
                  (indexUpdateIterateStack, Node.pathFind
                   (result.root, Constants.ViewTable,
                    Constants.ViewTable.primaryKey, (Table) pair.fork.key));
                views.hasNext();)
           {
-            updateViewTree
-              ((View) views.next().key, indexBase,
-               indexUpdateBaseStack, indexUpdateForkStack);
+            viewSet.add((View) views.next().key);
           }
         }
+      }
+
+      for (View v: viewSet) {
+        updateViewTree
+          (v, indexBase, indexUpdateBaseStack, indexUpdateForkStack);
       }
     }
 
@@ -575,7 +588,9 @@ class MyRevisionBuilder implements RevisionBuilder {
     // indexes so we can do a diff later and use it to update them
 
     if (Node.pathFind(result.root, Constants.IndexTable,
-                      Constants.IndexTable.primaryKey, table) != Node.Null)
+                      Constants.IndexTable.primaryKey, table) != Node.Null
+        || Node.pathFind(result.root, Constants.ViewTable,
+                         Constants.ViewTable.primaryKey, table) != Node.Null)
     {
       dirtyIndexes = true;
 

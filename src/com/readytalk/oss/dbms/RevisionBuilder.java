@@ -110,6 +110,10 @@ public interface RevisionBuilder {
    */
   public void remove(Index index);
 
+  public void add(View view);
+
+  public void remove(View view);
+
   /**
    * Adds the specified foreign key constraint to this builder.  This
    * has no effect if the constraint is already present.
