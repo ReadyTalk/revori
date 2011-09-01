@@ -255,6 +255,12 @@ class Merge {
     // Node.dump(builder.result.root, System.out, 1);
     // System.out.println();
 
-    return builder.result;
+    if (base.diff(builder.result, true).next() == DiffResult.Type.End) {
+      return base;
+    } else if (left.diff(builder.result, true).next() == DiffResult.Type.End) {
+      return left;
+    } else {
+      return builder.result;
+    }
   }
 }

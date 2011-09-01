@@ -452,6 +452,8 @@ class MyRevisionBuilder implements RevisionBuilder {
       }
     }
 
+    // now, filter out rows which fail the query test if that test
+    // uses an aggregate function
     if (view.query.hasAggregates) {
       // todo: only do this if the query test has aggregates
 
