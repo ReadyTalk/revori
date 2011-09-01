@@ -34,8 +34,12 @@ class Merge {
     {
       return left;
     } else if (base.root == left.root) {
-      return right;
-    } 
+      if (left.diff(right, true).next() == DiffResult.Type.End) {
+        return left;
+      } else {
+        return right;
+      }
+    }
  
     // The merge builds a new revision starting with the specified
     // left revision via a process which consists of the following
