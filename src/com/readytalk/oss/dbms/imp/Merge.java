@@ -28,14 +28,14 @@ class Merge {
     // Node.dump(left.root, System.out, 0);
     // System.out.println("right:");
     // Node.dump(right.root, System.out, 0);
-   
-    if (base.root == left.root) {
-      return right;
-    } else if (base.root == right.root
-               || left.root == right.root)
+
+    if (base.root == right.root
+        || left.root == right.root)
     {
       return left;
-    }
+    } else if (base.root == left.root) {
+      return right;
+    } 
  
     // The merge builds a new revision starting with the specified
     // left revision via a process which consists of the following
@@ -255,10 +255,10 @@ class Merge {
     // Node.dump(builder.result.root, System.out, 1);
     // System.out.println();
 
-    if (base.diff(builder.result, true).next() == DiffResult.Type.End) {
-      return base;
-    } else if (left.diff(builder.result, true).next() == DiffResult.Type.End) {
+    if (left.diff(builder.result, true).next() == DiffResult.Type.End) {
       return left;
+    } else if (base.diff(builder.result, true).next() == DiffResult.Type.End) {
+      return base;
     } else {
       return builder.result;
     }
