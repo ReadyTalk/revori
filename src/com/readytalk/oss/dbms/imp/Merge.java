@@ -34,7 +34,7 @@ class Merge {
     {
       return left;
     } else if (base.root == left.root) {
-      if (left.diff(right, true).next() == DiffResult.Type.End) {
+      if (left.equals(right)) {
         return left;
       } else {
         return right;
@@ -259,9 +259,9 @@ class Merge {
     // Node.dump(builder.result.root, System.out, 1);
     // System.out.println();
 
-    if (left.diff(builder.result, true).next() == DiffResult.Type.End) {
+    if (left.equals(builder.result)) {
       return left;
-    } else if (base.diff(builder.result, true).next() == DiffResult.Type.End) {
+    } else if (base.equals(builder.result)) {
       return base;
     } else {
       return builder.result;

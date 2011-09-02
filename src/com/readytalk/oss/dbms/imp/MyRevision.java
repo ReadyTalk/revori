@@ -171,4 +171,12 @@ public class MyRevision implements Revision {
     pw.flush();
     return sw.toString();
   }
+  
+  public boolean equals(Object other) {
+    if(this == other) {
+      return true;
+    }
+    return (other instanceof MyRevision)
+      && diff((MyRevision)other, true).next() == DiffResult.Type.End;
+  }
 }
