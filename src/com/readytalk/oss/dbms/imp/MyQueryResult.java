@@ -112,7 +112,7 @@ class MyQueryResult implements QueryResult {
   }
 
   public Object nextItem() {
-    if (iterator == null || nextItemIndex > expressions.size()) {
+    if (iterator == null || nextItemIndex >= expressions.size()) {
       throw new NoSuchElementException();
     } else {
       return expressions.get(nextItemIndex++).evaluate(true);
