@@ -55,6 +55,18 @@ public class Protocol {
       }
     });
 
+    serializers.put(Float.class, new Serializer<Float>() {
+      public void writeTo(WriteContext context, Float v) throws IOException {
+        writeFloat(context.out, v);
+      }
+    });
+
+    deserializers.put(Float.class, new Deserializer<Float>() {
+      public Float readFrom(ReadContext context, Class<? extends Float> c) throws IOException {
+        return readFloat(context.in);
+      }
+    });
+
     serializers.put(Long.class, new Serializer<Long>() {
       public void writeTo(WriteContext context, Long v) throws IOException {
         writeLong(context.out, v);
@@ -404,6 +416,16 @@ public class Protocol {
     }
   }
 
+  public static void writeFloat(OutputStream out, float v)
+    throws IOException
+  {
+    int bits = Float.floatToIntBits(v);
+    out.write((bits >> 0) & 0xff);
+    out.write((bits >> 8) & 0xff);
+    out.write((bits >> 16) & 0xff);
+    out.write((bits >> 24) & 0xff);
+  }
+
   public static void writeLong(OutputStream out, long v)
     throws IOException
   {
@@ -486,6 +508,18 @@ public class Protocol {
     } else {
       return (b & 0x7F) | (readInteger(in) << 7);
     }
+  }
+
+  public static float readFloat(InputStream in)
+    throws IOException
+  {
+    int b0 = in.read();
+    int b1 = in.read();
+    int b2 = in.read();
+    int b3 = in.read();
+    
+    int bits = (b0 << 0) | (b1 << 8) | (b2 << 16) | (b3 << 24);
+    return Float.intBitsToFloat(bits);
   }
 
   public static long readLong(InputStream in)
