@@ -23,7 +23,7 @@ public class Aggregate<T> implements Expression {
     this.type = type;
     this.function = function;
     this.expressions = Collections.unmodifiableList
-      (new ArrayList(expressions));
+      (new ArrayList<Expression>(expressions));
 
     this.order = nextOrder.getAndIncrement();
 

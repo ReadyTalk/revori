@@ -2,9 +2,7 @@ package unittests;
 
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-
-import static com.readytalk.oss.dbms.util.Util.list;
+import static com.readytalk.oss.dbms.util.Util.cols;
 import static com.readytalk.oss.dbms.util.Util.set;
 import static com.readytalk.oss.dbms.DuplicateKeyResolution.Throw;
 import static com.readytalk.oss.dbms.DuplicateKeyResolution.Overwrite;
@@ -13,9 +11,7 @@ import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Index;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Revision;
-import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.RevisionBuilder;
-import com.readytalk.oss.dbms.ForeignKey;
 import com.readytalk.oss.dbms.ForeignKeyResolver;
 import com.readytalk.oss.dbms.ForeignKeyResolvers;
 import com.readytalk.oss.dbms.util.BufferOutputStream;
@@ -28,14 +24,15 @@ import com.readytalk.oss.dbms.server.protocol.Writable;
 import com.readytalk.oss.dbms.server.protocol.Readable;
 import com.readytalk.oss.dbms.server.protocol.WriteContext;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.io.IOException;
 import java.io.ByteArrayInputStream;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Set;
 
 import junit.framework.TestCase;
 
@@ -44,7 +41,7 @@ public class Epidemic extends TestCase{
     assertEquals(expected, actual);
   }
 
-  @Test
+  /*@Test
   public void testTwoNodeNetwork() {
     NodeNetwork network = new NodeNetwork();
     NodeConflictResolver conflictResolver = new MyConflictResolver();
@@ -119,11 +116,68 @@ public class Epidemic extends TestCase{
     expectEqual(n1.server.head().query(numbersKey, 3, number), 3);
     expectEqual(n2.server.head().query(numbersKey, 3, number), 3);
     expectEqual(observer.server.head().query(numbersKey, 3, number), 3);
+  }*/
+  
+  @Test
+  public void testFrequentUpdates() {
+
+    NodeNetwork network = new NodeNetwork();
+    NodeConflictResolver conflictResolver = new NoConflictResolver();
+    ForeignKeyResolver foreignKeyResolver = ForeignKeyResolvers.Delete;
+
+    Node n1 = new Node(conflictResolver, foreignKeyResolver, network, 1);
+    Node n2 = new Node(conflictResolver, foreignKeyResolver, network, 2);
+
+    n1.server.updateView(set(n2.id));
+    n2.server.updateView(set(n1.id));
+
+    Column<Integer> id = new Column<Integer>(Integer.class);
+    Column<Integer> value = new Column<Integer>(Integer.class);
+    Table valueTable = new Table(cols(id));
+    
+    flush(network);
+
+    Revision base = n1.server.head();
+    RevisionBuilder builder = base.builder();
+    
+    builder.insert(Throw, valueTable, 0, value, 0);
+
+    n1.server.merge(base, builder.commit());
+    
+    flush(network, n1.id);
+
+    base = n1.server.head();
+    builder = base.builder();
+    
+    builder.insert(Overwrite, valueTable, 0, value, 1);
+
+    n1.server.merge(base, builder.commit());
+    
+    flush(network, n1.id);
+    
+    base = n1.server.head();
+    builder = base.builder();
+    
+    builder.insert(Overwrite, valueTable, 0, value, 2);
+
+    n1.server.merge(base, builder.commit());
+    
+    flush(network, n2.id);
+    
+    flush(network);
+
+    Index valueKey = valueTable.primaryKey;
+    
+    expectEqual(n1.server.head().query(valueKey, 0, value), 2);
+    expectEqual(n2.server.head().query(valueKey, 0, value), 2);
   }
 
-  private static void flush(NodeNetwork network) {
+  private static void flush(NodeNetwork network, NodeID... dontDeliverTo) {
     final int MaxIterations = 100;
+    final Set<NodeID> ddt = new HashSet<NodeID>(Arrays.asList(dontDeliverTo));
     int iteration = 0;
+    System.out.println("-------flush-------");
+    List<Message> undelivered = new ArrayList<Message>();
     while (network.messages.size() > 0) {
       if (iteration++ > MaxIterations) {
         throw new RuntimeException("exceeded maximum iteration count");
@@ -133,27 +187,33 @@ public class Epidemic extends TestCase{
       network.messages.clear();
 
       for (Message m: messages) {
-        try {
-          Node source = network.nodes.get(m.source);
-          Node destination = network.nodes.get(m.destination);
-
-          BufferOutputStream buffer = new BufferOutputStream();
-          m.body.writeTo(new WriteContext(buffer));
-
-          Readable result = (Readable) m.body.getClass().newInstance();
-          result.readFrom
-            (new ReadContext(new ByteArrayInputStream(buffer.getBuffer(), 0, buffer.size())));
-
-          destination.server.accept(m.source, result);
-        } catch (InstantiationException e) {
-          throw new RuntimeException(e);
-        } catch (IllegalAccessException e) {
-          throw new RuntimeException(e);
-        } catch (IOException e) {
-          throw new RuntimeException(e);
+        if(ddt.contains(m.destination)) {
+          undelivered.add(m);
+        } else {
+          try {
+            Node source = network.nodes.get(m.source);
+            Node destination = network.nodes.get(m.destination);
+  
+            BufferOutputStream buffer = new BufferOutputStream();
+            m.body.writeTo(new WriteContext(buffer));
+  
+            Readable result = (Readable) m.body.getClass().newInstance();
+            result.readFrom
+              (new ReadContext(new ByteArrayInputStream(buffer.getBuffer(), 0, buffer.size())));
+  
+            destination.server.accept(m.source, result);
+          } catch (InstantiationException e) {
+            throw new RuntimeException(e);
+          } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
         }
       }
     }
+    System.out.println("-------done-------");
+    network.messages.addAll(undelivered);
   }
 
   private static class MyConflictResolver implements NodeConflictResolver {
@@ -171,6 +231,21 @@ public class Epidemic extends TestCase{
       } else {
         return rightValue;
       }
+    }    
+  }
+
+  private static class NoConflictResolver implements NodeConflictResolver {
+    public Object resolveConflict(NodeID leftNode,
+                                  NodeID rightNode,
+                                  Table table,
+                                  Column column,
+                                  Object[] primaryKeyValues,
+                                  Object baseValue,
+                                  Object leftValue,
+                                  Object rightValue)
+    {
+      fail("conflict encountered");
+      throw new UnsupportedOperationException();
     }    
   }
 

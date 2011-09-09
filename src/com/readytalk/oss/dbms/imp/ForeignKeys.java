@@ -186,7 +186,7 @@ class ForeignKeys {
     return list;
   }
 
-  private static void fillRow(Object[] row, List<Column> columns, Node tree) {
+  private static void fillRow(Object[] row, List<Column<?>> columns, Node tree) {
     for (int i = 0; i < row.length; ++i) {
       Node n = Node.find(tree, columns.get(i));
       row[i] = n == Node.Null ? null : n.value;

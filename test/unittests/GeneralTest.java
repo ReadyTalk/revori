@@ -5,8 +5,8 @@ import junit.framework.TestCase;
 import org.junit.Test;
 
 import static com.readytalk.oss.dbms.util.Util.list;
-import static org.junit.Assert.*;
-
+import static com.readytalk.oss.dbms.util.Util.cols;
+import static com.readytalk.oss.dbms.ExpressionFactory.reference;
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Revisions;
@@ -20,20 +20,18 @@ import com.readytalk.oss.dbms.DeleteTemplate;
 import com.readytalk.oss.dbms.UpdateTemplate;
 import com.readytalk.oss.dbms.Parameter;
 import com.readytalk.oss.dbms.Constant;
-import com.readytalk.oss.dbms.ColumnReference;
 import com.readytalk.oss.dbms.TableReference;
 import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
-import com.readytalk.oss.dbms.Expression;
 
 
 public class GeneralTest extends TestCase{
     @Test
     public void testSimpleInsertDiffs(){
-        Column number = new Column(Integer.class);
-        Column name = new Column(String.class);
-        Table numbers = new Table(list(number));
+        Column<Integer> number = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
+        Table numbers = new Table(cols(number));
         
         Revision tail = Revisions.Empty;
         
@@ -41,7 +39,7 @@ public class GeneralTest extends TestCase{
         
         PatchTemplate insert = new InsertTemplate
         (numbers,
-         list(number, name),
+         cols(number, name),
          list((Expression) new Parameter(), new Parameter()),
          DuplicateKeyResolution.Throw);
         
@@ -51,11 +49,11 @@ public class GeneralTest extends TestCase{
         
         TableReference numbersReference = new TableReference(numbers);
         QueryTemplate equal = new QueryTemplate
-        (list((Expression) new ColumnReference(numbersReference, name)),
+        (list(reference(numbersReference, name)),
                 numbersReference,
                 new BinaryOperation
                 (BinaryOperation.Type.Equal,
-                        new ColumnReference(numbersReference, number),
+                    reference(numbersReference, number),
                         new Parameter()));
         
         QueryResult result = tail.diff(first, equal, 42);
@@ -87,15 +85,15 @@ public class GeneralTest extends TestCase{
         }
     @Test
     public void testLargerInsertDiffs(){
-        Column number = new Column(Integer.class);
-        Column name = new Column(String.class);
-        Table numbers = new Table(list(number));
+        Column<Integer> number = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
+        Table numbers = new Table(cols(number));
         
         Revision tail = Revisions.Empty;
         
         PatchTemplate insert = new InsertTemplate
         (numbers,
-         list(number, name),
+         cols(number, name),
          list((Expression) new Parameter(), new Parameter()),
          DuplicateKeyResolution.Throw);
         
@@ -113,11 +111,11 @@ public class GeneralTest extends TestCase{
         TableReference numbersReference = new TableReference(numbers);
 
         QueryTemplate equal = new QueryTemplate
-        (list((Expression) new ColumnReference(numbersReference, name)),
+        (list(reference(numbersReference, name)),
                 numbersReference,
                 new BinaryOperation
                 (BinaryOperation.Type.Equal,
-                        new ColumnReference(numbersReference, number),
+                        reference(numbersReference, number),
                         new Parameter()));
         
         QueryResult result = tail.diff(first, equal, 42);
@@ -189,15 +187,15 @@ public class GeneralTest extends TestCase{
     @Test
     public void testDeleteDiffs(){
     
-    Column number = new Column(Integer.class);
-    Column name = new Column(String.class);
-    Table numbers = new Table(list(number));
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Table numbers = new Table(cols(number));
 
     Revision tail = Revisions.Empty;
 
     PatchTemplate insert = new InsertTemplate
       (numbers,
-       list(number, name),
+       cols(number, name),
        list((Expression) new Parameter(), new Parameter()),
        DuplicateKeyResolution.Throw);
 
@@ -214,18 +212,18 @@ public class GeneralTest extends TestCase{
 
     TableReference numbersReference = new TableReference(numbers);
     QueryTemplate equal = new QueryTemplate
-      (list((Expression) new ColumnReference(numbersReference, name)),
+      (list(reference(numbersReference, name)),
        numbersReference,
        new BinaryOperation
        (BinaryOperation.Type.Equal,
-        new ColumnReference(numbersReference, number),
+        reference(numbersReference, number),
         new Parameter()));
 
     PatchTemplate delete = new DeleteTemplate
       (numbersReference,
        new BinaryOperation
        (BinaryOperation.Type.Equal,
-        new ColumnReference(numbersReference, number),
+        reference(numbersReference, number),
         new Parameter()));
 
     builder = first.builder();
@@ -368,15 +366,15 @@ public class GeneralTest extends TestCase{
     
     @Test
     public void testUpdateDiffs(){
-        Column number = new Column(Integer.class);
-        Column name = new Column(String.class);
-        Table numbers = new Table(list(number));
+        Column<Integer> number = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
+        Table numbers = new Table(cols(number));
 
         Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
         (numbers,
-         list(number, name),
+         cols(number, name),
          list((Expression) new Parameter(), new Parameter()),
          DuplicateKeyResolution.Throw);
         
@@ -404,9 +402,9 @@ public class GeneralTest extends TestCase{
         (numbersReference,
          new BinaryOperation
          (BinaryOperation.Type.Equal,
-          new ColumnReference(numbersReference, number),
+          reference(numbersReference, number),
           new Parameter()),
-         list(name),
+         cols(name),
          list((Expression) new Parameter()));
 
         builder = first.builder();
@@ -416,11 +414,11 @@ public class GeneralTest extends TestCase{
         Revision second = builder.commit();
 
         QueryTemplate equal = new QueryTemplate
-        (list((Expression) new ColumnReference(numbersReference, name)),
+        (list(reference(numbersReference, name)),
                 numbersReference,
                 new BinaryOperation
                 (BinaryOperation.Type.Equal,
-                        new ColumnReference(numbersReference, number),
+                        reference(numbersReference, number),
                         new Parameter()));
 
         Object[] parameters = { 1 };
@@ -469,7 +467,7 @@ public class GeneralTest extends TestCase{
         Revision third = builder.commit();
 
         QueryTemplate any = new QueryTemplate
-        (list((Expression) new ColumnReference(numbersReference, name)),
+        (list(reference(numbersReference, name)),
                 numbersReference,
                 new Constant(true));
         Object[] parameters5 = {};
@@ -493,15 +491,15 @@ public class GeneralTest extends TestCase{
     
     @Test
     public void testNonIndexedQueries(){
-        Column number = new Column(Integer.class);
-        Column name = new Column(String.class);
-        Table numbers = new Table(list(number));
+        Column<Integer> number = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
+        Table numbers = new Table(cols(number));
 
         Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
-           list(number, name),
+           cols(number, name),
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
@@ -526,12 +524,12 @@ public class GeneralTest extends TestCase{
         TableReference numbersReference = new TableReference(numbers);
 
         QueryTemplate nameEqual = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, number),
-                (Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, number),
+                reference(numbersReference, name)),
            numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.Equal,
-            new ColumnReference(numbersReference, name),
+            reference(numbersReference, name),
             new Parameter()));
 
         Object[] parameters = { "nine" };
@@ -551,12 +549,12 @@ public class GeneralTest extends TestCase{
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
         QueryTemplate nameLessThan = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, number),
-                (Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, number),
+                reference(numbersReference, name)),
            numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.LessThan,
-            new ColumnReference(numbersReference, name),
+            reference(numbersReference, name),
             new Parameter()));
         Object[] parameters2 = { "nine" };
 
@@ -579,15 +577,15 @@ public class GeneralTest extends TestCase{
     
     @Test
     public void testIndexedColumnUpdates(){
-        Column number = new Column(Integer.class);
-        Column name = new Column(String.class);
-        Table numbers = new Table(list(number));
+        Column<Integer> number = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
+        Table numbers = new Table(cols(number));
 
         Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
-           list(number, name),
+           cols(number, name),
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
@@ -605,9 +603,9 @@ public class GeneralTest extends TestCase{
           (numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.Equal,
-            new ColumnReference(numbersReference, number),
+            reference(numbersReference, number),
             new Parameter()),
-           list(number),
+           cols(number),
            list((Expression) new Parameter()));
 
         builder = first.builder();
@@ -617,11 +615,11 @@ public class GeneralTest extends TestCase{
         Revision second = builder.commit();
 
         QueryTemplate numberEqual = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, name)),
            numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.Equal,
-            new ColumnReference(numbersReference, number),
+            reference(numbersReference, number),
             new Parameter()));
 
         Object[] parameters = { 4 };

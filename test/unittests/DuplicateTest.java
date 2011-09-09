@@ -4,7 +4,8 @@ import junit.framework.TestCase;
 import org.junit.Test;
 
 import static com.readytalk.oss.dbms.util.Util.list;
-import static org.junit.Assert.*;
+import static com.readytalk.oss.dbms.util.Util.cols;
+import static com.readytalk.oss.dbms.ExpressionFactory.reference;
 
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.Column;
@@ -29,15 +30,15 @@ public class DuplicateTest extends TestCase{
     
     @Test
     public void testDuplicateInsertsThrowAndOverwrite(){
-        Column number = new Column(Integer.class);
-        Column name = new Column(String.class);
-        Table numbers = new Table(list(number));
+        Column<Integer> number = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
+        Table numbers = new Table(cols(number));
 
         Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
-           list(number, name),
+           cols(number, name),
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
@@ -70,7 +71,7 @@ public class DuplicateTest extends TestCase{
 
         PatchTemplate insertOrUpdate = new InsertTemplate
           (numbers,
-           list(number, name),
+           cols(number, name),
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Overwrite);
 
@@ -81,7 +82,7 @@ public class DuplicateTest extends TestCase{
         TableReference numbersReference = new TableReference(numbers);
 
         QueryTemplate any = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, name)),
+          (list((Expression) reference(numbersReference, name)),
            numbersReference,
            new Constant(true));
 
@@ -100,15 +101,15 @@ public class DuplicateTest extends TestCase{
     
     @Test
     public void testDuplicateInsertsSkip(){
-        Column number = new Column(Integer.class);
-        Column name = new Column(String.class);
-        Table numbers = new Table(list(number));
+        Column<Integer> number = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
+        Table numbers = new Table(cols(number));
 
         Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
-           list(number, name),
+           cols(number, name),
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Skip);
 
@@ -122,8 +123,8 @@ public class DuplicateTest extends TestCase{
         
         TableReference numbersReference = new TableReference(numbers);
         QueryTemplate q1 = new QueryTemplate
-        (list((Expression) new ColumnReference(numbersReference, number), 
-        		new ColumnReference(numbersReference, name)),
+        (list(reference(numbersReference, number), 
+        		reference(numbersReference, name)),
          numbersReference,
          new Constant(true));
         
@@ -152,8 +153,8 @@ public class DuplicateTest extends TestCase{
         numbersReference = new TableReference(numbers);
 
         QueryTemplate any = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, number), 
-        		  (Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, number), 
+        		  reference(numbersReference, name)),
            numbersReference,
            new Constant(true));
 
@@ -183,15 +184,15 @@ public class DuplicateTest extends TestCase{
     
     @Test
     public void testDuplicateInsertsOverwrite(){
-        Column number = new Column(Integer.class);
-        Column name = new Column(String.class);
-        Table numbers = new Table(list(number));
+        Column<Integer> number = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
+        Table numbers = new Table(cols(number));
 
         Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
-           list(number, name),
+           cols(number, name),
            list((Expression) new Parameter(),
                 new Parameter()), DuplicateKeyResolution.Overwrite);
 
@@ -205,8 +206,8 @@ public class DuplicateTest extends TestCase{
         
         TableReference numbersReference = new TableReference(numbers);
         QueryTemplate q1 = new QueryTemplate
-        (list((Expression) new ColumnReference(numbersReference, number),
-        		new ColumnReference(numbersReference, name)),
+        (list(reference(numbersReference, number),
+        		reference(numbersReference, name)),
          numbersReference,
          new Constant(true));
         
@@ -235,8 +236,8 @@ public class DuplicateTest extends TestCase{
         numbersReference = new TableReference(numbers);
 
         QueryTemplate any = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, number), 
-        		  (Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, number), 
+        		  reference(numbersReference, name)),
            numbersReference,
            new Constant(true));
 
@@ -284,16 +285,16 @@ public class DuplicateTest extends TestCase{
     
     @Test
     public void testDuplicateInsertsMultiKeyThrow(){
-        Column number = new Column(Integer.class);
-        Column key = new Column(Integer.class);
-        Column name = new Column(String.class);
-        Table numbers = new Table(list(number, key));
+        Column<Integer> number = new Column<Integer>(Integer.class);
+        Column<Integer> key = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
+        Table numbers = new Table(cols(number, key));
 
         Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
-           list(number, name, key),
+           cols(number, name, key),
            list((Expression) new Parameter(), new Parameter(),
                 new Parameter()), DuplicateKeyResolution.Throw);
 
@@ -307,9 +308,9 @@ public class DuplicateTest extends TestCase{
         
         TableReference numbersReference = new TableReference(numbers);
         QueryTemplate q1 = new QueryTemplate
-        (list((Expression) new ColumnReference(numbersReference, number),
-        		new ColumnReference(numbersReference, name),
-        		new ColumnReference(numbersReference, key)),
+        (list(reference(numbersReference, number),
+        		reference(numbersReference, name),
+        		reference(numbersReference, key)),
          numbersReference,
          new Constant(true));
         
@@ -354,9 +355,9 @@ public class DuplicateTest extends TestCase{
         numbersReference = new TableReference(numbers);
 
         QueryTemplate any = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, number), 
-        		  (Expression) new ColumnReference(numbersReference, name),
-        		  (Expression) new ColumnReference(numbersReference, key)),
+          (list(reference(numbersReference, number), 
+        		  reference(numbersReference, name),
+        		  reference(numbersReference, key)),
            numbersReference,
            new Constant(true));
 
@@ -391,16 +392,16 @@ public class DuplicateTest extends TestCase{
     
     @Test
     public void testDuplicateInsertsMultiKeySkip(){
-        Column number = new Column(Integer.class);
-        Column key = new Column(Integer.class);
-        Column name = new Column(String.class);
-        Table numbers = new Table(list(number, key));
+        Column<Integer> number = new Column<Integer>(Integer.class);
+        Column<Integer> key = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
+        Table numbers = new Table(cols(number, key));
 
         Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
-           list(number, name, key),
+           cols(number, name, key),
            list((Expression) new Parameter(), new Parameter(),
                 new Parameter()), DuplicateKeyResolution.Skip);
 
@@ -414,9 +415,9 @@ public class DuplicateTest extends TestCase{
         
         TableReference numbersReference = new TableReference(numbers);
         QueryTemplate q1 = new QueryTemplate
-        (list((Expression) new ColumnReference(numbersReference, number),
-        		new ColumnReference(numbersReference, name),
-        		new ColumnReference(numbersReference, key)),
+        (list(reference(numbersReference, number),
+        		reference(numbersReference, name),
+        		reference(numbersReference, key)),
          numbersReference,
          new Constant(true));
         
@@ -448,9 +449,9 @@ public class DuplicateTest extends TestCase{
         numbersReference = new TableReference(numbers);
 
         QueryTemplate any = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, number), 
-        		  (Expression) new ColumnReference(numbersReference, name),
-        		  (Expression) new ColumnReference(numbersReference, key)),
+          (list(reference(numbersReference, number), 
+        		  reference(numbersReference, name),
+        		  reference(numbersReference, key)),
            numbersReference,
            new Constant(true));
 
@@ -485,16 +486,16 @@ public class DuplicateTest extends TestCase{
     
     @Test
     public void testDuplicateInsertsMultiKeyOverwrite(){
-        Column number = new Column(Integer.class);
-        Column key = new Column(Integer.class);
-        Column name = new Column(String.class);
-        Table numbers = new Table(list(number, key));
+        Column<Integer> number = new Column<Integer>(Integer.class);
+        Column<Integer> key = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
+        Table numbers = new Table(cols(number, key));
 
         Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
-           list(number, name, key),
+           cols(number, name, key),
            list((Expression) new Parameter(), new Parameter(),
                 new Parameter()), DuplicateKeyResolution.Overwrite);
 
@@ -508,9 +509,9 @@ public class DuplicateTest extends TestCase{
         
         TableReference numbersReference = new TableReference(numbers);
         QueryTemplate q1 = new QueryTemplate
-        (list((Expression) new ColumnReference(numbersReference, number),
-        		new ColumnReference(numbersReference, name),
-        		new ColumnReference(numbersReference, key)),
+        (list(reference(numbersReference, number),
+        		reference(numbersReference, name),
+        		reference(numbersReference, key)),
          numbersReference,
          new Constant(true));
         
@@ -542,9 +543,9 @@ public class DuplicateTest extends TestCase{
         numbersReference = new TableReference(numbers);
 
         QueryTemplate any = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, number), 
-        		  (Expression) new ColumnReference(numbersReference, name),
-        		  (Expression) new ColumnReference(numbersReference, key)),
+          (list(reference(numbersReference, number), 
+        		  reference(numbersReference, name),
+        		  reference(numbersReference, key)),
            numbersReference,
            new Constant(true));
 
@@ -604,15 +605,15 @@ public class DuplicateTest extends TestCase{
 
     @Test
     public void testDuplicateUpdates(){
-        Column number = new Column(Integer.class);
-        Column name = new Column(String.class);
-        Table numbers = new Table(list(number));
+        Column<Integer> number = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
+        Table numbers = new Table(cols(number));
 
         Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
-           list(number, name),
+           cols(number, name),
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
@@ -630,9 +631,9 @@ public class DuplicateTest extends TestCase{
           (numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.Equal,
-            new ColumnReference(numbersReference, number),
+            reference(numbersReference, number),
             new Parameter()),
-           list(number),
+           cols(number),
            list((Expression) new Parameter()));
 
         try {
@@ -654,8 +655,8 @@ public class DuplicateTest extends TestCase{
         Revision second = builder.commit();
 
         QueryTemplate any = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, number),
-                (Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, number),
+                reference(numbersReference, name)),
            numbersReference,
            new Constant(true));
 

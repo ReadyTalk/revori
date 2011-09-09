@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.HashMap;
 
 class SourceAdapterFactory {
-  public static final Map<Class, Factory> factories = new HashMap();
+  public static final Map<Class<?>, Factory> factories = new HashMap<Class<?>, Factory>();
 
   static {
     factories.put(TableReference.class, new Factory() {

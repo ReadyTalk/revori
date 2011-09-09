@@ -1,5 +1,6 @@
 package com.readytalk.oss.dbms;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
 import java.util.Arrays;
@@ -9,7 +10,7 @@ public final class ColumnList {
   /**
    * The columns that this Row will contain values for.
    */
-  public final List<Column> columns;
+  public final List<Column<?>> columns;
 
   /**
    * This allows the DBMS implementation to attach some data
@@ -20,12 +21,12 @@ public final class ColumnList {
    */
   public Object impData;
 
-  public ColumnList(List<Column> columns) {
+  public ColumnList(List<Column<?>> columns) {
     this.columns = Collections.unmodifiableList(columns);
   }
 
-  public ColumnList(Column... columns) {
-    this.columns = Collections.unmodifiableList(Arrays.asList(columns));
+  public ColumnList(Column<?>... columns) {
+    this.columns = Collections.unmodifiableList(new ArrayList<Column<?>>(Arrays.asList(columns)));
   }
 
 }

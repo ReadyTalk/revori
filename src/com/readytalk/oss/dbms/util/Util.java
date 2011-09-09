@@ -7,6 +7,8 @@ import java.util.HashSet;
 import java.util.Collection;
 import java.util.Iterator;
 
+import com.readytalk.oss.dbms.Column;
+
 public class Util {
   private static final boolean Debug = true;
 
@@ -15,7 +17,7 @@ public class Util {
   }
 
   public static <T> List<T> appendToList(List<T> list, T[] elements) {
-    List<T> result = new ArrayList(list.size() + elements.length);
+    List<T> result = new ArrayList<T>(list.size() + elements.length);
     result.addAll(list);
     for (T o: elements) result.add(o);
     return result;
@@ -25,8 +27,12 @@ public class Util {
     return toList(elements);
   }
 
+  public static List<Column<?>> cols(Column<?> ... elements) {
+    return toList(elements);
+  }
+
   public static <T> List<T> toList(T[] elements) {
-    List<T> list = new ArrayList(elements.length);
+    List<T> list = new ArrayList<T>(elements.length);
     for (T o: elements) list.add(o);
     return list;
   }
@@ -36,13 +42,13 @@ public class Util {
   }
 
   public static <T> Set<T> toSet(T[] elements) {
-    Set<T> set = new HashSet(elements.length);
+    Set<T> set = new HashSet<T>(elements.length);
     for (T o: elements) set.add(o);
     return set;
   }
 
   public static <T> Set<T> union(Collection<T> ... sets) {
-    Set<T> set = new HashSet();
+    Set<T> set = new HashSet<T>();
     for (Collection<T> s: sets) {
       set.addAll(s);
     }
@@ -61,16 +67,16 @@ public class Util {
     return copy;
   }
 
-  public static int compare(Collection<? extends Comparable> a,
-                            Collection<? extends Comparable> b)
+  public static <T extends Comparable<T>> int compare(Collection<T> a,
+                            Collection<T> b)
   {
     int d = a.size() - b.size();
     if (d != 0) {
       return d;
     }
 
-    Iterator<? extends Comparable> ai = a.iterator();
-    Iterator<? extends Comparable> bi = b.iterator();
+    Iterator<T> ai = a.iterator();
+    Iterator<T> bi = b.iterator();
     while (ai.hasNext()) {
       d = ai.next().compareTo(bi.next());
       if (d != 0) {

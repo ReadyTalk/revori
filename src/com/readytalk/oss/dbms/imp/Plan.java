@@ -5,8 +5,6 @@ import static com.readytalk.oss.dbms.util.Util.list;
 import com.readytalk.oss.dbms.TableReference;
 import com.readytalk.oss.dbms.Index;
 import com.readytalk.oss.dbms.Column;
-import com.readytalk.oss.dbms.Expression;
-import com.readytalk.oss.dbms.ExpressionVisitor;
 
 class Plan {
   public final Index index;
@@ -28,7 +26,7 @@ class Plan {
   private static ColumnReferenceAdapter findColumnReference
     (ExpressionAdapter expression,
      TableReference tableReference,
-     Column column)
+     Column<?> column)
   {
     ColumnReferenceFinder finder = new ColumnReferenceFinder
       (tableReference, column);
@@ -44,7 +42,7 @@ class Plan {
     Plan plan = new Plan(index);
 
     for (int i = 0; i < plan.size; ++i) {
-      Column column = index.columns.get(i);
+      Column<?> column = index.columns.get(i);
 
       ColumnReferenceAdapter reference = findColumnReference
         (test, tableReference, column);
@@ -141,11 +139,11 @@ class Plan {
     implements ExpressionAdapterVisitor
   {
     public final TableReference tableReference;
-    public final Column column;
+    public final Column<?> column;
     public ColumnReferenceAdapter reference;
 
     public ColumnReferenceFinder(TableReference tableReference,
-                                 Column column)
+                                 Column<?> column)
     {
       this.tableReference = tableReference;
       this.column = column;

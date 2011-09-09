@@ -25,17 +25,17 @@ public final class Index implements Comparable<Index> {
    * are added to the end of the original list to ensure each row maps
    * to a unique key in the index.
    */
-  public final List<Column> columns;
+  public final List<Column<?>> columns;
 
   /**
    * Defines an index which is associated with the specified list of
    * columns.  The order of the list determines the indexing order as
    * in an SQL DBMS.
    */
-  public Index(Table table, List<Column> columns) {
+  public Index(Table table, List<Column<?>> primaryKey) {
     this.table = table;
 
-    List<Column> copy = new ArrayList<Column>(columns);
+    List<Column<?>> copy = new ArrayList<Column<?>>(primaryKey);
 
     if (table.primaryKey != null) {
       // pad index with primary key columns to make it unique
@@ -55,8 +55,8 @@ public final class Index implements Comparable<Index> {
       return d;
     }
 
-    Iterator<Column> ti = columns.iterator();
-    Iterator<Column> oi = o.columns.iterator();
+    Iterator<Column<?>> ti = columns.iterator();
+    Iterator<Column<?>> oi = o.columns.iterator();
     while (ti.hasNext()) {
       d = ti.next().compareTo(oi.next());
       if (d != 0) {

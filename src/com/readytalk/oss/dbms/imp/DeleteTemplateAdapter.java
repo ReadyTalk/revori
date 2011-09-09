@@ -40,7 +40,7 @@ class DeleteTemplateAdapter implements PatchTemplateAdapter {
       (delete.tableReference, MyRevision.Empty, NodeStack.Null, revision,
        new NodeStack(), test, expressionContext, plan, false);
 
-    List<Column> keyColumns = index.columns;
+    List<Column<?>> keyColumns = index.columns;
 
     Object deleteToken = index.equals(plan.index) ? null : builder.token;
 

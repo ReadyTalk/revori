@@ -5,7 +5,9 @@ import junit.framework.TestCase;
 import org.junit.Test;
 
 import static com.readytalk.oss.dbms.util.Util.list;
-import static org.junit.Assert.*;
+import static com.readytalk.oss.dbms.util.Util.cols;
+
+import static com.readytalk.oss.dbms.ExpressionFactory.reference;
 
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.Column;
@@ -20,25 +22,24 @@ import com.readytalk.oss.dbms.TableReference;
 import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.Parameter;
-import com.readytalk.oss.dbms.ColumnReference;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
 
 public class IndexesTest extends TestCase{
     
     @Test
     public void testMultiLevelIndexes(){
-        Column country = new Column(String.class);
-        Column state = new Column(String.class);
-        Column city = new Column(String.class);
-        Column zip = new Column(Integer.class);
-        Column color = new Column(String.class);
-        Table places = new Table(list(country, state, city));
+        Column<String> country = new Column<String>(String.class);
+        Column<String> state = new Column<String>(String.class);
+        Column<String> city = new Column<String>(String.class);
+        Column<Integer> zip = new Column<Integer>(Integer.class);
+        Column<String> color = new Column<String>(String.class);
+        Table places = new Table(cols(country, state, city));
 
         Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (places,
-           list(country, state, city, zip, color),
+           cols(country, state, city, zip, color),
            list((Expression) new Parameter(),
                 new Parameter(),
                 new Parameter(),
@@ -67,12 +68,12 @@ public class IndexesTest extends TestCase{
         TableReference placesReference = new TableReference(places);
 
         QueryTemplate stateEqual = new QueryTemplate
-          (list((Expression) new ColumnReference(placesReference, color),
-                (Expression) new ColumnReference(placesReference, zip)),
+          (list(reference(placesReference, color),
+                reference(placesReference, zip)),
            placesReference,
            new BinaryOperation
            (BinaryOperation.Type.Equal,
-            new ColumnReference(placesReference, state),
+            reference(placesReference, state),
             new Parameter()));
         Object[] parameters = { "Colorado" };
 
@@ -115,12 +116,12 @@ public class IndexesTest extends TestCase{
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
         QueryTemplate countryEqual = new QueryTemplate
-          (list((Expression) new ColumnReference(placesReference, color),
-                (Expression) new ColumnReference(placesReference, city)),
+          (list(reference(placesReference, color),
+                reference(placesReference, city)),
            placesReference,
            new BinaryOperation
            (BinaryOperation.Type.Equal,
-            new ColumnReference(placesReference, country),
+            reference(placesReference, country),
             new Parameter()));
         Object[] parameters3 = { "France" };
 
@@ -143,8 +144,8 @@ public class IndexesTest extends TestCase{
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
         QueryTemplate countryStateCityEqual = new QueryTemplate
-          (list((Expression) new ColumnReference(placesReference, color),
-                (Expression) new ColumnReference(placesReference, city)),
+          (list(reference(placesReference, color),
+                reference(placesReference, city)),
            placesReference,
            new BinaryOperation
            (BinaryOperation.Type.And,
@@ -152,15 +153,15 @@ public class IndexesTest extends TestCase{
             (BinaryOperation.Type.And,
              new BinaryOperation
              (BinaryOperation.Type.Equal,
-              new ColumnReference(placesReference, country),
+              reference(placesReference, country),
               new Parameter()),
              new BinaryOperation
              (BinaryOperation.Type.Equal,
-              new ColumnReference(placesReference, state),
+              reference(placesReference, state),
               new Parameter())),
             new BinaryOperation
             (BinaryOperation.Type.Equal,
-             new ColumnReference(placesReference, city),
+             reference(placesReference, city),
              new Parameter())));
         Object[] parameters5 = { "France", "Colorado", "Paris" };
 

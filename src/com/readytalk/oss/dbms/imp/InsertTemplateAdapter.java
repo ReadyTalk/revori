@@ -21,12 +21,12 @@ class InsertTemplateAdapter implements PatchTemplateAdapter {
 
     ExpressionContext expressionContext = new ExpressionContext(parameters);
 
-    Map<Column, Object> map = new HashMap();
+    Map<Column<?>, Object> map = new HashMap<Column<?>, Object>();
     { int index = 0;
-      Iterator<Column> columnIterator = insert.columns.iterator();
+      Iterator<Column<?>> columnIterator = insert.columns.iterator();
       Iterator<Expression> valueIterator = insert.values.iterator();
       while (columnIterator.hasNext()) {
-        Column column = columnIterator.next();
+        Column<?> column = columnIterator.next();
 
         map.put
           (column, Compare.validate
@@ -40,7 +40,7 @@ class InsertTemplateAdapter implements PatchTemplateAdapter {
       
     Node tree = Node.Null;
     Node.BlazeResult result = new Node.BlazeResult();
-    for (Column c: insert.columns) {
+    for (Column<?> c: insert.columns) {
       tree = Node.blaze(result, builder.token, builder.stack, tree, c);
       result.node.value = map.get(c);
     }
@@ -52,7 +52,7 @@ class InsertTemplateAdapter implements PatchTemplateAdapter {
     builder.setKey(Constants.TableDataDepth, insert.table);
     builder.setKey(Constants.IndexDataDepth, index);
 
-    List<Column> columns = index.columns;
+    List<Column<?>> columns = index.columns;
     int i;
     for (i = 0; i < columns.size() - 1; ++i) {
       builder.setKey

@@ -21,7 +21,7 @@ public final class InsertTemplate implements PatchTemplate {
   /**
    * An immutable list of columns for which values are to be inserted.
    */
-  public final List<Column> columns;
+  public final List<Column<?>> columns;
 
   /**
    * An immutable list of expressions which, when resolved, yield the
@@ -47,12 +47,12 @@ public final class InsertTemplate implements PatchTemplate {
    * the specified DuplicateKeyResolution.
    */
   public InsertTemplate(Table table,
-                        List<Column> columns,
+                        List<Column<?>> columns,
                         List<Expression> values,
                         DuplicateKeyResolution duplicateKeyResolution)
   {
     this.table = table;
-    this.columns = Collections.unmodifiableList(new ArrayList<Column>(columns));
+    this.columns = Collections.unmodifiableList(new ArrayList<Column<?>>(columns));
     this.values = Collections.unmodifiableList(new ArrayList<Expression>(values));
     this.duplicateKeyResolution = duplicateKeyResolution;
     this.parameterCount = ParameterCounter.countParameters(this.values);

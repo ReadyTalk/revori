@@ -27,7 +27,7 @@ public final class UpdateTemplate implements PatchTemplate {
   /**
    * An immutable list of columns for which values are to be updated.
    */
-  public final List<Column> columns;
+  public final List<Column<?>> columns;
 
   /**
    * An immutable list of expressions which, when resolved, yield the
@@ -45,13 +45,13 @@ public final class UpdateTemplate implements PatchTemplate {
    */
   public UpdateTemplate(TableReference tableReference,
                         Expression test,
-                        List<Column> columns,
+                        List<Column<?>> columns,
                         List<Expression> values)
   {
     this.tableReference = tableReference;
     this.test = test;
-    this.columns = Collections.unmodifiableList(new ArrayList(columns));
-    this.values = Collections.unmodifiableList(new ArrayList(values));
+    this.columns = Collections.unmodifiableList(new ArrayList<Column<?>>(columns));
+    this.values = Collections.unmodifiableList(new ArrayList<Expression>(values));
     this.parameterCount = ParameterCounter.countParameters
       (append(this.values, test));
 

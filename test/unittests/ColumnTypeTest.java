@@ -5,6 +5,8 @@ import junit.framework.TestCase;
 import org.junit.Test;
 
 import static com.readytalk.oss.dbms.util.Util.list;
+import static com.readytalk.oss.dbms.util.Util.cols;
+import static com.readytalk.oss.dbms.ExpressionFactory.reference;
 
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.Column;
@@ -25,15 +27,15 @@ import com.readytalk.oss.dbms.DuplicateKeyResolution;
 public class ColumnTypeTest extends TestCase{
    @Test
    public void testColumnTypes(){
-	    Column number = new Column(Integer.class);
-	    Column name = new Column(String.class);
-	    Table numbers = new Table(list(number));
+	    Column<Integer> number = new Column<Integer>(Integer.class);
+	    Column<String> name = new Column<String>(String.class);
+	    Table numbers = new Table(cols(number));
 
 	    Revision tail = Revisions.Empty;
 
 	    PatchTemplate insert = new InsertTemplate
 	      (numbers,
-	       list(number, name),
+	          cols(number, name),
 	       list((Expression) new Parameter(), new Parameter()),
                DuplicateKeyResolution.Throw);
 
@@ -59,9 +61,9 @@ public class ColumnTypeTest extends TestCase{
 	      (numbersReference,
 	       new BinaryOperation
 	       (BinaryOperation.Type.Equal,
-	        new ColumnReference(numbersReference, number),
+	        reference(numbersReference, number),
 	        new Parameter()),
-	       list(name),
+	        cols(name),
 	       list((Expression) new Parameter()));
 
 	    try {

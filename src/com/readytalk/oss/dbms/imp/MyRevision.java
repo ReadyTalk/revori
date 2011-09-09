@@ -48,16 +48,16 @@ public class MyRevision implements Revision {
         ("expected index as first element of path");        
     }
 
-    List<Column> columns = index.columns;
+    List<Column<?>> columns = index.columns;
 
     if (pathLength != columns.size() + 2) {
       throw new IllegalArgumentException
         ("wrong number of parameters for specified index");
     }
 
-    Column column;
+    Column<?> column;
     try {
-      column = (Column) path[pathOffset + columns.size() + 1];
+      column = (Column<?>) path[pathOffset + columns.size() + 1];
     } catch (ClassCastException e) {
       throw new IllegalArgumentException
         ("expected column as second-to-last element of path");        

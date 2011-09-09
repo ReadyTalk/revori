@@ -6,11 +6,11 @@ import com.readytalk.oss.dbms.ExpressionVisitor;
 
 class ColumnReferenceAdapter implements ExpressionAdapter {
   public final TableReference tableReference;
-  public final Column column;
+  public final Column<?> column;
   public Object value = Compare.Undefined;
 
   public ColumnReferenceAdapter(TableReference tableReference,
-                                Column column)
+                                Column<?> column)
   {
     this.tableReference = tableReference;
     this.column = column;

@@ -1,9 +1,11 @@
 package com.readytalk.oss.dbms.server;
 
 import static com.readytalk.oss.dbms.util.Util.list;
+import static com.readytalk.oss.dbms.util.Util.cols;
 import static com.readytalk.oss.dbms.util.Util.set;
 
-import com.readytalk.oss.dbms.util.Util;
+import static com.readytalk.oss.dbms.ExpressionFactory.reference;
+
 import com.readytalk.oss.dbms.util.BufferOutputStream;
 import com.readytalk.oss.dbms.server.protocol.Stringable;
 import com.readytalk.oss.dbms.BinaryOperation.Type;
@@ -11,7 +13,6 @@ import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.TableReference;
 import com.readytalk.oss.dbms.Column;
-import com.readytalk.oss.dbms.Index;
 import com.readytalk.oss.dbms.ColumnReference;
 import com.readytalk.oss.dbms.Source;
 import com.readytalk.oss.dbms.Expression;
@@ -28,14 +29,10 @@ import com.readytalk.oss.dbms.Parameter;
 import com.readytalk.oss.dbms.Constant;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
 import com.readytalk.oss.dbms.InsertTemplate;
-import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.DeleteTemplate;
 import com.readytalk.oss.dbms.UpdateTemplate;
-import com.readytalk.oss.dbms.ForeignKey;
-import com.readytalk.oss.dbms.ForeignKeyResolver;
 import com.readytalk.oss.dbms.ForeignKeyResolvers;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
@@ -113,7 +110,7 @@ public class SQLServer implements RevisionServer {
     });
 
     validators.put(UnaryOperation.class, new Validator<UnaryOperation>() {
-      public Expression validate(Class type, UnaryOperation expression) {
+      public Expression validate(Class<UnaryOperation> type, UnaryOperation expression) {
         switch (expression.type.operationClass()) {
         case Boolean: {
           Expression operand = SQLServer.validate
@@ -133,7 +130,7 @@ public class SQLServer implements RevisionServer {
     });
 
     validators.put(BinaryOperation.class, new Validator<BinaryOperation>() {
-      public Expression validate(Class type, BinaryOperation expression) {
+      public Expression validate(Class<BinaryOperation> type, BinaryOperation expression) {
         Expression left = SQLServer.validate(null, expression.leftOperand);
         Expression right = SQLServer.validate
           (left.typeConstraint(), expression.rightOperand);
@@ -153,7 +150,7 @@ public class SQLServer implements RevisionServer {
   }
 
   private interface Validator<T extends Expression> {
-    public Expression validate(Class type, T expression);
+    public Expression validate(Class<T> type, T expression);
   }
 
   private static class Server {
@@ -170,9 +167,9 @@ public class SQLServer implements RevisionServer {
     public final PatchTemplate deleteDatabaseTables;
     public final PatchTemplate deleteTable;
 
-    public final Column tagsDatabase;
-    public final Column tagsName;
-    public final Column tagsTag;
+    public final Column<String> tagsDatabase;
+    public final Column<String> tagsName;
+    public final Column<Object> tagsTag;
     public final Table tags;
 
     public final PatchTemplate insertOrUpdateTag;
@@ -225,76 +222,74 @@ public class SQLServer implements RevisionServer {
       (conflictResolver, ForeignKeyResolvers.Delete);
 
     public Server() {
-      Column databasesName = new Column(String.class);
-      Column databasesDatabase = new Column(Object.class);
-      Table databases = new Table(list(databasesName));
+      Column<String> databasesName = new Column<String>(String.class);
+      Column<Object> databasesDatabase = new Column<Object>(Object.class);
+      Table databases = new Table(cols(databasesName));
       TableReference databasesReference = new TableReference(databases);
 
       this.insertOrUpdateDatabase = new InsertTemplate
-        (databases, list(databasesName, databasesDatabase),
+        (databases, cols(databasesName, databasesDatabase),
          list((Expression) new Parameter(), new Parameter()),
          DuplicateKeyResolution.Overwrite);
 
       this.listDatabases = new QueryTemplate
-        (list((Expression) new ColumnReference
-              (databasesReference, databasesDatabase)),
+        (list(reference(databasesReference, databasesDatabase)),
          databasesReference,
          new Constant(true));
 
       this.findDatabase = new QueryTemplate
-        (list((Expression) new ColumnReference
-              (databasesReference, databasesDatabase)),
+        (list(reference(databasesReference, databasesDatabase)),
          databasesReference,
          new BinaryOperation
          (BinaryOperation.Type.Equal,
-          new ColumnReference(databasesReference, databasesName),
+          reference(databasesReference, databasesName),
           new Parameter()));
 
       this.deleteDatabase = new DeleteTemplate
         (databasesReference,
          new BinaryOperation
          (BinaryOperation.Type.Equal,
-          new ColumnReference(databasesReference, databasesName),
+          reference(databasesReference, databasesName),
           new Parameter()));
 
-      Column tablesDatabase = new Column(String.class);
-      Column tablesName = new Column(String.class);
-      Column tablesTable = new Column(Object.class);
-      Table tables = new Table(list(tablesDatabase, tablesName));
+      Column<String> tablesDatabase = new Column<String>(String.class);
+      Column<String> tablesName = new Column<String>(String.class);
+      Column<Object> tablesTable = new Column<Object>(Object.class);
+      Table tables = new Table(cols(tablesDatabase, tablesName));
       TableReference tablesReference = new TableReference(tables);
 
       this.insertOrUpdateTable = new InsertTemplate
-        (tables, list(tablesDatabase, tablesName, tablesTable),
+        (tables, cols(tablesDatabase, tablesName, tablesTable),
          list((Expression) new Parameter(), new Parameter(), new Parameter()),
          DuplicateKeyResolution.Overwrite);
 
       this.listTables = new QueryTemplate
-        (list((Expression) new ColumnReference(tablesReference, tablesTable)),
+        (list(reference(tablesReference, tablesTable)),
          tablesReference,
          new BinaryOperation
          (BinaryOperation.Type.Equal,
-          new ColumnReference(tablesReference, tablesDatabase),
+          reference(tablesReference, tablesDatabase),
           new Parameter()));
 
       this.findTable = new QueryTemplate
-        (list((Expression) new ColumnReference(tablesReference, tablesTable)),
+        (list(reference(tablesReference, tablesTable)),
          tablesReference,
          new BinaryOperation
          (BinaryOperation.Type.And,
           new BinaryOperation
           (BinaryOperation.Type.Equal,
-           new ColumnReference(tablesReference, tablesDatabase),
+           reference(tablesReference, tablesDatabase),
            new Parameter()),
           new BinaryOperation
           (BinaryOperation.Type.Equal,
-           new ColumnReference(tablesReference, tablesName),
+           reference(tablesReference, tablesName),
            new Parameter())));
 
       this.deleteDatabaseTables = new DeleteTemplate
         (tablesReference,
          new BinaryOperation
          (BinaryOperation.Type.Equal,
-          new ColumnReference(tablesReference, tablesDatabase),
+          reference(tablesReference, tablesDatabase),
           new Parameter()));
 
       this.deleteTable = new DeleteTemplate
@@ -303,51 +298,51 @@ public class SQLServer implements RevisionServer {
          (BinaryOperation.Type.And,
           new BinaryOperation
           (BinaryOperation.Type.Equal,
-           new ColumnReference(tablesReference, tablesDatabase),
+           reference(tablesReference, tablesDatabase),
            new Parameter()),
           new BinaryOperation
           (BinaryOperation.Type.Equal,
-           new ColumnReference(tablesReference, tablesName),
+           reference(tablesReference, tablesName),
            new Parameter())));
 
-      this.tagsDatabase = new Column(String.class);
-      this.tagsName = new Column(String.class);
-      this.tagsTag = new Column(Object.class);
-      this.tags = new Table(list(tagsDatabase, tagsName));
+      this.tagsDatabase = new Column<String>(String.class);
+      this.tagsName = new Column<String>(String.class);
+      this.tagsTag = new Column<Object>(Object.class);
+      this.tags = new Table(cols(tagsDatabase, tagsName));
       TableReference tagsReference = new TableReference(tags);
 
       this.insertOrUpdateTag = new InsertTemplate
-        (tags, list(tagsDatabase, tagsName, tagsTag),
+        (tags, cols(tagsDatabase, tagsName, tagsTag),
          list((Expression) new Parameter(), new Parameter(), new Parameter()),
          DuplicateKeyResolution.Overwrite);
 
       this.listTags = new QueryTemplate
-        (list((Expression) new ColumnReference(tagsReference, tagsTag)),
+        (list(reference(tagsReference, tagsTag)),
          tagsReference,
          new BinaryOperation
          (BinaryOperation.Type.Equal,
-          new ColumnReference(tagsReference, tagsDatabase),
+          reference(tagsReference, tagsDatabase),
           new Parameter()));
 
       this.findTag = new QueryTemplate
-        (list((Expression) new ColumnReference(tagsReference, tagsTag)),
+        (list(reference(tagsReference, tagsTag)),
          tagsReference,
          new BinaryOperation
          (BinaryOperation.Type.And,
           new BinaryOperation
           (BinaryOperation.Type.Equal,
-           new ColumnReference(tagsReference, tagsDatabase),
+           reference(tagsReference, tagsDatabase),
            new Parameter()),
           new BinaryOperation
           (BinaryOperation.Type.Equal,
-           new ColumnReference(tagsReference, tagsName),
+           reference(tagsReference, tagsName),
            new Parameter())));
 
       this.deleteDatabaseTags = new DeleteTemplate
         (tagsReference,
          new BinaryOperation
          (BinaryOperation.Type.Equal,
-          new ColumnReference(tagsReference, tagsDatabase),
+          reference(tagsReference, tagsDatabase),
           new Parameter()));
 
       this.deleteTag = new DeleteTemplate
@@ -356,11 +351,11 @@ public class SQLServer implements RevisionServer {
          (BinaryOperation.Type.And,
           new BinaryOperation
           (BinaryOperation.Type.Equal,
-           new ColumnReference(tagsReference, tagsDatabase),
+           reference(tagsReference, tagsDatabase),
            new Parameter()),
           new BinaryOperation
           (BinaryOperation.Type.Equal,
-           new ColumnReference(tagsReference, tagsName),
+           reference(tagsReference, tagsName),
            new Parameter())));
 
       binaryOperationTypes.put("and", BinaryOperation.Type.And);
@@ -896,7 +891,7 @@ public class SQLServer implements RevisionServer {
       for (MyTableReference tableReference: tableReferences) {
         for (MyColumn column: tableReference.table.columnList) {
           expressions.add
-            (new ColumnReference(tableReference.reference, column.column));
+            (reference(tableReference.reference, column.column));
         }
       }
     } else {
@@ -962,21 +957,21 @@ public class SQLServer implements RevisionServer {
     }
   }
 
-  private static List<Column> makeColumnList(MyTable table,
+  private static List<Column<?>> makeColumnList(MyTable table,
                                                   Tree tree)
   {
-    List<Column> columns = new ArrayList<Column>(tree.length());
+    List<Column<?>> columns = new ArrayList<Column<?>>(tree.length());
     for (int i = 0; i < tree.length(); ++i) {
       columns.add(findColumn(table, ((Name) tree.get(i)).value).column);
     }
     return columns;
   }
 
-  private static List<Column> makeOptionalColumnList(MyTable table,
+  private static List<Column<?>> makeOptionalColumnList(MyTable table,
                                                           Tree tree)
   {
     if (tree == Nothing) {
-      List<Column> columns = new ArrayList<Column>(table.columnList.size());
+      List<Column<?>> columns = new ArrayList<Column<?>>(table.columnList.size());
       for (MyColumn c: table.columnList) {
         columns.add(c.column);
       }
@@ -991,7 +986,7 @@ public class SQLServer implements RevisionServer {
   {
     MyTable table = findTable(client, ((Name) tree.get(2)).value);
 
-    List<Column> columns = makeOptionalColumnList(table, tree.get(3));
+    List<Column<?>> columns = makeOptionalColumnList(table, tree.get(3));
     List<Expression> rawValues = makeExpressionList
       (client.server, tree.get(6), null);
 
@@ -999,7 +994,7 @@ public class SQLServer implements RevisionServer {
       throw new RuntimeException("column count and value count do not match");
     }
 
-    List<Expression> values = new ArrayList(rawValues.size());
+    List<Expression> values = new ArrayList<Expression>(rawValues.size());
     for (int i = 0; i < columns.size(); ++i) {
       values.add(validate(columns.get(i).type, rawValues.get(i)));
     }
@@ -1017,11 +1012,11 @@ public class SQLServer implements RevisionServer {
     List<MyTableReference> tableReferences = list(tableReference);
 
     Tree operations = tree.get(3);
-    List<Column> columns = new ArrayList<Column>();
+    List<Column<?>> columns = new ArrayList<Column<?>>();
     List<Expression> values = new ArrayList<Expression>();
     for (int i = 0; i < operations.length(); ++i) {
       Tree operation = operations.get(i);
-      Column column = findColumn
+      Column<?> column = findColumn
         (table, ((Name) operation.get(0)).value).column;
       columns.add(column);
       values.add
@@ -1065,7 +1060,7 @@ public class SQLServer implements RevisionServer {
   {
     MyTable table = findTable(client, ((Name) tree.get(1)).value);
 
-    List<Column> columns = makeOptionalColumnList(table, tree.get(2));
+    List<Column<?>> columns = makeOptionalColumnList(table, tree.get(2));
     List<Expression> values = new ArrayList<Expression>(columns.size());
     for (Column<?> c: columns) {
       values.add(new Parameter());
@@ -1113,8 +1108,8 @@ public class SQLServer implements RevisionServer {
     List<MyColumn> columnList = new ArrayList<MyColumn>(columns.size());
     Map<String, MyColumn> columnMap = new HashMap<String, MyColumn>(columns.size());
     for (Tree column: columns) {
-      Class type = findColumnType(server, ((Terminal) column.get(1)).value);
-      Column dbmsColumn = new Column(type);
+      Class<?> type = findColumnType(server, ((Terminal) column.get(1)).value);
+      Column<?> dbmsColumn = new Column(type);
   
       MyColumn myColumn = new MyColumn
         (((Name) column.get(0)).value, dbmsColumn, type);
@@ -1125,7 +1120,7 @@ public class SQLServer implements RevisionServer {
     List<MyColumn> myPrimaryKeyColumns
       = new ArrayList<MyColumn>(primaryKeyTree.length());
 
-    List<Column> dbmsPrimaryKeyColumns = new ArrayList<Column>
+    List<Column<?>> dbmsPrimaryKeyColumns = new ArrayList<Column<?>>
       (primaryKeyTree.length());
 
     for (int i = 0; i < primaryKeyTree.length(); ++i) {
@@ -1627,7 +1622,7 @@ public class SQLServer implements RevisionServer {
     public static String skipSpace(String in) {
       int i = 0;
       while (i < in.length()) {
-        if (Character.isSpace(in.charAt(i))) {
+        if (Character.isWhitespace(in.charAt(i))) {
           ++ i;
         } else {
           break;
@@ -2610,18 +2605,18 @@ public class SQLServer implements RevisionServer {
     server.server.unregisterListener(listener);
   }
 
-  public void add(Table table, List<Column> columns) {
-    Map<String, MyColumn> map = new HashMap(columns.size());
-    List<MyColumn> myColumns = new ArrayList(columns.size());
-    for (Column c: columns) {
+  public void add(Table table, List<Column<?>> columns) {
+    Map<String, MyColumn> map = new HashMap<String, MyColumn>(columns.size());
+    List<MyColumn> myColumns = new ArrayList<MyColumn>(columns.size());
+    for (Column<?> c: columns) {
       MyColumn myColumn = new MyColumn(c.id, c, c.type);
       map.put(c.id, myColumn);
       myColumns.add(myColumn);
     }
 
-    List<Column> primaryKey = table.primaryKey.columns;
-    List<MyColumn> myPrimaryKey = new ArrayList(primaryKey.size());
-    for (Column c: primaryKey) {
+    List<Column<?>> primaryKey = table.primaryKey.columns;
+    List<MyColumn> myPrimaryKey = new ArrayList<MyColumn>(primaryKey.size());
+    for (Column<?> c: primaryKey) {
       myPrimaryKey.add(new MyColumn(c.id, c, c.type));
     }
 

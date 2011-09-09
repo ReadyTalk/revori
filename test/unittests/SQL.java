@@ -1,7 +1,5 @@
 package unittests;
 
-import static org.junit.Assert.assertEquals;
-
 import static com.readytalk.oss.dbms.server.SQLServer.readString;
 
 import java.io.IOException;

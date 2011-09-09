@@ -5,7 +5,8 @@ import junit.framework.TestCase;
 import org.junit.Test;
 
 import static com.readytalk.oss.dbms.util.Util.list;
-import static org.junit.Assert.*;
+import static com.readytalk.oss.dbms.util.Util.cols;
+import static com.readytalk.oss.dbms.ExpressionFactory.reference;
 
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.Column;
@@ -21,7 +22,6 @@ import com.readytalk.oss.dbms.TableReference;
 import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.Parameter;
-import com.readytalk.oss.dbms.ColumnReference;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
 
 public class JoinTest extends TestCase{
@@ -29,24 +29,24 @@ public class JoinTest extends TestCase{
     @Test
     public void testSimpleJoins(){
     	
-        Column id = new Column(Integer.class);
-        Column name = new Column(String.class);
-        Table names = new Table(list(id));
+        Column<Integer> id = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
+        Table names = new Table(cols(id));
 
-        Column nickname = new Column(String.class);
-        Table nicknames = new Table(list(id, nickname));
+        Column<String> nickname = new Column<String>(String.class);
+        Table nicknames = new Table(cols(id, nickname));
 
         Revision tail = Revisions.Empty;
 
         PatchTemplate nameInsert = new InsertTemplate
           (names,
-           list(id, name),
+           cols(id, name),
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         PatchTemplate nicknameInsert = new InsertTemplate
           (nicknames,
-           list(id, nickname),
+           cols(id, nickname),
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
@@ -70,16 +70,16 @@ public class JoinTest extends TestCase{
         TableReference nicknamesReference = new TableReference(nicknames);
 
         QueryTemplate namesInnerNicknames = new QueryTemplate
-          (list((Expression) new ColumnReference(namesReference, name),
-                (Expression) new ColumnReference(nicknamesReference, nickname)),
+          (list(reference(namesReference, name),
+                reference(nicknamesReference, nickname)),
            new Join
            (Join.Type.Inner,
             namesReference,
             nicknamesReference),
            new BinaryOperation
            (BinaryOperation.Type.Equal,
-            new ColumnReference(namesReference, id),
-            new ColumnReference(nicknamesReference, id)));
+            reference(namesReference, id),
+            reference(nicknamesReference, id)));
         Object[] parameters = {};
         
         QueryResult result = tail.diff(first, namesInnerNicknames, parameters);
@@ -99,16 +99,16 @@ public class JoinTest extends TestCase{
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
         QueryTemplate namesLeftNicknames = new QueryTemplate
-          (list((Expression) new ColumnReference(namesReference, name),
-                (Expression) new ColumnReference(nicknamesReference, nickname)),
+          (list(reference(namesReference, name),
+                reference(nicknamesReference, nickname)),
            new Join
            (Join.Type.LeftOuter,
             namesReference,
             nicknamesReference),
            new BinaryOperation
            (BinaryOperation.Type.Equal,
-            new ColumnReference(namesReference, id),
-            new ColumnReference(nicknamesReference, id)));
+            reference(namesReference, id),
+            reference(nicknamesReference, id)));
         Object[] parameters1 = {};
         
         result = tail.diff(first, namesLeftNicknames, parameters1);
@@ -195,43 +195,43 @@ public class JoinTest extends TestCase{
     @Test
     public void testCompoundJoins(){
     	
-        Column id = new Column(Integer.class);
-        Column name = new Column(String.class);
-        Table names = new Table(list(id));
+        Column<Integer> id = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
+        Table names = new Table(cols(id));
 
-        Column nickname = new Column(String.class);
-        Table nicknames = new Table(list(id, nickname));
+        Column<String> nickname = new Column<String>(String.class);
+        Table nicknames = new Table(cols(id, nickname));
 
-        Column lastname = new Column(String.class);
-        Table lastnames = new Table(list(name));
+        Column<String> lastname = new Column<String>(String.class);
+        Table lastnames = new Table(cols(name));
 
-        Column string = new Column(String.class);
-        Column color = new Column(String.class);
-        Table colors = new Table(list(string));
+        Column<String> string = new Column<String>(String.class);
+        Column<String> color = new Column<String>(String.class);
+        Table colors = new Table(cols(string));
 
         Revision tail = Revisions.Empty;
 
         PatchTemplate nameInsert = new InsertTemplate
           (names,
-           list(id, name),
+           cols(id, name),
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         PatchTemplate nicknameInsert = new InsertTemplate
           (nicknames,
-           list(id, nickname),
+           cols(id, nickname),
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         PatchTemplate lastnameInsert = new InsertTemplate
           (lastnames,
-           list(name, lastname),
+           cols(name, lastname),
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         PatchTemplate colorInsert = new InsertTemplate
           (colors,
-           list(string, color),
+           cols(string, color),
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
@@ -267,9 +267,9 @@ public class JoinTest extends TestCase{
         TableReference colorsReference = new TableReference(colors);
 
         QueryTemplate namesInnerNicknamesInnerColors = new QueryTemplate
-          (list((Expression) new ColumnReference(namesReference, name),
-                (Expression) new ColumnReference(nicknamesReference, nickname),
-                (Expression) new ColumnReference(colorsReference, color)),
+          (list(reference(namesReference, name),
+                reference(nicknamesReference, nickname),
+                reference(colorsReference, color)),
            new Join
            (Join.Type.Inner,
             new Join
@@ -281,12 +281,12 @@ public class JoinTest extends TestCase{
            (BinaryOperation.Type.And,
             new BinaryOperation
             (BinaryOperation.Type.Equal,
-             new ColumnReference(namesReference, id),
-             new ColumnReference(nicknamesReference, id)),
+             reference(namesReference, id),
+             reference(nicknamesReference, id)),
             new BinaryOperation
             (BinaryOperation.Type.Equal,
-             new ColumnReference(colorsReference, string),
-             new ColumnReference(nicknamesReference, nickname))));
+             reference(colorsReference, string),
+             reference(nicknamesReference, nickname))));
         Object[] parameters = {};
         
         QueryResult result = tail.diff(first, namesInnerNicknamesInnerColors, parameters);
@@ -306,9 +306,9 @@ public class JoinTest extends TestCase{
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
         QueryTemplate namesLeftNicknamesInnerColors = new QueryTemplate
-          (list((Expression) new ColumnReference(namesReference, name),
-                (Expression) new ColumnReference(nicknamesReference, nickname),
-                (Expression) new ColumnReference(colorsReference, color)),
+          (list(reference(namesReference, name),
+                reference(nicknamesReference, nickname),
+                reference(colorsReference, color)),
            new Join
            (Join.Type.Inner,
             new Join
@@ -320,12 +320,12 @@ public class JoinTest extends TestCase{
            (BinaryOperation.Type.And,
             new BinaryOperation
             (BinaryOperation.Type.Equal,
-             new ColumnReference(namesReference, id),
-             new ColumnReference(nicknamesReference, id)),
+             reference(namesReference, id),
+             reference(nicknamesReference, id)),
             new BinaryOperation
             (BinaryOperation.Type.Equal,
-             new ColumnReference(colorsReference, string),
-             new ColumnReference(nicknamesReference, nickname))));
+             reference(colorsReference, string),
+             reference(nicknamesReference, nickname))));
         Object[] parameters1 = {};
         
         result = tail.diff(first, namesLeftNicknamesInnerColors, parameters1);
@@ -345,9 +345,9 @@ public class JoinTest extends TestCase{
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
         QueryTemplate namesInnerNicknamesLeftColors = new QueryTemplate
-          (list((Expression) new ColumnReference(namesReference, name),
-                (Expression) new ColumnReference(nicknamesReference, nickname),
-                (Expression) new ColumnReference(colorsReference, color)),
+          (list(reference(namesReference, name),
+                reference(nicknamesReference, nickname),
+                reference(colorsReference, color)),
            new Join
            (Join.Type.LeftOuter,
             new Join
@@ -359,12 +359,12 @@ public class JoinTest extends TestCase{
            (BinaryOperation.Type.And,
             new BinaryOperation
             (BinaryOperation.Type.Equal,
-             new ColumnReference(namesReference, id),
-             new ColumnReference(nicknamesReference, id)),
+             reference(namesReference, id),
+             reference(nicknamesReference, id)),
             new BinaryOperation
             (BinaryOperation.Type.Equal,
-             new ColumnReference(colorsReference, string),
-             new ColumnReference(nicknamesReference, nickname))));
+             reference(colorsReference, string),
+             reference(nicknamesReference, nickname))));
         Object[] parameters2 = {};
         
         result = tail.diff(first, namesInnerNicknamesLeftColors, parameters2);
@@ -393,10 +393,10 @@ public class JoinTest extends TestCase{
 
         QueryTemplate namesInnerLastnamesLeftNicknamesLeftColors
           = new QueryTemplate
-          (list((Expression) new ColumnReference(namesReference, name),
-                (Expression) new ColumnReference(lastnamesReference, lastname),
-                (Expression) new ColumnReference(nicknamesReference, nickname),
-                (Expression) new ColumnReference(colorsReference, color)),
+          (list(reference(namesReference, name),
+                reference(lastnamesReference, lastname),
+                reference(nicknamesReference, nickname),
+                reference(colorsReference, color)),
            new Join
            (Join.Type.LeftOuter,
             new Join
@@ -411,18 +411,18 @@ public class JoinTest extends TestCase{
            (BinaryOperation.Type.And,
             new BinaryOperation
             (BinaryOperation.Type.Equal,
-             new ColumnReference(namesReference, name),
-             new ColumnReference(lastnamesReference, name)),
+             reference(namesReference, name),
+             reference(lastnamesReference, name)),
             new BinaryOperation
             (BinaryOperation.Type.And,
              new BinaryOperation
              (BinaryOperation.Type.Equal,
-              new ColumnReference(namesReference, id),
-              new ColumnReference(nicknamesReference, id)),
+              reference(namesReference, id),
+              reference(nicknamesReference, id)),
              new BinaryOperation
              (BinaryOperation.Type.Equal,
-              new ColumnReference(colorsReference, string),
-              new ColumnReference(nicknamesReference, nickname)))));
+              reference(colorsReference, string),
+              reference(nicknamesReference, nickname)))));
         Object[] parameters3 = {};
         
         result = tail.diff(first, namesInnerLastnamesLeftNicknamesLeftColors, parameters3);

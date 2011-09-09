@@ -30,7 +30,7 @@ class UnionScan implements Scan {
   public List<Interval> evaluate() {
     Iterator<Interval> leftIterator = left.evaluate().iterator();
     Iterator<Interval> rightIterator = right.evaluate().iterator();
-    List<Interval> result = new ArrayList();
+    List<Interval> result = new ArrayList<Interval>();
 
     int d = 0;
     Interval leftItem = null;

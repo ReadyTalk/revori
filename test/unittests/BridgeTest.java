@@ -1,8 +1,6 @@
 package unittests;
 
-import static org.junit.Assert.assertEquals;
-
-import static com.readytalk.oss.dbms.util.Util.list;
+import static com.readytalk.oss.dbms.util.Util.cols;
 import static com.readytalk.oss.dbms.DuplicateKeyResolution.Throw;
 
 import com.readytalk.oss.dbms.Table;
@@ -28,9 +26,9 @@ public class BridgeTest extends TestCase {
 
     Bridge bridge = new Bridge();
 
-    Column number = new Column(Integer.class, "number");
-    Column name = new Column(String.class, "name");
-    Table numbers = new Table(list(number), "numbers");
+    Column<Integer> number = new Column<Integer>(Integer.class, "number");
+    Column<String> name = new Column<String>(String.class, "name");
+    Table numbers = new Table(cols(number), "numbers");
     Bridge.Path path = new Bridge.Path(numbers);
 
     bridge.register(left, path, right, path);
@@ -66,13 +64,13 @@ public class BridgeTest extends TestCase {
 
     Bridge bridge = new Bridge();
 
-    Column number = new Column(Integer.class, "number");
-    Column name = new Column(String.class, "name");
-    Table numbers = new Table(list(number), "numbers");
+    Column<Integer> number = new Column<Integer>(Integer.class, "number");
+    Column<String> name = new Column<String>(String.class, "name");
+    Table numbers = new Table(cols(number), "numbers");
     Bridge.Path leftPath = new Bridge.Path(numbers);
 
-    Column origin = new Column(Integer.class, "origin");
-    Table originNumbers = new Table(list(origin, number), "origin numbers");
+    Column<Integer> origin = new Column<Integer>(Integer.class, "origin");
+    Table originNumbers = new Table(cols(origin, number), "origin numbers");
 
     bridge.register(left1, leftPath, right, new Bridge.Path(originNumbers, 1));
     bridge.register(left2, leftPath, right, new Bridge.Path(originNumbers, 2));

@@ -12,7 +12,7 @@ import java.util.TreeSet;
 public final class View implements Comparable<View> {
   public final QueryTemplate query;
   public final List<Object> parameters;
-  public final List<Column> columns;
+  public final List<Column<?>> columns;
   public final Table table;
   public final int primaryKeyOffset;
   public final int aggregateOffset;
@@ -20,14 +20,14 @@ public final class View implements Comparable<View> {
 
   public View(QueryTemplate query,
               List<Object> parameters,
-              List<Column> columns,
-              List<Column> primaryKey,
+              List<Column<?>> columns,
+              List<Column<?>> primaryKey,
               final List<Expression> primaryKeyExpressions,
               String id)
   {
-    final List<Column> myPrimaryKey = new ArrayList(primaryKey);
-    final List<Column> myColumns = new ArrayList(columns);
-    final List<Expression> myExpressions = new ArrayList(query.expressions);
+    final List<Column<?>> myPrimaryKey = new ArrayList<Column<?>>(primaryKey);
+    final List<Column<?>> myColumns = new ArrayList<Column<?>>(columns);
+    final List<Expression> myExpressions = new ArrayList<Expression>(query.expressions);
 
     if (myColumns.size() != myExpressions.size()) {
       throw new IllegalArgumentException();
@@ -51,7 +51,7 @@ public final class View implements Comparable<View> {
           public void visit(Source source) {
             if (source instanceof TableReference) {
               TableReference tableReference = (TableReference) source;
-              for (Column c: tableReference.table.primaryKey.columns) {
+              for (Column<?> c: tableReference.table.primaryKey.columns) {
                 ColumnReference columnReference = new ColumnReference
                   (tableReference, c);
 
@@ -67,7 +67,7 @@ public final class View implements Comparable<View> {
 
     if (myPrimaryKey.isEmpty()) {
       myPrimaryKey.add
-        (new Column(Singleton.class, "singleton." + Column.makeId()));
+        (new Column<Singleton>(Singleton.class, "singleton." + Column.makeId()));
       myExpressions.add(new Constant(Singleton.Instance));
     }
 
@@ -77,19 +77,19 @@ public final class View implements Comparable<View> {
     this.primaryKeyOffset = query.expressions.size();
     this.aggregateOffset = myExpressions.size();
 
-    final Set<Aggregate> aggregates;
+    final Set<Aggregate<?>> aggregates;
     if (query.hasAggregates) {
-      myColumns.add(new Column(Integer.class, "count." + Column.makeId()));
+      myColumns.add(new Column<Integer>(Integer.class, "count." + Column.makeId()));
       myExpressions.add
-        (new Aggregate
-         (Integer.class, Foldables.Count, Collections.emptyList()));
+        (new Aggregate<Integer>
+         (Integer.class, Foldables.Count, new ArrayList<Expression>()));
 
-      aggregates = new TreeSet();
+      aggregates = new TreeSet<Aggregate<?>>();
 
       ExpressionVisitor visitor = new ExpressionVisitor() {
           public void visit(Expression e) {
             if (e instanceof Aggregate) {
-              aggregates.add((Aggregate) e);
+              aggregates.add((Aggregate<?>) e);
             }
           }
         };
@@ -98,7 +98,7 @@ public final class View implements Comparable<View> {
         e.visit(visitor);
       }
 
-      for (Aggregate a: aggregates) {
+      for (Aggregate<?> a: aggregates) {
         myColumns.add(makeColumn(a, null));
         myExpressions.add(a);
       }
@@ -125,9 +125,10 @@ public final class View implements Comparable<View> {
   public View(QueryTemplate query,
               Object[] parameters)
   {
-    this(query, list(parameters), makeColumnList(query.expressions),
-         (List<Column>) (List) Collections.emptyList(),
-         (List<Expression>) (List) Collections.emptyList(),
+    this(query, list(parameters),
+         makeColumnList(query.expressions),
+         Collections.<Column<?>>emptyList(),
+         Collections.<Expression>emptyList(),
          makeId(query.source));
   }
 
@@ -139,24 +140,24 @@ public final class View implements Comparable<View> {
     return "view." + id;
   }
 
-  private static Column makeColumn(Expression e, Class defaultType) {
-    Class type;
+  private static <T> Column<T> makeColumn(Expression e, Class<T> defaultType) {
+    Class<T> type;
     String id = Column.makeId();
     if (e instanceof ColumnReference) {
-      Column c = ((ColumnReference) e).column;
+      Column<T> c = ((ColumnReference<T>) e).column;
       type = c.type;
       id = c.id + "." + id;
     } else if (e instanceof Aggregate) {
-      type = ((Aggregate) e).type;
+      type = ((Aggregate<T>) e).type;
       id = "aggregate." + id;
     } else {
       type = defaultType;
     }
-    return new Column(type, id);
+    return new Column<T>(type, id);
   }
 
-  private static List<Column> makeColumnList(List<Expression> expressions) {
-    List<Column> columns = new ArrayList(expressions.size());
+  private static List<Column<?>> makeColumnList(List<Expression> expressions) {
+    List<Column<?>> columns = new ArrayList<Column<?>>(expressions.size());
     for (int i = 0; i < expressions.size(); ++i) {
       columns.add(makeColumn(expressions.get(i), Object.class));
     }

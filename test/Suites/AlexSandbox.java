@@ -1,21 +1,16 @@
 package Suites;
 
-import java.awt.Image;
-import java.awt.List;
-import java.nio.charset.Charset;
 import java.sql.Time;
-import java.text.DecimalFormat;
 import java.util.Date;
 import java.util.UUID;
-
-import javax.xml.soap.Text;
 
 import junit.framework.TestCase;
 
 import org.junit.Test;
 
 import static com.readytalk.oss.dbms.util.Util.list;
-import static org.junit.Assert.*;
+import static com.readytalk.oss.dbms.util.Util.cols;
+import static com.readytalk.oss.dbms.ExpressionFactory.reference;
 
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.Column;
@@ -61,17 +56,17 @@ public class AlexSandbox extends TestCase{
 	@Test
 	public void testDataTypes(){
         
-        Column uuidColumn = new Column(UUID.class);
-        Column longColumn= new Column(Long.class);
-		Column nameColumn = new Column(String.class);
-		Column dateColumn = new Column(Date.class);		
-		Column floatColumn = new Column(Float.class);
-		Column intColumn = new Column(Integer.class);
-		Column byteColumn = new Column(Byte.class);
-		Column timeColumn = new Column(Time.class);
-		Column boolColumn = new Column(Boolean.class);
-		Column intArrayColumn = new Column(Integer[].class);
-		Column customClassColumn = new Column(CustomClass.class);
+    Column<UUID> uuidColumn = new Column<UUID>(UUID.class);
+    Column<Long> longColumn= new Column<Long>(Long.class);
+		Column<String> nameColumn = new Column<String>(String.class);
+		Column<Date> dateColumn = new Column<Date>(Date.class);		
+		Column<Float> floatColumn = new Column<Float>(Float.class);
+		Column<Integer> intColumn = new Column<Integer>(Integer.class);
+		Column<Byte> byteColumn = new Column<Byte>(Byte.class);
+		Column<Time> timeColumn = new Column<Time>(Time.class);
+		Column<Boolean> boolColumn = new Column<Boolean>(Boolean.class);
+		Column<Integer[]> intArrayColumn = new Column<Integer[]>(Integer[].class);
+		Column<CustomClass> customClassColumn = new Column<CustomClass>(CustomClass.class);
 		
 		//Try to create a null data column
 		try{
@@ -81,12 +76,12 @@ public class AlexSandbox extends TestCase{
 		
 		//Need to ask Joel about some of these scenarios...
 		//Try to create a table with null pk
-		Table bogus = new Table(list(new Column(CustomClass.class)));		
+		Table bogus = new Table(cols(new Column<CustomClass>(CustomClass.class)));		
 		
-		//Table numbers = new Table(list(uuidColumn, longColumn, nameColumn, dateColumn, floatColumn,
+		//Table numbers = new Table(cols(uuidColumn, longColumn, nameColumn, dateColumn, floatColumn,
 		//		intColumn, byteColumn, timeColumn, boolColumn));
 		
-		Table numbers = new Table(list(uuidColumn, longColumn, nameColumn, dateColumn, floatColumn,
+		Table numbers = new Table(cols(uuidColumn, longColumn, nameColumn, dateColumn, floatColumn,
 				intColumn, byteColumn, timeColumn));
 
 		Revision tail = Revisions.Empty;
@@ -109,9 +104,9 @@ public class AlexSandbox extends TestCase{
 
 		PatchTemplate insert = new InsertTemplate
 		(numbers,
-				list(uuidColumn, longColumn, nameColumn, dateColumn, floatColumn,
+				cols(uuidColumn, longColumn, nameColumn, dateColumn, floatColumn,
 						intColumn, byteColumn, timeColumn, boolColumn, intArrayColumn, customClassColumn),
-                 list((Expression) new Parameter(), new Parameter(), new Parameter(), new Parameter(),
+						list((Expression) new Parameter(), new Parameter(), new Parameter(), new Parameter(),
 						new Parameter(), new Parameter(), new Parameter(), new Parameter(),
 						new Parameter(), new Parameter(), new Parameter()),
 						DuplicateKeyResolution.Throw);
@@ -124,17 +119,17 @@ public class AlexSandbox extends TestCase{
 		TableReference numbersReference = new TableReference(numbers);
 		
 		QueryTemplate any = new QueryTemplate
-        (list((Expression) new ColumnReference(numbersReference, uuidColumn),
-      		    (Expression) new ColumnReference(numbersReference, longColumn),
-                (Expression) new ColumnReference(numbersReference, nameColumn),
-                (Expression) new ColumnReference(numbersReference, dateColumn),
-                (Expression) new ColumnReference(numbersReference, floatColumn),
-                (Expression) new ColumnReference(numbersReference, intColumn),
-                (Expression) new ColumnReference(numbersReference, byteColumn),
-                (Expression) new ColumnReference(numbersReference, timeColumn),
-                (Expression) new ColumnReference(numbersReference, boolColumn),
-                (Expression) new ColumnReference(numbersReference, intArrayColumn),
-                (Expression) new ColumnReference(numbersReference, customClassColumn)),
+        (list(reference(numbersReference, uuidColumn),
+      		    reference(numbersReference, longColumn),
+                reference(numbersReference, nameColumn),
+                reference(numbersReference, dateColumn),
+                reference(numbersReference, floatColumn),
+                reference(numbersReference, intColumn),
+                reference(numbersReference, byteColumn),
+                reference(numbersReference, timeColumn),
+                reference(numbersReference, boolColumn),
+                reference(numbersReference, intArrayColumn),
+                reference(numbersReference, customClassColumn)),
                 numbersReference,
                 new Constant(true));
 		
@@ -158,17 +153,17 @@ public class AlexSandbox extends TestCase{
 	@Test
 	public void testInsertIncorrectDataType(){
         
-        Column key = new Column(Integer.class);
-        Column number = new Column(Integer.class);
+        Column<Integer> key = new Column<Integer>(Integer.class);
+        Column<Integer> number = new Column<Integer>(Integer.class);
         
-        Table table = new Table(list(key));
+        Table table = new Table(cols(key));
         
         Revision tail = Revisions.Empty;
         
         RevisionBuilder builder = tail.builder();
         PatchTemplate insert = new InsertTemplate(
    	    table, 
-   	    list(key, number),
+   	    cols(key, number),
    	    list((Expression) new Parameter(), new Parameter()),
    	    DuplicateKeyResolution.Throw);
         
@@ -180,18 +175,18 @@ public class AlexSandbox extends TestCase{
 	
 	@Test
 	public void testInsertIncorrectDataTypeMultiKey(){
-        Column key = new Column(Integer.class);
-        Column number = new Column(Integer.class);
-        Column name = new Column(String.class);
+        Column<Integer> key = new Column<Integer>(Integer.class);
+        Column<Integer> number = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
         
-        Table table = new Table(list(key, number));
+        Table table = new Table(cols(key, number));
         
         Revision tail = Revisions.Empty;
         
         RevisionBuilder builder = tail.builder();
         PatchTemplate insert = new InsertTemplate(
    	    table, 
-   	    list(key, number, name),
+   	    cols(key, number, name),
    	    list((Expression) new Parameter(), new Parameter(), new Parameter()),
    	    DuplicateKeyResolution.Throw);
         try{
@@ -202,18 +197,18 @@ public class AlexSandbox extends TestCase{
 	
 	@Test
 	public void testApplyAlreadyCommitted(){
-        Column key = new Column(Integer.class);
-        Column number = new Column(Integer.class);
-        Column name = new Column(String.class);
+        Column<Integer> key = new Column<Integer>(Integer.class);
+        Column<Integer> number = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
         
-        Table table = new Table(list(key, number));
+        Table table = new Table(cols(key, number));
         
         Revision tail = Revisions.Empty;
         
         RevisionBuilder builder = tail.builder();
         PatchTemplate insert = new InsertTemplate(
    	    table, 
-   	    list(key, number, name),
+   	    cols(key, number, name),
    	    list((Expression) new Parameter(), new Parameter(), new Parameter()),
    	    DuplicateKeyResolution.Throw);
         
@@ -230,17 +225,17 @@ public class AlexSandbox extends TestCase{
 	
 	@Test
 	public void testInvalidApplyWrongNumberOfParameters(){
-	 Column number = new Column(Integer.class);
-	 Column number1 = new Column(Integer.class);
-	 Column number2 = new Column(Integer.class);
+	 Column<Integer> number = new Column<Integer>(Integer.class);
+	 Column<Integer> number1 = new Column<Integer>(Integer.class);
+	 Column<Integer> number2 = new Column<Integer>(Integer.class);
 	 
-	 Table numbers = new Table(list(number));
+	 Table numbers = new Table(cols(number));
 		   
 	 Revision tail = Revisions.Empty;
 	 RevisionBuilder builder = tail.builder();
 	 PatchTemplate insert = new InsertTemplate(
 	   numbers, 
-	   list(number, number1, number2),
+	   cols(number, number1, number2),
 	   list((Expression) new Parameter(), new Parameter(), new Parameter()),
 	   DuplicateKeyResolution.Throw);
 		   
@@ -263,7 +258,7 @@ public class AlexSandbox extends TestCase{
 	 TableReference numbersReference = new TableReference(numbers);
 		   
 	 QueryTemplate myQT = new QueryTemplate(
-	   list((Expression) new ColumnReference(numbersReference, number)),
+	   list(reference(numbersReference, number)),
 	   numbersReference,
 	   new Constant(true));
 		   
@@ -275,14 +270,14 @@ public class AlexSandbox extends TestCase{
 	
    @Test
    public void testNoValuesInserted(){
-       Column number = new Column(Integer.class);
-       Table numbers = new Table(list(number));
+       Column<Integer> number = new Column<Integer>(Integer.class);
+       Table numbers = new Table(cols(number));
        
        Revision tail = Revisions.Empty;
        RevisionBuilder builder = tail.builder();
        PatchTemplate insert = new InsertTemplate(
                numbers,
-               list(number),
+               cols(number),
                list((Expression) new Parameter()),
                DuplicateKeyResolution.Throw);
 
@@ -292,7 +287,7 @@ public class AlexSandbox extends TestCase{
        TableReference numbersReference = new TableReference(numbers);
 
        QueryTemplate myQT = new QueryTemplate(
-				list((Expression) new ColumnReference(numbersReference, number)),
+        list(reference(numbersReference, number)),
 				numbersReference,
 				new Constant(true));
 
@@ -303,15 +298,15 @@ public class AlexSandbox extends TestCase{
 
    @Test
    public void testInsertNoPrimaryKey(){
-	   Column key = new Column(Integer.class);
-	   Column number = new Column(Integer.class);
-	   Table numbers = new Table(list(key));
+	   Column<Integer> key = new Column<Integer>(Integer.class);
+	   Column<Integer> number = new Column<Integer>(Integer.class);
+	   Table numbers = new Table(cols(key));
 	   
 	   Revision tail = Revisions.Empty;
 	   RevisionBuilder builder = tail.builder();
 	   try{
 	   PatchTemplate insert = new InsertTemplate(
-			   numbers, list(number), list((Expression) new Parameter()), DuplicateKeyResolution.Throw);
+			   numbers, cols(number), list((Expression) new Parameter()), DuplicateKeyResolution.Throw);
 	   fail("Expected Illegal Argument Exception");
 	   }catch(IllegalArgumentException expected){}
 
@@ -320,7 +315,7 @@ public class AlexSandbox extends TestCase{
 	   TableReference numbersReference = new TableReference(numbers);
 	   
 	   QueryTemplate myQT = new QueryTemplate(
-			   list((Expression) new ColumnReference(numbersReference, key)),
+	       list(reference(numbersReference, key)),
 			   numbersReference,
 			   new Constant(true));
 	   
@@ -332,13 +327,13 @@ public class AlexSandbox extends TestCase{
 	
    @Test
    public void testInsertKeyOnly(){
-	   Column number = new Column(Integer.class);
-	   Table numbers = new Table(list(number));
+	   Column<Integer> number = new Column<Integer>(Integer.class);
+	   Table numbers = new Table(cols(number));
 	   
 	   Revision tail = Revisions.Empty;
 	   RevisionBuilder builder = tail.builder();
 	   PatchTemplate insert = new InsertTemplate(
-			   numbers, list(number), list((Expression) new Parameter()), DuplicateKeyResolution.Throw);
+			   numbers, cols(number), list((Expression) new Parameter()), DuplicateKeyResolution.Throw);
 	   
 	   builder.apply(insert, 1);
 	   builder.apply(insert, 2);
@@ -351,7 +346,7 @@ public class AlexSandbox extends TestCase{
 	   TableReference numbersReference = new TableReference(numbers);
 	   
 	   QueryTemplate myQT = new QueryTemplate(
-			   list((Expression) new ColumnReference(numbersReference, number)),
+	       list(reference(numbersReference, number)),
 			   numbersReference,
 			   new Constant(true));
 	   
@@ -372,15 +367,15 @@ public class AlexSandbox extends TestCase{
 	
    @Test
    public void testColumnTypes(){
-	    Column number = new Column(Integer.class);
-	    Column name = new Column(String.class);
-	    Table numbers = new Table(list(number));
+	    Column<Integer> number = new Column<Integer>(Integer.class);
+	    Column<String> name = new Column<String>(String.class);
+	    Table numbers = new Table(cols(number));
 
 	    Revision tail = Revisions.Empty;
 
 	    PatchTemplate insert = new InsertTemplate
 	      (numbers,
-	       list(number, name),
+	       cols(number, name),
 	       list((Expression) new Parameter(),
 	            new Parameter()), DuplicateKeyResolution.Throw);
 
@@ -406,9 +401,9 @@ public class AlexSandbox extends TestCase{
 	      (numbersReference,
 	       new BinaryOperation
 	       (BinaryOperation.Type.Equal,
-	        new ColumnReference(numbersReference, number),
+	        reference(numbersReference, number),
 	        new Parameter()),
-	       list(name),
+	       cols(name),
 	       list((Expression) new Parameter()));
 
 	    try {
@@ -419,18 +414,18 @@ public class AlexSandbox extends TestCase{
    
    @Test (expected=IllegalArgumentException.class)
    public void testNotEnoughColumnsForPrimaryKeyQuery(){
-       Column key = new Column(Integer.class);
-       Column firstName = new Column(String.class);
-       Column lastName = new Column(String.class);
-       Column city = new Column(String.class);
-       Table names = new Table(list(key, city));
+       Column<Integer> key = new Column<Integer>(Integer.class);
+       Column<String> firstName = new Column<String>(String.class);
+       Column<String> lastName = new Column<String>(String.class);
+       Column<String> city = new Column<String>(String.class);
+       Table names = new Table(cols(key, city));
        Revision tail = Revisions.Empty;
        
        RevisionBuilder builder = tail.builder();
        try{
        PatchTemplate insert = new InsertTemplate
         (names,
-                list(key, firstName, lastName),
+                cols(key, firstName, lastName),
                 list((Expression) new Parameter(),
                         new Parameter(),
                         new Parameter()), DuplicateKeyResolution.Throw);

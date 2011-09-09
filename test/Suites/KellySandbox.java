@@ -5,15 +5,14 @@ import junit.framework.TestCase;
 import org.junit.Test;
 
 import static com.readytalk.oss.dbms.util.Util.list;
-import static org.junit.Assert.*;
+import static com.readytalk.oss.dbms.util.Util.cols;
+
+import static com.readytalk.oss.dbms.ExpressionFactory.reference;
 
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Parameter;
-import com.readytalk.oss.dbms.ColumnReference;
 import com.readytalk.oss.dbms.Expression;
-import com.readytalk.oss.dbms.QueryResult;
-import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.Revisions;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Revision;
@@ -28,15 +27,15 @@ import com.readytalk.oss.dbms.DuplicateKeyResolution;
 public class KellySandbox extends TestCase{
    @Test
    public void testColumnTypes(){
-	    Column number = new Column(Integer.class);
-	    Column name = new Column(String.class);
-	    Table numbers = new Table(list(number));
+	    Column<Integer> number = new Column<Integer>(Integer.class);
+	    Column<String> name = new Column<String>(String.class);
+	    Table numbers = new Table(cols(number));
 
 	    Revision tail = Revisions.Empty;
 
 	    PatchTemplate insert = new InsertTemplate
 	      (numbers,
-	       list(number, name),
+	       cols(number, name),
 	       list((Expression) new Parameter(),
 	            new Parameter()), DuplicateKeyResolution.Throw);
 
@@ -62,9 +61,9 @@ public class KellySandbox extends TestCase{
 	      (numbersReference,
 	       new BinaryOperation
 	       (BinaryOperation.Type.Equal,
-	        new ColumnReference(numbersReference, number),
+	        reference(numbersReference, number),
 	        new Parameter()),
-	       list(name),
+	       cols(name),
 	       list((Expression) new Parameter()));
 
 	    try {
@@ -75,23 +74,21 @@ public class KellySandbox extends TestCase{
    
    @Test (expected=IllegalArgumentException.class)
    public void testNotEnoughColumnsForPrimaryKeyQuery(){
-       Column key = new Column(Integer.class);
-       Column firstName = new Column(String.class);
-       Column lastName = new Column(String.class);
-       Column city = new Column(String.class);
-       Table names = new Table(list(key, city));
-       Revision tail = Revisions.Empty;
+       Column<Integer> key = new Column<Integer>(Integer.class);
+       Column<String> firstName = new Column<String>(String.class);
+       Column<String> lastName = new Column<String>(String.class);
+       Column<String> city = new Column<String>(String.class);
+       Table names = new Table(cols(key, city));
        
-       RevisionBuilder builder = tail.builder();
        try{
-       PatchTemplate insert = new InsertTemplate
-        (names,
-                list(key, firstName, lastName),
-                list((Expression) new Parameter(),
-                        new Parameter(),
-                        new Parameter()), DuplicateKeyResolution.Throw);
-       fail("Expecting IllegalArgumentException...");
-       }catch(IllegalArgumentException expected){}
+           new InsertTemplate
+            (names,
+                    cols(key, firstName, lastName),
+                    list((Expression) new Parameter(),
+                            new Parameter(),
+                            new Parameter()), DuplicateKeyResolution.Throw);
+           fail("Expecting IllegalArgumentException...");
+       } catch(IllegalArgumentException expected){}
       
-       }
+   }
 }

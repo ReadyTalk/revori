@@ -67,7 +67,7 @@ public final class QueryTemplate implements Comparable<QueryTemplate> {
                        Set<Expression> groupingExpressions)
   {
     this.expressions = Collections.unmodifiableList
-      (new ArrayList(expressions));
+      (new ArrayList<Expression>(expressions));
     this.source = source;
     this.test = test;
     this.parameterCount = ParameterCounter.countParameters

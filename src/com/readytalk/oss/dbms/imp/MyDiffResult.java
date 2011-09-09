@@ -89,7 +89,7 @@ class MyDiffResult implements DiffResult {
   public int depth;
   public int bottom;
   public int clientDepth;
-  public Set<Column> primaryKey;
+  public Set<Column<?>> primaryKey;
   public List<RefererForeignKeyAdapter> refererKeyAdapters;
 
   public MyDiffResult(MyRevision base,
@@ -225,7 +225,7 @@ class MyDiffResult implements DiffResult {
 
             if (Compare.equal(index, table.primaryKey)) {
               bottom = index.columns.size() + Constants.IndexDataBodyDepth;
-              primaryKey = new TreeSet(table.primaryKey.columns);
+              primaryKey = new TreeSet<Column<?>>(table.primaryKey.columns);
               descend();
             }
             break;

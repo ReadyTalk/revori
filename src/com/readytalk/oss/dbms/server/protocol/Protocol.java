@@ -160,7 +160,7 @@ public class Protocol {
       public void writeTo(WriteContext context, Table t) throws IOException {
         write(context, t.id);
         writeInteger(context.out, t.order);
-        List<Column> columns = t.primaryKey.columns;
+        List<Column<?>> columns = t.primaryKey.columns;
         writeInteger(context.out, columns.size());
         for (Column<?> c: columns) {
           write(context, c);
@@ -173,7 +173,7 @@ public class Protocol {
         String id = (String) read(context);
         int order = readInteger(context.in);
         int columnCount = readInteger(context.in);
-        List<Column> columns = new ArrayList<Column>(columnCount);
+        List<Column<?>> columns = new ArrayList<Column<?>>(columnCount);
         for (int i = 0; i < columnCount; ++i) {
           columns.add((Column<?>) read(context));
         }
@@ -212,11 +212,11 @@ public class Protocol {
         Table referer = (Table) read(context);
         Table referent = (Table) read(context);
         int size = readInteger(context.in);
-        ArrayList<Column> refererColumns = new ArrayList<Column>();
-        ArrayList<Column> referentColumns = new ArrayList<Column>();
+        ArrayList<Column<?>> refererColumns = new ArrayList<Column<?>>();
+        ArrayList<Column<?>> referentColumns = new ArrayList<Column<?>>();
         for(int i = 0; i < size; i++) {
-          refererColumns.add((Column)read(context));
-          referentColumns.add((Column)read(context));
+          refererColumns.add((Column<?>)read(context));
+          referentColumns.add((Column<?>)read(context));
         }
         return new ForeignKey(
             referer,
@@ -230,7 +230,7 @@ public class Protocol {
       public void writeTo(WriteContext context, Index index) throws IOException {
         write(context, index.table);
         writeInteger(context.out, index.columns.size());
-        for(Column col : index.columns) {
+        for(Column<?> col : index.columns) {
           write(context, col);
         }
       }
@@ -240,9 +240,9 @@ public class Protocol {
       public Index readFrom(ReadContext context, Class<? extends Index> c) throws IOException {
         Table table = (Table) read(context);
         int size = readInteger(context.in);
-        ArrayList<Column> cols = new ArrayList<Column>();
+        ArrayList<Column<?>> cols = new ArrayList<Column<?>>();
         for(int i = 0; i < size; i++) {
-          cols.add((Column)read(context));
+          cols.add((Column<?>)read(context));
         }
         return new Index(table, cols);
       }
@@ -272,10 +272,10 @@ public class Protocol {
       }
     });
 
-    serializers.put(Map.class, new Serializer<Map>() {
-      public void writeTo(WriteContext context, Map m) throws IOException {
+    serializers.put(Map.class, new Serializer<Map<?, ?>>() {
+      public void writeTo(WriteContext context, Map<?, ?> m) throws IOException {
         writeInteger(context.out, m.size());
-        for(Map.Entry e : (Set<Map.Entry>)m.entrySet()) {
+        for(Map.Entry<?, ?> e : m.entrySet()) {
           write(context, e.getKey());
           write(context, e.getValue());
         }

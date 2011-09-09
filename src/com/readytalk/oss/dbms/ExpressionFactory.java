@@ -24,10 +24,10 @@ public class ExpressionFactory {
   /**
    * Alias for <code>new ColumnReference(tableReference, column)</code>
    */
-  public static Expression reference(TableReference tableReference,
-                                     Column column)
+  public static <T> Expression reference(TableReference tableReference,
+                                     Column<T> column)
   {
-    return new ColumnReference(tableReference, column);
+    return new ColumnReference<T>(tableReference, column);
   }
 
   /**
@@ -129,6 +129,6 @@ public class ExpressionFactory {
                                          Foldable<T> function,
                                          Expression ... expressions)
   {
-    return new Aggregate(type, function, list(expressions));
+    return new Aggregate<T>(type, function, list(expressions));
   }
 }

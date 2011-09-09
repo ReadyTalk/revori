@@ -4,13 +4,7 @@ import static com.readytalk.oss.dbms.util.Util.expect;
 import static com.readytalk.oss.dbms.util.Util.list;
 import static com.readytalk.oss.dbms.util.Util.copy;
 
-import static com.readytalk.oss.dbms.ExpressionFactory.reference;
-import static com.readytalk.oss.dbms.ExpressionFactory.isNull;
-import static com.readytalk.oss.dbms.ExpressionFactory.and;
-import static com.readytalk.oss.dbms.ExpressionFactory.equal;
 import static com.readytalk.oss.dbms.SourceFactory.reference;
-import static com.readytalk.oss.dbms.SourceFactory.leftJoin;
-
 import com.readytalk.oss.dbms.RevisionBuilder;
 import com.readytalk.oss.dbms.TableBuilder;
 import com.readytalk.oss.dbms.RowBuilder;
@@ -20,11 +14,9 @@ import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Revision;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
-import com.readytalk.oss.dbms.Resolution;
 import com.readytalk.oss.dbms.DuplicateKeyException;
 import com.readytalk.oss.dbms.PatchTemplate;
 import com.readytalk.oss.dbms.TableReference;
-import com.readytalk.oss.dbms.Constant;
 import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.UpdateTemplate;
 import com.readytalk.oss.dbms.InsertTemplate;
@@ -33,22 +25,14 @@ import com.readytalk.oss.dbms.ColumnList;
 import com.readytalk.oss.dbms.ForeignKey;
 import com.readytalk.oss.dbms.ForeignKeyResolver;
 import com.readytalk.oss.dbms.ForeignKeyResolvers;
-import com.readytalk.oss.dbms.ForeignKeyException;
-import com.readytalk.oss.dbms.Expression;
-import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.SourceVisitor;
 import com.readytalk.oss.dbms.Source;
-import com.readytalk.oss.dbms.util.Util;
-
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.HashSet;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.Collections;
 
 class MyRevisionBuilder implements RevisionBuilder {
   private static final Map<Class, PatchTemplateAdapter> adapters
@@ -59,8 +43,6 @@ class MyRevisionBuilder implements RevisionBuilder {
     adapters.put(InsertTemplate.class, new InsertTemplateAdapter());
     adapters.put(DeleteTemplate.class, new DeleteTemplateAdapter());
   }
-
-  private static final Object[] EmptyArray = new Object[0];
 
   public Object token;
   public final NodeStack stack;
@@ -252,7 +234,7 @@ class MyRevisionBuilder implements RevisionBuilder {
     setKey(Constants.TableDataDepth, index.table);
     setKey(Constants.IndexDataDepth, index);
 
-    List<Column> keyColumns = index.columns;
+    List<Column<?>> keyColumns = index.columns;
 
     while (true) {
       QueryResult.Type type = iterator.nextRow();
@@ -301,13 +283,13 @@ class MyRevisionBuilder implements RevisionBuilder {
   }
 
   private Node makeTree(NodeStack stack,
-                        List<Column> columns,
+                        List<Column<?>> columns,
                         List<ExpressionAdapter> expressions)
   {
     Node.BlazeResult result = new Node.BlazeResult();
     Node n = Node.Null;
     for (int i = 0; i < columns.size(); ++i) {
-      Column c = columns.get(i);
+      Column<?> c = columns.get(i);
       Object v = expressions.get(i).evaluate(true);
       if (v != null && ! c.type.isInstance(v)) {
         throw new ClassCastException
@@ -331,14 +313,14 @@ class MyRevisionBuilder implements RevisionBuilder {
     setKey(Constants.TableDataDepth, view.table);
     setKey(Constants.IndexDataDepth, view.table.primaryKey);
 
-    List<Column> keyColumns = view.table.primaryKey.columns;
+    List<Column<?>> keyColumns = view.table.primaryKey.columns;
 
     final List<ExpressionAdapter> expressions = qr.expressions;
 
     List<AggregateAdapter> aggregates;
     int maxValues;
     if (view.query.hasAggregates) {
-      aggregates = new ArrayList();
+      aggregates = new ArrayList<AggregateAdapter>();
 
       maxValues = 0;
       for (int i = view.aggregateOffset; i < view.aggregateExpressionOffset;
@@ -608,7 +590,7 @@ class MyRevisionBuilder implements RevisionBuilder {
 
     Node tree = Node.Null;
     Node.BlazeResult result = new Node.BlazeResult();
-    List<Column> columns = table.primaryKey.columns;
+    List<Column<?>> columns = table.primaryKey.columns;
     for (int i = 0; i < columns.size(); ++i) {
       tree = Node.blaze(result, token, stack, tree, columns.get(i));
       result.node.value = path[i];
@@ -625,7 +607,7 @@ class MyRevisionBuilder implements RevisionBuilder {
     setKey(Constants.TableDataDepth, table);
     setKey(Constants.IndexDataDepth, table.primaryKey);
 
-    List<Column> columns = table.primaryKey.columns;
+    List<Column<?>> columns = table.primaryKey.columns;
     for (int i = 0; i < columns.size(); ++i) {
       if (i == columns.size() - 1) {
         delete(Constants.IndexDataBodyDepth + i, path[i]);
@@ -789,7 +771,7 @@ class MyRevisionBuilder implements RevisionBuilder {
   }
 
   private void insert(int depth,
-                      List<Column> columns,
+                      List<Column<?>> columns,
                       Comparable[] path)
   {
     for (int i = 0; i < path.length; ++i) {
@@ -799,7 +781,7 @@ class MyRevisionBuilder implements RevisionBuilder {
 
   private void insert(DuplicateKeyResolution duplicateKeyResolution,
                       Table table,
-                      Column column,
+                      Column<?> column,
                       Object value,
                       Comparable[] path)
   {
@@ -883,7 +865,7 @@ class MyRevisionBuilder implements RevisionBuilder {
              + values.length + ")");
         }
         for(int i = 0; i < values.length; i++) {
-          column(columns.columns.get(i), values[i]);
+          column((Column)columns.columns.get(i), values[i]);
         }
         return this;
       }
@@ -991,7 +973,7 @@ class MyRevisionBuilder implements RevisionBuilder {
         ("expected table as first path element");        
     }
 
-    List<Column> columns = table.primaryKey.columns;
+    List<Column<?>> columns = table.primaryKey.columns;
 
     if (pathLength == columns.size() + 1) {
       Comparable[] myPath = new Comparable[columns.size()];
@@ -1001,9 +983,9 @@ class MyRevisionBuilder implements RevisionBuilder {
 
       insert(duplicateKeyResolution, table, null, null, myPath);
     } else if (pathLength == columns.size() + 3) {
-      Column column;
+      Column<?> column;
       try {
-        column = (Column) path[pathOffset + columns.size() + 1];
+        column = (Column<?>) path[pathOffset + columns.size() + 1];
       } catch (ClassCastException e) {
         throw new IllegalArgumentException
           ("expected column as second-to-last path element");        

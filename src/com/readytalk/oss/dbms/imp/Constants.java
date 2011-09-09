@@ -1,6 +1,6 @@
 package com.readytalk.oss.dbms.imp;
 
-import static com.readytalk.oss.dbms.util.Util.list;
+import static com.readytalk.oss.dbms.util.Util.cols;
 
 import com.readytalk.oss.dbms.Constant;
 import com.readytalk.oss.dbms.Column;
@@ -17,48 +17,46 @@ class Constants {
   public static final int MaxDepth
     = IndexDataBodyDepth + MaxIndexDataBodyDepth;
 
-  public static final Column TableColumn
-    = new Column(Table.class,
+  public static final Column<Table> TableColumn
+    = new Column<Table>(Table.class,
                  "TableColumn.Constants.imp.dbms.oss.readytalk.com");
 
-  public static final Column IndexColumn
-    = new Column(Index.class,
+  public static final Column<Index> IndexColumn
+    = new Column<Index>(Index.class,
                  "IndexColumn.Constants.imp.dbms.oss.readytalk.com");
 
   public static final Table IndexTable
-    = new Table(list(TableColumn, IndexColumn),
+    = new Table(cols(TableColumn, IndexColumn),
                 "IndexTable.Constants.imp.dbms.oss.readytalk.com");
 
-  public static final Column ViewColumn
-    = new Column(View.class,
+  public static final Column<View> ViewColumn
+    = new Column<View>(View.class,
                  "ViewColumn.Constants.imp.dbms.oss.readytalk.com");
 
   public static final Table ViewTable
-    = new Table(list(TableColumn, ViewColumn),
+    = new Table(cols(TableColumn, ViewColumn),
                 "ViewTable.Constants.imp.dbms.oss.readytalk.com");
 
-  public static final Column ForeignKeyRefererColumn
-    = new Column
-    (Table.class,
+  public static final Column<Table> ForeignKeyRefererColumn
+    = new Column<Table>(Table.class,
      "ForeignKeyRefererColumn.Constants.imp.dbms.oss.readytalk.com");
 
-  public static final Column ForeignKeyReferentColumn
-    = new Column
-    (Table.class,
+  public static final Column<Table> ForeignKeyReferentColumn
+    = new Column<Table>(Table.class,
      "ForeignKeyReferentColumn.Constants.imp.dbms.oss.readytalk.com");
 
-  public static final Column ForeignKeyColumn
-    = new Column(ForeignKey.class,
+  public static final Column<ForeignKey> ForeignKeyColumn
+    = new Column<ForeignKey>(ForeignKey.class,
                  "ForeignKeyColumn.Constants.imp.dbms.oss.readytalk.com");
 
   public static final Table ForeignKeyTable
     = new Table
-    (list(ForeignKeyColumn),
+    (cols(ForeignKeyColumn),
      "ForeignKeyTable.Constants.imp.dbms.oss.readytalk.com");
 
   public static final Index ForeignKeyRefererIndex
-    = new Index(ForeignKeyTable, list(ForeignKeyRefererColumn));
+    = new Index(ForeignKeyTable, cols(ForeignKeyRefererColumn));
 
   public static final Index ForeignKeyReferentIndex
-    = new Index(ForeignKeyTable, list(ForeignKeyReferentColumn));
+    = new Index(ForeignKeyTable, cols(ForeignKeyReferentColumn));
 }

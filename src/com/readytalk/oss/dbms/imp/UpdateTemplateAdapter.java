@@ -55,14 +55,14 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
       (update.tableReference, MyRevision.Empty, NodeStack.Null, revision,
        new NodeStack(), test, expressionContext, plan, false);
 
-    List<Column> keyColumns = index.columns;
+    List<Column<?>> keyColumns = index.columns;
 
     int[] keyColumnsUpdated;
-    { List<Column> columnList = new ArrayList<Column>();
+    { List<Column<?>> columnList = new ArrayList<Column<?>>();
       for (Column<?> c: keyColumns) {
         if (update.columns.contains(c)) {
           if (columnList == null) {
-            columnList = new ArrayList<Column>();
+            columnList = new ArrayList<Column<?>>();
           }
           columnList.add(c);
         }

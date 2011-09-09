@@ -8,7 +8,7 @@ import java.util.Collections;
  * table with itself), in which case it is useful to represent those
  * references unambiguously as separate objects.
  */
-public final class ColumnReference implements Expression {
+public final class ColumnReference<T> implements Expression {
   /**
    * The table reference specified when this instance was defined.
    */
@@ -17,7 +17,7 @@ public final class ColumnReference implements Expression {
   /**
    * The column specified when this instance was defined.
    */
-  public final Column column;
+  public final Column<T> column;
 
   /**
    * Defines a column reference which may be used to unambiguously
@@ -26,7 +26,7 @@ public final class ColumnReference implements Expression {
    * create multiple ColumnReferences to the same table.
    */
   public ColumnReference(TableReference tableReference,
-                         Column column)
+                         Column<T> column)
   {
     this.tableReference = tableReference;
     this.column = column;
@@ -57,7 +57,7 @@ public final class ColumnReference implements Expression {
     if (this == e) return 0;
 
     if (e instanceof ColumnReference) {
-      ColumnReference o = (ColumnReference) e;
+      ColumnReference<T> o = (ColumnReference<T>) e;
 
       int d = column.compareTo(o.column);
       if (d != 0) {
@@ -71,6 +71,6 @@ public final class ColumnReference implements Expression {
   }
 
   public boolean equals(Object o) {
-    return o instanceof ColumnReference && compareTo((ColumnReference) o) == 0;
+    return o instanceof ColumnReference && compareTo((ColumnReference<T>) o) == 0;
   }
 }

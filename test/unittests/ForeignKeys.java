@@ -1,13 +1,12 @@
 package unittests;
 
 import static com.readytalk.oss.dbms.util.Util.list;
+import static com.readytalk.oss.dbms.util.Util.cols;
 import static com.readytalk.oss.dbms.DuplicateKeyResolution.Throw;
 import static com.readytalk.oss.dbms.DuplicateKeyResolution.Overwrite;
 import static com.readytalk.oss.dbms.ExpressionFactory.parameter;
 import static com.readytalk.oss.dbms.ExpressionFactory.equal;
 import static com.readytalk.oss.dbms.ExpressionFactory.reference;
-
-import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
@@ -29,15 +28,15 @@ import com.readytalk.oss.dbms.ForeignKeyException;
 
 public class ForeignKeys extends TestCase {
   private static void testDelete(boolean restrict) {
-    Column number = new Column(Integer.class);
-    Column name = new Column(String.class);
-    Table englishNumbers = new Table(list(number));
-    Table spanishNumbers = new Table(list(number));
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Table englishNumbers = new Table(cols(number));
+    Table spanishNumbers = new Table(cols(number));
 
     RevisionBuilder builder = Revisions.Empty.builder();
 
-    builder.add(new ForeignKey(spanishNumbers, list(number),
-                               englishNumbers, list(number)));
+    builder.add(new ForeignKey(spanishNumbers, cols(number),
+                               englishNumbers, cols(number)));
 
     builder.insert(Throw, englishNumbers, 1, name, "one");
     builder.insert(Throw, spanishNumbers, 1, name, "uno");
@@ -76,26 +75,27 @@ public class ForeignKeys extends TestCase {
     testDelete(false);
   }
 
-  private static void testDeleteTemplate(boolean restrict) {
-    Column number = new Column(Integer.class);
-    Column name = new Column(String.class);
-    Table englishNumbers = new Table(list(number));
-    Table spanishNumbers = new Table(list(number));
+  @Test
+  public static void testDeleteTemplate(boolean restrict) {
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Table englishNumbers = new Table(cols(number));
+    Table spanishNumbers = new Table(cols(number));
 
     RevisionBuilder builder = Revisions.Empty.builder();
 
-    builder.add(new ForeignKey(spanishNumbers, list(number),
-                               englishNumbers, list(number)));
+    builder.add(new ForeignKey(spanishNumbers, cols(number),
+                               englishNumbers, cols(number)));
 
     PatchTemplate englishInsert = new InsertTemplate
       (englishNumbers,
-       list(number, name),
+       cols(number, name),
        list(parameter(), parameter()),
        Throw);
 
     PatchTemplate spanishInsert = new InsertTemplate
       (spanishNumbers,
-       list(number, name),
+       cols(number, name),
        list(parameter(), parameter()),
        Throw);
 
@@ -139,16 +139,16 @@ public class ForeignKeys extends TestCase {
   }
 
   private static void testUpdate(boolean restrict) {
-    Column number = new Column(Integer.class);
-    Column english = new Column(String.class);
-    Column name = new Column(String.class);
-    Table englishNumbers = new Table(list(number));
-    Table spanishNumbers = new Table(list(english));
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> english = new Column<String>(String.class);
+    Column<String> name = new Column<String>(String.class);
+    Table englishNumbers = new Table(cols(number));
+    Table spanishNumbers = new Table(cols(english));
 
     RevisionBuilder builder = Revisions.Empty.builder();
 
-    builder.add(new ForeignKey(spanishNumbers, list(english),
-                               englishNumbers, list(name)));
+    builder.add(new ForeignKey(spanishNumbers, cols(english),
+                               englishNumbers, cols(name)));
 
     builder.insert(Throw, englishNumbers, 1, name, "one");
     builder.insert(Throw, spanishNumbers, "one", name, "uno");
@@ -190,15 +190,15 @@ public class ForeignKeys extends TestCase {
 
   @Test
   public void testInsert() {
-    Column number = new Column(Integer.class);
-    Column name = new Column(String.class);
-    Table englishNumbers = new Table(list(number));
-    Table spanishNumbers = new Table(list(number));
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Table englishNumbers = new Table(cols(number));
+    Table spanishNumbers = new Table(cols(number));
 
     RevisionBuilder builder = Revisions.Empty.builder();
 
-    builder.add(new ForeignKey(spanishNumbers, list(number),
-                               englishNumbers, list(number)));
+    builder.add(new ForeignKey(spanishNumbers, cols(number),
+                               englishNumbers, cols(number)));
 
     builder.insert(Throw, englishNumbers, 1, name, "one");
     builder.insert(Throw, spanishNumbers, 1, name, "uno");
@@ -211,15 +211,15 @@ public class ForeignKeys extends TestCase {
   }
 
   private static void testMerge(boolean restrict) {
-    Column number = new Column(Integer.class);
-    Column name = new Column(String.class);
-    Table englishNumbers = new Table(list(number));
-    Table spanishNumbers = new Table(list(number));
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Table englishNumbers = new Table(cols(number));
+    Table spanishNumbers = new Table(cols(number));
 
     RevisionBuilder builder = Revisions.Empty.builder();
 
-    builder.add(new ForeignKey(spanishNumbers, list(number),
-                               englishNumbers, list(number)));
+    builder.add(new ForeignKey(spanishNumbers, cols(number),
+                               englishNumbers, cols(number)));
 
     builder.insert(Throw, englishNumbers, 1, name, "one");
     builder.insert(Throw, englishNumbers, 2, name, "two");
@@ -263,10 +263,10 @@ public class ForeignKeys extends TestCase {
 
   @Test
   public void testAddForeignKey() {
-    Column number = new Column(Integer.class);
-    Column name = new Column(String.class);
-    Table englishNumbers = new Table(list(number));
-    Table spanishNumbers = new Table(list(number));
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Table englishNumbers = new Table(cols(number));
+    Table spanishNumbers = new Table(cols(number));
 
     RevisionBuilder builder = Revisions.Empty.builder();
 
@@ -276,8 +276,8 @@ public class ForeignKeys extends TestCase {
 
     builder = builder.commit().builder();
 
-    builder.add(new ForeignKey(spanishNumbers, list(number),
-                               englishNumbers, list(number)));
+    builder.add(new ForeignKey(spanishNumbers, cols(number),
+                               englishNumbers, cols(number)));
 
     try {
       builder.commit();
@@ -286,15 +286,15 @@ public class ForeignKeys extends TestCase {
   }
 
   private static void testDiff(boolean skipBrokenReferences) {
-    Column number = new Column(Integer.class);
-    Column name = new Column(String.class);
-    Table englishNumbers = new Table(list(number));
-    Table spanishNumbers = new Table(list(number));
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Table englishNumbers = new Table(cols(number));
+    Table spanishNumbers = new Table(cols(number));
 
     RevisionBuilder builder = Revisions.Empty.builder();
 
-    builder.add(new ForeignKey(spanishNumbers, list(number),
-                               englishNumbers, list(number)));
+    builder.add(new ForeignKey(spanishNumbers, cols(number),
+                               englishNumbers, cols(number)));
 
     builder.insert(Throw, englishNumbers, 1, name, "one");
     builder.insert(Throw, spanishNumbers, 1, name, "uno");
@@ -360,22 +360,22 @@ public class ForeignKeys extends TestCase {
 
   @Test
   public void testBlocksAndWindows() {
-    Column screenId = new Column(String.class, "screenId");
-    Column windowId = new Column(Integer.class, "windowId");
-    Column blockId = new Column(Integer.class, "blockId");
+    Column<String> screenId = new Column<String>(String.class, "screenId");
+    Column<Integer> windowId = new Column<Integer>(Integer.class, "windowId");
+    Column<Integer> blockId = new Column<Integer>(Integer.class, "blockId");
 
-    Table screens = new Table(list(screenId), "screens");
+    Table screens = new Table(cols(screenId), "screens");
     Table windows = new Table
-      (list(screenId, windowId), "windows", list(screens));
+      (cols(screenId, windowId), "windows", list(screens));
     Table blocks = new Table
-      (list(screenId, windowId, blockId), "blocks", list(windows));
+      (cols(screenId, windowId, blockId), "blocks", list(windows));
 
     RevisionBuilder builder = Revisions.Empty.builder();
     builder.add
-      (new ForeignKey(windows, list(screenId), screens, list(screenId)));
+      (new ForeignKey(windows, cols(screenId), screens, cols(screenId)));
     builder.add
       (new ForeignKey
-       (blocks, list(screenId, windowId), windows, list(screenId, windowId)));
+       (blocks, cols(screenId, windowId), windows, cols(screenId, windowId)));
 
     Revision base = builder.commit();
     builder = base.builder();

@@ -5,7 +5,7 @@ import junit.framework.TestCase;
 import org.junit.Test;
 
 import static com.readytalk.oss.dbms.util.Util.list;
-import static org.junit.Assert.*;
+import static com.readytalk.oss.dbms.util.Util.cols;
 
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.Column;
@@ -32,15 +32,15 @@ public class MergeTest extends TestCase{
     @Test
     public void testMerges(){
 
-        final Column number = new Column(Integer.class);
-        final Column name = new Column(String.class);
-        final Table numbers = new Table(list(number));
+        final Column<Integer> number = new Column<Integer>(Integer.class);
+        final Column<String> name = new Column<String>(String.class);
+        final Table numbers = new Table(cols(number));
 
         Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
-           list(number, name),
+           cols(number, name),
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
@@ -70,7 +70,7 @@ public class MergeTest extends TestCase{
            (BinaryOperation.Type.Equal,
             new ColumnReference(numbersReference, number),
             new Parameter()),
-           list(name),
+           cols(name),
            list((Expression) new Parameter()));
 
         builder = base.builder();

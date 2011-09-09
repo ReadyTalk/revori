@@ -8,23 +8,23 @@ import java.util.Iterator;
 public final class ForeignKey implements Comparable<ForeignKey> {
   public final Table refererTable;
 
-  public final List<Column> refererColumns;
+  public final List<Column<?>> refererColumns;
 
   public final Table referentTable;
 
-  public final List<Column> referentColumns;
+  public final List<Column<?>> referentColumns;
 
   public ForeignKey(Table refererTable,
-                    List<Column> refererColumns,
+                    List<Column<?>> refererColumns,
                     Table referentTable,
-                    List<Column> referentColumns)
+                    List<Column<?>> referentColumns)
   {
     this.refererTable = refererTable;
     this.refererColumns = Collections.unmodifiableList
-      (new ArrayList(refererColumns));
+      (new ArrayList<Column<?>>(refererColumns));
     this.referentTable = referentTable;
     this.referentColumns = Collections.unmodifiableList
-      (new ArrayList(referentColumns));
+      (new ArrayList<Column<?>>(referentColumns));
 
     if (this.refererColumns.size() !=this. referentColumns.size()) {
       throw new IllegalArgumentException
@@ -35,8 +35,8 @@ public final class ForeignKey implements Comparable<ForeignKey> {
       throw new IllegalArgumentException("column lists must be non-empty");
     }
 
-    Iterator<Column> refererIterator = this.refererColumns.iterator();
-    Iterator<Column> referentIterator = this.referentColumns.iterator();
+    Iterator<Column<?>> refererIterator = this.refererColumns.iterator();
+    Iterator<Column<?>> referentIterator = this.referentColumns.iterator();
     while (refererIterator.hasNext()) {
       if (refererIterator.next().type != referentIterator.next().type) {
         throw new IllegalArgumentException
@@ -45,14 +45,14 @@ public final class ForeignKey implements Comparable<ForeignKey> {
     }
   }
 
-  private static int compare(List<Column> a, List<Column> b) {
+  private static int compare(List<Column<?>> a, List<Column<?>> b) {
     int d = a.size() - b.size();
     if (d != 0) {
       return d;
     }
 
-    Iterator<Column> ai = a.iterator();
-    Iterator<Column> bi = b.iterator();
+    Iterator<Column<?>> ai = a.iterator();
+    Iterator<Column<?>> bi = b.iterator();
     while (ai.hasNext()) {
       d = ai.next().compareTo(bi.next());
       if (d != 0) {
@@ -84,10 +84,10 @@ public final class ForeignKey implements Comparable<ForeignKey> {
 
   public int hashCode() {
     int h = refererTable.hashCode() ^ referentTable.hashCode();
-    for (Column c: refererColumns) {
+    for (Column<?> c: refererColumns) {
       h ^= c.hashCode();
     }
-    for (Column c: referentColumns) {
+    for (Column<?> c: referentColumns) {
       h ^= c.hashCode();
     }
     return h;

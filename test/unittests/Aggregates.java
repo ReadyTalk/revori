@@ -1,14 +1,13 @@
 package unittests;
 
 import static com.readytalk.oss.dbms.util.Util.list;
+import static com.readytalk.oss.dbms.util.Util.cols;
 import static com.readytalk.oss.dbms.util.Util.set;
 import static com.readytalk.oss.dbms.DuplicateKeyResolution.Throw;
 import static com.readytalk.oss.dbms.ExpressionFactory.equal;
 import static com.readytalk.oss.dbms.ExpressionFactory.reference;
 import static com.readytalk.oss.dbms.ExpressionFactory.aggregate;
 import static com.readytalk.oss.dbms.ExpressionFactory.constant;
-
-import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
@@ -34,9 +33,9 @@ public class Aggregates extends TestCase {
 
   @Test
   public void testCount() {
-    Column number = new Column(Integer.class, "number");
-    Column name = new Column(String.class, "name");
-    Table things = new Table(list(number), "things");
+    Column<Integer> number = new Column<Integer>(Integer.class, "number");
+    Column<String> name = new Column<String>(String.class, "name");
+    Table things = new Table(cols(number), "things");
     
     RevisionBuilder builder = Revisions.Empty.builder();
 
@@ -124,9 +123,9 @@ public class Aggregates extends TestCase {
 
   @Test
   public void testView() {
-    Column number = new Column(Integer.class, "number");
-    Column name = new Column(String.class, "name");
-    Table things = new Table(list(number), "things");
+    Column<Integer> number = new Column<Integer>(Integer.class, "number");
+    Column<String> name = new Column<String>(String.class, "name");
+    Table things = new Table(cols(number), "things");
     
     RevisionBuilder builder = Revisions.Empty.builder();
 
@@ -139,7 +138,7 @@ public class Aggregates extends TestCase {
 
     TableReference thingsReference = new TableReference(things);
 
-    Column sum = new Column(Integer.class, "sum");
+    Column<Integer> sum = new Column<Integer>(Integer.class, "sum");
 
     View view = new View
       (new QueryTemplate
@@ -149,8 +148,8 @@ public class Aggregates extends TestCase {
         thingsReference, constant(true),
         set(reference(thingsReference, name))),
        Collections.emptyList(),
-       list(name, sum),
-       list(name),
+       cols(name, sum),
+       cols(name),
        list(reference(thingsReference, name)),
        "view");
 

@@ -5,7 +5,9 @@ import junit.framework.TestCase;
 import org.junit.Test;
 
 import static com.readytalk.oss.dbms.util.Util.list;
-import static org.junit.Assert.*;
+import static com.readytalk.oss.dbms.util.Util.cols;
+
+import static com.readytalk.oss.dbms.ExpressionFactory.reference;
 
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Revisions;
@@ -20,23 +22,22 @@ import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.Parameter;
 import com.readytalk.oss.dbms.Constant;
-import com.readytalk.oss.dbms.ColumnReference;
 import com.readytalk.oss.dbms.DuplicateKeyResolution;
 
 public class SimpleTest extends TestCase{
     
 	@Test
     public void testSimpleInsertQuery(){
-        Column key = new Column(Integer.class);
-        Column firstName = new Column(String.class);
-        Column lastName = new Column(String.class);
-        Table names = new Table(list(key));
+        Column<Integer> key = new Column<Integer>(Integer.class);
+        Column<String> firstName = new Column<String>(String.class);
+        Column<String> lastName = new Column<String>(String.class);
+        Table names = new Table(cols(key));
         Revision tail = Revisions.Empty;
         
         RevisionBuilder builder = tail.builder();
         PatchTemplate insert = new InsertTemplate
          (names,
-          list(key, firstName, lastName),
+          cols(key, firstName, lastName),
           list((Expression) new Parameter(),
                new Parameter(),
                new Parameter()), DuplicateKeyResolution.Throw);
@@ -49,9 +50,9 @@ public class SimpleTest extends TestCase{
         TableReference namesReference = new TableReference(names);
         
         QueryTemplate any = new QueryTemplate
-          (list((Expression) new ColumnReference(namesReference, key),
-        		  (Expression) new ColumnReference(namesReference, firstName),
-                  (Expression) new ColumnReference(namesReference, lastName)),
+          (list(reference(namesReference, key),
+        		  reference(namesReference, firstName),
+                  reference(namesReference, lastName)),
                   namesReference,
                   new Constant(true));
         Object[] parameters = {};
@@ -75,18 +76,18 @@ public class SimpleTest extends TestCase{
     
     @Test
     public void testMultipleColumnInsertQuery(){
-        Column key = new Column(Integer.class);
-        Column firstName = new Column(String.class);
-        Column lastName = new Column(String.class);
-        Column city = new Column(String.class);
-        Column age = new Column(Integer.class);
-        Table names = new Table(list(key));
+        Column<Integer> key = new Column<Integer>(Integer.class);
+        Column<String> firstName = new Column<String>(String.class);
+        Column<String> lastName = new Column<String>(String.class);
+        Column<String> city = new Column<String>(String.class);
+        Column<Integer> age = new Column<Integer>(Integer.class);
+        Table names = new Table(cols(key));
         Revision tail = Revisions.Empty;
         //Insert 4 columns
         RevisionBuilder builder = tail.builder();
         PatchTemplate insert = new InsertTemplate
          (names,
-                 list(key, firstName, lastName, city),
+                 cols(key, firstName, lastName, city),
                  list((Expression) new Parameter(),
                          new Parameter(),
                          new Parameter(),
@@ -99,7 +100,7 @@ public class SimpleTest extends TestCase{
         builder = first.builder();
         insert = new InsertTemplate
          (names,
-                 list(key, firstName),
+                 cols(key, firstName),
                  list((Expression) new Parameter(),
                          new Parameter()), DuplicateKeyResolution.Throw);
         builder.apply(insert, 2, "Charleston");
@@ -110,7 +111,7 @@ public class SimpleTest extends TestCase{
         builder = second.builder();
         insert = new InsertTemplate
          (names,
-                 list(key, firstName, lastName, city, age),
+                 cols(key, firstName, lastName, city, age),
                  list((Expression) new Parameter(),
                          new Parameter(),
                          new Parameter(),
@@ -125,11 +126,11 @@ public class SimpleTest extends TestCase{
         TableReference namesReference = new TableReference(names);
         
         QueryTemplate any = new QueryTemplate
-          (list((Expression) new ColumnReference(namesReference, key),
-        		  (Expression) new ColumnReference(namesReference, firstName),
-                  (Expression) new ColumnReference(namesReference, lastName),
-                  (Expression) new ColumnReference(namesReference, city),
-                  (Expression) new ColumnReference(namesReference, age)),
+          (list(reference(namesReference, key),
+        		  reference(namesReference, firstName),
+                  reference(namesReference, lastName),
+                  reference(namesReference, city),
+                  reference(namesReference, age)),
                   namesReference,
                   new Constant(true));
         Object[] parameters = {};
@@ -160,22 +161,20 @@ public class SimpleTest extends TestCase{
     
     @Test
     public void testNotEnoughColumnsForPrimaryKeyQuery(){
-        Column key = new Column(Integer.class);
-        Column firstName = new Column(String.class);
-        Column lastName = new Column(String.class);
-        Column city = new Column(String.class);
-        Table names = new Table(list(key, city));
-        Revision tail = Revisions.Empty;
+        Column<Integer> key = new Column<Integer>(Integer.class);
+        Column<String> firstName = new Column<String>(String.class);
+        Column<String> lastName = new Column<String>(String.class);
+        Column<String> city = new Column<String>(String.class);
+        Table names = new Table(cols(key, city));
         
-        RevisionBuilder builder = tail.builder();
         try{
-        PatchTemplate insert = new InsertTemplate
-         (names,
-          list(key, firstName, lastName),
-          list((Expression) new Parameter(),
-                         new Parameter(),
-                         new Parameter()), DuplicateKeyResolution.Throw);
-        fail("Expected IllegalArgumentException...");
-                }catch(IllegalArgumentException expected){}
-        }
+          new InsertTemplate
+           (names,
+            cols(key, firstName, lastName),
+            list((Expression) new Parameter(),
+                           new Parameter(),
+                           new Parameter()), DuplicateKeyResolution.Throw);
+          fail("Expected IllegalArgumentException...");
+        } catch(IllegalArgumentException expected){}
     }
+}

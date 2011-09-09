@@ -36,7 +36,7 @@ public class Table implements Comparable<Table> {
    * Instances of Table are considered equal if and only if their orders, IDs
    * and primary keys are equal.
    */
-  public Table(List<Column> primaryKey, String id) {
+  public Table(List<Column<?>> primaryKey, String id) {
     this(primaryKey, id, 0);
   }
 
@@ -47,7 +47,7 @@ public class Table implements Comparable<Table> {
    * Instances of Table are considered equal if and only if their orders, IDs
    * and primary keys are equal.
    */
-  public Table(List<Column> primaryKey, String id, int order) {
+  public Table(List<Column<?>> primaryKey, String id, int order) {
     this.primaryKey = new Index(this, primaryKey);
     this.order = order;
     this.id = id;
@@ -63,7 +63,7 @@ public class Table implements Comparable<Table> {
    * Instances of Table are considered equal if and only if their orders, IDs
    * and primary keys are equal.
    */
-  public Table(List<Column> primaryKey, String id, List<Table> comesAfter) {
+  public Table(List<Column<?>> primaryKey, String id, List<Table> comesAfter) {
     this(primaryKey, id, makeOrder(comesAfter));
   }
 
@@ -71,7 +71,7 @@ public class Table implements Comparable<Table> {
    * Defines a table using the specified primary key and an
    * automatically generated ID.<p>
    */
-  public Table(List<Column> primaryKey) {
+  public Table(List<Column<?>> primaryKey) {
     this(primaryKey, makeId());
   }
 

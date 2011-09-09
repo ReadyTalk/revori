@@ -3,9 +3,7 @@ package unittests;
 import junit.framework.TestCase;
 
 import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-
-import static com.readytalk.oss.dbms.util.Util.list;
+import static com.readytalk.oss.dbms.util.Util.cols;
 import static com.readytalk.oss.dbms.DuplicateKeyResolution.Throw;
 import static com.readytalk.oss.dbms.DuplicateKeyResolution.Overwrite;
 
@@ -15,7 +13,6 @@ import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Revision;
 import com.readytalk.oss.dbms.RevisionBuilder;
 import com.readytalk.oss.dbms.DiffResult;
-import com.readytalk.oss.dbms.DiffResult.Type;
 
 public class LowLevel extends TestCase{
   private static void expectEqual(Object actual, Object expected) {
@@ -24,9 +21,9 @@ public class LowLevel extends TestCase{
 
   @Test
   public void testLowLevelDiffs() {
-    Column number = new Column(Integer.class);
-    Column name = new Column(String.class);
-    Table numbers = new Table(list(number));
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Table numbers = new Table(cols(number));
 
     Revision tail = Revisions.Empty;
 
@@ -329,9 +326,9 @@ public class LowLevel extends TestCase{
 
   @Test
   public void testLowLevelDiffApplication() {
-    Column number = new Column(Integer.class);
-    Column name = new Column(String.class);
-    Table numbers = new Table(list(number));
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Table numbers = new Table(cols(number));
 
     Revision tail = Revisions.Empty;
 

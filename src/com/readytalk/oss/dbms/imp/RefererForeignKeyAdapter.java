@@ -30,17 +30,17 @@ public class RefererForeignKeyAdapter {
 
     Expression referentTest = constant(true);
 
-    for (Column c: constraint.referentColumns) {
+    for (Column<?> c: constraint.referentColumns) {
       referentTest = and
         (referentTest, equal(reference(referent, c), parameter()));
     }
 
     query = new QueryTemplate
-      ((List<Expression>) (List) Collections.emptyList(), referent,
+      (Collections.<Expression>emptyList(), referent,
        referentTest);
   }
 
-  private Object[] parametersOrNull(List<Column> columns, Node tree) {
+  private Object[] parametersOrNull(List<Column<?>> columns, Node tree) {
     Object[] parameters = new Object[columns.size()];
     for (int i = 0; i < parameters.length; ++i) {
       Node n = Node.find(tree, columns.get(i));
@@ -53,7 +53,7 @@ public class RefererForeignKeyAdapter {
   }
 
   private boolean queryEmptyAndNotNull(QueryTemplate query,
-                            Revision revision, List<Column> columns, Node tree)
+                            Revision revision, List<Column<?>> columns, Node tree)
   {
     Object[] params = parametersOrNull(columns, tree);
     if(params == null) {

@@ -11,13 +11,9 @@ import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.Revision;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.TableReference;
-import com.readytalk.oss.dbms.DeleteTemplate;
 import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.ForeignKey;
-import com.readytalk.oss.dbms.ForeignKeyResolver;
-import com.readytalk.oss.dbms.ForeignKeyException;
-
 import java.util.List;
 import java.util.ArrayList;
 
@@ -38,7 +34,7 @@ public class ReferentForeignKeyAdapter {
         (refererTest, equal(reference(referer, c), parameter()));
     }
     
-    List<Column> refererColumns = referer.table.primaryKey.columns;
+    List<Column<?>> refererColumns = referer.table.primaryKey.columns;
     List<Expression> refererColumnReferences
       = new ArrayList<Expression>(refererColumns.size());
 
@@ -58,7 +54,7 @@ public class ReferentForeignKeyAdapter {
         (referentTest, equal(reference(referent, c), parameter()));
     }
     
-    List<Column> referentColumns = referent.table.primaryKey.columns;
+    List<Column<?>> referentColumns = referent.table.primaryKey.columns;
     List<Expression> referentColumnReferences
       = new ArrayList<Expression>(refererColumns.size());
 
@@ -70,7 +66,7 @@ public class ReferentForeignKeyAdapter {
       (referentColumnReferences, referent, referentTest);
   }
 
-  private Object[] parameters(List<Column> columns, Node tree) {
+  private Object[] parameters(List<Column<?>> columns, Node tree) {
     Object[] parameters = new Object[columns.size()];
     for (int i = 0; i < parameters.length; ++i) {
       Node n = Node.find(tree, columns.get(i));
@@ -80,7 +76,7 @@ public class ReferentForeignKeyAdapter {
   }
 
   private QueryResult query(QueryTemplate query,
-                            Revision revision, List<Column> columns, Node tree)
+                            Revision revision, List<Column<?>> columns, Node tree)
   {
     return MyRevision.Empty.diff(revision, query, parameters(columns, tree));
   }

@@ -31,7 +31,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 public class EpidemicServer implements RevisionServer {
-  private static final boolean Debug = false;
+  private static final boolean Debug = true;
 
   private static final int End = 0;
   private static final int Descend = 1;

@@ -5,7 +5,9 @@ import junit.framework.TestCase;
 import org.junit.Test;
 
 import static com.readytalk.oss.dbms.util.Util.list;
-import static org.junit.Assert.*;
+import static com.readytalk.oss.dbms.util.Util.cols;
+
+import static com.readytalk.oss.dbms.ExpressionFactory.reference;
 
 import com.readytalk.oss.dbms.BinaryOperation;
 import com.readytalk.oss.dbms.Column;
@@ -20,9 +22,7 @@ import com.readytalk.oss.dbms.PatchTemplate;
 import com.readytalk.oss.dbms.UpdateTemplate;
 import com.readytalk.oss.dbms.InsertTemplate;
 import com.readytalk.oss.dbms.DeleteTemplate;
-import com.readytalk.oss.dbms.Constant;
 import com.readytalk.oss.dbms.TableReference;
-import com.readytalk.oss.dbms.ColumnReference;
 import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.Parameter;
@@ -32,21 +32,21 @@ import com.readytalk.oss.dbms.DuplicateKeyResolution;
 public class MultipleIndex extends TestCase{
     @Test
     public void testMultipleIndexInserts(){
-        Column number = new Column(Integer.class);
-        Column name = new Column(String.class);
-        Table numbers = new Table(list(number));
+        Column<Integer> number = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
+        Table numbers = new Table(cols(number));
 
         Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
-           list(number, name),
+           cols(number, name),
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         RevisionBuilder builder = tail.builder();
 
-        Index nameIndex = new Index(numbers, list(name));
+        Index nameIndex = new Index(numbers, cols(name));
 
         builder.add(nameIndex);
 
@@ -65,17 +65,17 @@ public class MultipleIndex extends TestCase{
         TableReference numbersReference = new TableReference(numbers);
         
         QueryTemplate greaterThanAndLessThan = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, name)),
            numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.And,
             new BinaryOperation
             (BinaryOperation.Type.GreaterThan,
-             new ColumnReference(numbersReference, name),
+             reference(numbersReference, name),
              new Parameter()),
             new BinaryOperation
             (BinaryOperation.Type.LessThan,
-             new ColumnReference(numbersReference, name),
+             reference(numbersReference, name),
              new Parameter())));
         Object[] parameters = { "four", "two" };
 
@@ -185,15 +185,15 @@ public class MultipleIndex extends TestCase{
     
     @Test
     public void testMultipleIndexUpdates(){
-        Column number = new Column(Integer.class);
-        Column name = new Column(String.class);
-        Table numbers = new Table(list(number));
+        Column<Integer> number = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
+        Table numbers = new Table(cols(number));
 
         Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
-           list(number, name),
+           cols(number, name),
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
@@ -209,7 +209,7 @@ public class MultipleIndex extends TestCase{
         builder.apply(insert, 8, "eight");
         builder.apply(insert, 9, "nine");
 
-        Index nameIndex = new Index(numbers, list(name));
+        Index nameIndex = new Index(numbers, cols(name));
 
         builder.add(nameIndex);
 
@@ -219,9 +219,9 @@ public class MultipleIndex extends TestCase{
           (numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.Equal,
-            new ColumnReference(numbersReference, number),
+            reference(numbersReference, number),
             new Parameter()),
-           list(name),
+           cols(name),
            list((Expression) new Parameter()));
 
         builder.apply(updateNameWhereNumberEqual, 1, "uno");
@@ -232,17 +232,17 @@ public class MultipleIndex extends TestCase{
         Revision first = builder.commit();
 
         QueryTemplate greaterThanAndLessThan = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, name)),
            numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.And,
             new BinaryOperation
             (BinaryOperation.Type.GreaterThan,
-             new ColumnReference(numbersReference, name),
+             reference(numbersReference, name),
              new Parameter()),
             new BinaryOperation
             (BinaryOperation.Type.LessThan,
-             new ColumnReference(numbersReference, name),
+             reference(numbersReference, name),
              new Parameter())));
         Object[] parameters = { "four", "two" };
 
@@ -284,15 +284,15 @@ public class MultipleIndex extends TestCase{
     
     @Test
     public void testMultipleIndexDeletes(){
-        Column number = new Column(Integer.class);
-        Column name = new Column(String.class);
-        Table numbers = new Table(list(number));
+        Column<Integer> number = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
+        Table numbers = new Table(cols(number));
 
         Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
-           list(number, name),
+           cols(number, name),
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
@@ -308,7 +308,7 @@ public class MultipleIndex extends TestCase{
         builder.apply(insert, 8, "eight");
         builder.apply(insert, 9, "nine");
 
-        Index nameIndex = new Index(numbers, list(name));
+        Index nameIndex = new Index(numbers, cols(name));
 
         builder.add(nameIndex);
 
@@ -318,7 +318,7 @@ public class MultipleIndex extends TestCase{
           (numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.Equal,
-            new ColumnReference(numbersReference, number),
+            reference(numbersReference, number),
             new Parameter()));
 
         builder.apply(deleteWhereNumberEqual, 6);
@@ -327,7 +327,7 @@ public class MultipleIndex extends TestCase{
           (numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.Equal,
-            new ColumnReference(numbersReference, name),
+            reference(numbersReference, name),
             new Parameter()));
 
         builder.apply(deleteWhereNameEqual, "four");
@@ -335,17 +335,17 @@ public class MultipleIndex extends TestCase{
         Revision first = builder.commit();
 
         QueryTemplate greaterThanAndLessThanName = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, name)),
            numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.And,
             new BinaryOperation
             (BinaryOperation.Type.GreaterThan,
-             new ColumnReference(numbersReference, name),
+             reference(numbersReference, name),
              new Parameter()),
             new BinaryOperation
             (BinaryOperation.Type.LessThan,
-             new ColumnReference(numbersReference, name),
+             reference(numbersReference, name),
              new Parameter())));
         Object[] parameters = { "f", "t" };
 
@@ -362,17 +362,17 @@ public class MultipleIndex extends TestCase{
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
         QueryTemplate greaterThanAndLessThanNumber = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, name)),
            numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.And,
             new BinaryOperation
             (BinaryOperation.Type.GreaterThan,
-             new ColumnReference(numbersReference, number),
+             reference(numbersReference, number),
              new Parameter()),
             new BinaryOperation
             (BinaryOperation.Type.LessThan,
-             new ColumnReference(numbersReference, number),
+             reference(numbersReference, number),
              new Parameter())));
         Object[] parameters1 = { 2, 8 };
 
@@ -408,21 +408,21 @@ public class MultipleIndex extends TestCase{
     
     @Test
     public void testMultipleIndexMerges(){
-        Column number = new Column(Integer.class);
-        Column name = new Column(String.class);
-        Table numbers = new Table(list(number));
+        Column<Integer> number = new Column<Integer>(Integer.class);
+        Column<String> name = new Column<String>(String.class);
+        Table numbers = new Table(cols(number));
 
         Revision tail = Revisions.Empty;
 
         PatchTemplate insert = new InsertTemplate
           (numbers,
-           list(number, name),
+           cols(number, name),
            list((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         RevisionBuilder builder = tail.builder();
 
-        Index nameIndex = new Index(numbers, list(name));
+        Index nameIndex = new Index(numbers, cols(name));
 
         builder.add(nameIndex);
 
@@ -460,17 +460,17 @@ public class MultipleIndex extends TestCase{
         TableReference numbersReference = new TableReference(numbers);
 
         QueryTemplate greaterThanAndLessThan = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, name)),
+          (list(reference(numbersReference, name)),
            numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.And,
             new BinaryOperation
             (BinaryOperation.Type.GreaterThan,
-             new ColumnReference(numbersReference, name),
+             reference(numbersReference, name),
              new Parameter()),
             new BinaryOperation
             (BinaryOperation.Type.LessThan,
-             new ColumnReference(numbersReference, name),
+             reference(numbersReference, name),
              new Parameter())));
         Object[] parameters = { "four", "two" };
 
@@ -515,9 +515,9 @@ public class MultipleIndex extends TestCase{
           (numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.Equal,
-            new ColumnReference(numbersReference, number),
+            reference(numbersReference, number),
             new Parameter()),
-           list(name),
+           cols(name),
            list((Expression) new Parameter()));
 
         builder.apply(updateNameWhereNumberEqual, 1, "uno");
@@ -531,7 +531,7 @@ public class MultipleIndex extends TestCase{
           (numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.Equal,
-            new ColumnReference(numbersReference, number),
+            reference(numbersReference, number),
             new Parameter()));
 
         builder.apply(deleteWhereNumberEqual, 1);

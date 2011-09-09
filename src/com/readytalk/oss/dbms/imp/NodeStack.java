@@ -1,6 +1,5 @@
 package com.readytalk.oss.dbms.imp;
 
-import static com.readytalk.oss.dbms.util.Util.list;
 import static com.readytalk.oss.dbms.util.Util.expect;
 
 class NodeStack {
