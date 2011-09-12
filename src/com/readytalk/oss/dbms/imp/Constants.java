@@ -27,7 +27,7 @@ class Constants {
 
   public static final Table IndexTable
     = new Table(cols(TableColumn, IndexColumn),
-                "IndexTable.Constants.imp.dbms.oss.readytalk.com");
+                "IndexTable.Constants.imp.dbms.oss.readytalk.com", Short.MIN_VALUE);
 
   public static final Column<View> ViewColumn
     = new Column<View>(View.class,

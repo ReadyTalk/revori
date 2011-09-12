@@ -46,6 +46,8 @@ public class Table implements Comparable<Table> {
    *
    * Instances of Table are considered equal if and only if their orders, IDs
    * and primary keys are equal.
+   * 
+   * An order of <= Short.MIN_VALUE is reserved for internal data structures.
    */
   public Table(List<Column<?>> primaryKey, String id, int order) {
     this.primaryKey = new Index(this, primaryKey);

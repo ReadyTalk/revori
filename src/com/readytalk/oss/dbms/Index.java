@@ -97,4 +97,9 @@ public final class Index implements Comparable<Index> {
   public String toString() {
     return "index[" + table + " " + columns + "]";
   }
+
+  public boolean isPrimary() {
+    // TODO: we *should* be able to use (this == table.primaryKey) here
+    return equals(table.primaryKey);
+  }
 }

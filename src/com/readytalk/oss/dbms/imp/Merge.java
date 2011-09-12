@@ -13,6 +13,8 @@ import com.readytalk.oss.dbms.DiffResult;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Set;
+import java.util.TreeSet;
 
 class Merge {
   public static MyRevision mergeRevisions
@@ -58,8 +60,8 @@ class Merge {
     MyRevisionBuilder builder = new MyRevisionBuilder
       (new Object(), left, new NodeStack());
 
-    List<Index> indexes = new ArrayList<Index>();
-    List<Index> newIndexes = new ArrayList<Index>();
+    Set<Index> indexes = new TreeSet<Index>();
+    Set<Index> newIndexes = new TreeSet<Index>();
 
     NodeStack baseStack = new NodeStack();
     NodeStack leftStack = new NodeStack();
@@ -87,8 +89,10 @@ class Merge {
           boolean conflict = false;
           if (triple.base == null) {
             if (triple.left == null) {
-              builder.insertOrUpdate
-                (depth, triple.right.key, triple.right.value);
+              if(depth != Constants.IndexDataDepth || ((Index)triple.right.key).isPrimary()) {
+                builder.insertOrUpdate
+                  (depth, triple.right.key, triple.right.value);
+              }
             } else if (triple.right == null) {
               // do nothing -- left already has insert
             } else if (depth == bottom) {
@@ -103,6 +107,9 @@ class Merge {
           } else if (triple.left != null) {
             if (triple.right != null) {
               if (triple.left == triple.base) {
+                if(depth == Constants.IndexDataDepth) {
+                  indexes.remove(triple.right.key);
+                }
                 builder.insertOrUpdate
                   (depth, triple.right.key, triple.right.value);
               } else if (triple.right == triple.base) {
