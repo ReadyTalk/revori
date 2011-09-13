@@ -110,5 +110,30 @@ public class TableBuilder extends TestCase {
     // 10 is decidedly non-awesome
     assertEquals(null, second.query(awesomeNumbers.primaryKey, 10.0, number));
   }
+  
+  @Test
+  public void testDeleteColumn() {
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Table numbers = new Table(cols(number));
+
+    RevisionBuilder builder = Revisions.Empty.builder();
+
+    builder.table(numbers)
+      .row(1).column(name, "one").up()
+      .row(2).column(name, "two").up().up();
+
+    Revision first = builder.commit();
+    
+    builder = first.builder();
+    builder.table(numbers)
+      .row(2).delete(name).up().up();
+    Revision second = builder.commit();
+
+    assertEquals("one", second.query(numbers.primaryKey, 1, name));
+    assertEquals(1, second.query(numbers.primaryKey, 1, number));
+    assertEquals(null, second.query(numbers.primaryKey, 2, name));
+    assertEquals(2, second.query(numbers.primaryKey, 2, number));
+  }
 
 }
