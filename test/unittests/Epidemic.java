@@ -41,7 +41,7 @@ public class Epidemic extends TestCase{
     assertEquals(expected, actual);
   }
 
-  /*@Test
+  @Test
   public void testTwoNodeNetwork() {
     NodeNetwork network = new NodeNetwork();
     NodeConflictResolver conflictResolver = new MyConflictResolver();
@@ -56,7 +56,7 @@ public class Epidemic extends TestCase{
 
     Column number = new Column(Integer.class);
     Column name = new Column(String.class);
-    Table numbers = new Table(list(number));
+    Table numbers = new Table(cols(number));
 
     Revision base = n1.server.head();
     RevisionBuilder builder = base.builder();
@@ -116,7 +116,7 @@ public class Epidemic extends TestCase{
     expectEqual(n1.server.head().query(numbersKey, 3, number), 3);
     expectEqual(n2.server.head().query(numbersKey, 3, number), 3);
     expectEqual(observer.server.head().query(numbersKey, 3, number), 3);
-  }*/
+  }
   
   @Test
   public void testFrequentUpdates() {
@@ -170,6 +170,92 @@ public class Epidemic extends TestCase{
     
     expectEqual(n1.server.head().query(valueKey, 0, value), 2);
     expectEqual(n2.server.head().query(valueKey, 0, value), 2);
+  }
+
+  @Test
+  public void testAcks() {
+    NodeNetwork network = new NodeNetwork();
+    NodeConflictResolver conflictResolver = new NoConflictResolver();
+    ForeignKeyResolver foreignKeyResolver = ForeignKeyResolvers.Delete;
+
+    Node n1 = new Node(conflictResolver, foreignKeyResolver, network, 1);
+    Node n2 = new Node(conflictResolver, foreignKeyResolver, network, 2);
+
+    n1.server.updateView(set(n2.id));
+    n2.server.updateView(set(n1.id));
+
+    Column number = new Column(Integer.class);
+    Column value = new Column(Integer.class);
+    Table numbers = new Table(cols(number));
+
+    Revision base = n1.server.head();
+    RevisionBuilder builder = base.builder();
+    
+    builder.insert(Throw, numbers, 1, value, 42);
+
+    n1.server.merge(base, builder.commit());
+
+    Index numbersKey = numbers.primaryKey;
+
+    expectEqual(n1.server.head().query(numbersKey, 1, value), 42);
+
+    base = n2.server.head();
+    builder = base.builder();
+    
+    builder.insert(Throw, numbers, 2, value, 57);
+
+    n2.server.merge(base, builder.commit());
+
+    expectEqual(n2.server.head().query(numbersKey, 2, value), 57);
+
+    flush(network);
+
+    expectEqual(n1.server.head().query(numbersKey, 1, value), 42);
+    expectEqual(n2.server.head().query(numbersKey, 1, value), 42);
+    expectEqual(n1.server.head().query(numbersKey, 2, value), 57);
+    expectEqual(n2.server.head().query(numbersKey, 2, value), 57);
+
+    base = n1.server.head();
+    builder = base.builder();
+    
+    builder.insert(Overwrite, numbers, 1, value, 43);
+
+    n1.server.merge(base, builder.commit());
+
+    base = n2.server.head();
+    builder = base.builder();
+
+    builder.insert(Overwrite, numbers, 2, value, 58);
+
+    n2.server.merge(base, builder.commit());
+
+    flush(network);
+
+    expectEqual(n1.server.head().query(numbersKey, 1, value), 43);
+    expectEqual(n2.server.head().query(numbersKey, 1, value), 43);
+    expectEqual(n1.server.head().query(numbersKey, 2, value), 58);
+    expectEqual(n2.server.head().query(numbersKey, 2, value), 58);
+
+    base = n1.server.head();
+    builder = base.builder();
+    
+    builder.insert(Overwrite, numbers, 1, value, 44);
+
+    n1.server.merge(base, builder.commit());
+
+    base = n2.server.head();
+    builder = base.builder();
+
+    builder.insert(Overwrite, numbers, 2, value, 59);
+
+    n2.server.merge(base, builder.commit());
+
+    flush(network);
+
+    expectEqual(n1.server.head().query(numbersKey, 1, value), 44);
+    expectEqual(n2.server.head().query(numbersKey, 1, value), 44);
+    expectEqual(n1.server.head().query(numbersKey, 2, value), 59);
+    expectEqual(n2.server.head().query(numbersKey, 2, value), 59);
   }
 
   private static void flush(NodeNetwork network, NodeID... dontDeliverTo) {

@@ -410,6 +410,27 @@ public class EpidemicServer implements RevisionServer {
     debugMessage("insertRevision state.id: " + state.id + ", sequenceNo: " + sequenceNumber + ", record: " + newRecord.hashCode());
   }
 
+  private Revision merge(Record base, Record head, Record fork,
+                         NodeID headNode, NodeID forkNode)
+  {
+    MyConflictResolver resolver = new MyConflictResolver
+      (headNode, forkNode, conflictResolver);
+
+    Revision result = head.revision;
+    Record record = base.next;
+    while (base != fork) {
+      if (record.merged == null) {
+        result = base.revision.merge
+          (result, record.revision, resolver, foreignKeyResolver);
+      }
+
+      base = record;
+      record = record.next;
+    }
+
+    return result;
+  }
+
   private void acceptAck(NodeID acknowledger,
                          long acknowledgerSequenceNumber,
                          NodeID diffOrigin,
@@ -421,7 +442,7 @@ public class EpidemicServer implements RevisionServer {
     Record record = state.acknowledged.get(diffOrigin);
 
     if (record.sequenceNumber < diffSequenceNumber) {
-      Revision base = record.revision;
+      Record base = record;
       while (record != null
              && record.sequenceNumber < diffSequenceNumber)
       {
@@ -431,10 +452,8 @@ public class EpidemicServer implements RevisionServer {
       if (record != null && record.sequenceNumber == diffSequenceNumber) {
         if (record.merged == null) {
           insertRevision
-            (state, acknowledgerSequenceNumber, base.merge
-             (state.head.revision, record.revision, new MyConflictResolver
-              (acknowledger, diffOrigin, conflictResolver),
-              foreignKeyResolver), record);
+            (state, acknowledgerSequenceNumber, merge
+             (base, state.head, record, acknowledger, diffOrigin), record);
         }
 
         state.acknowledged.put(diffOrigin, record);
