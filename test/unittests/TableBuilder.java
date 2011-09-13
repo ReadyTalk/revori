@@ -135,5 +135,43 @@ public class TableBuilder extends TestCase {
     assertEquals(null, second.query(numbers.primaryKey, 2, name));
     assertEquals(2, second.query(numbers.primaryKey, 2, number));
   }
+  
+  @Test
+  public void testMultipleTables() {
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> numberName = new Column<String>(String.class);
+    Table numbers = new Table(cols(number));
+
+    Column<Integer> pointx = new Column<Integer>(Integer.class);
+    Column<Integer> pointy = new Column<Integer>(Integer.class);
+    Column<String> pointName = new Column<String>(String.class);
+    Table points = new Table(cols(pointx, pointy));
+
+    RevisionBuilder builder = Revisions.Empty.builder();
+
+    builder
+      .table(numbers)
+      .row(1).column(numberName, "one").up()
+      .row(2).column(numberName, "two").up().up()
+      .table(points)
+      .row(0, 0).column(pointName, "origin").up()
+      .row(1, 0).column(pointName, "x").up()
+      .row(0, 1).column(pointName, "y").up().up()
+      .table(numbers)
+      .row(3).column(numberName, "three").up()
+      .row(4).column(numberName, "four").up().up();
+
+    Revision first = builder.commit();
+
+    assertEquals("one", first.query(numbers.primaryKey, 1, numberName));
+    assertEquals("two", first.query(numbers.primaryKey, 2, numberName));
+    assertEquals("three", first.query(numbers.primaryKey, 3, numberName));
+    assertEquals("four", first.query(numbers.primaryKey, 4, numberName));
+
+    assertEquals("origin", first.query(points.primaryKey, 0, 0, pointName));
+    assertEquals("x", first.query(points.primaryKey, 1, 0, pointName));
+    assertEquals("y", first.query(points.primaryKey, 0, 1, pointName));
+    
+  }
 
 }
