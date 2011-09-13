@@ -836,10 +836,13 @@ class MyRevisionBuilder implements RevisionBuilder {
 
       public MyRowBuilder() {
         path = new Object[3 + table.primaryKey.columns.size()];
-        path[0] = table;
       }
 
       public void init(Comparable[] keys) {
+        if(path.length < keys.length + 3) {
+          path = new Object[3 + keys.length];
+        }
+        path[0] = table;
         for(int i = 0; i < keys.length; i++) {
           path[i + 1] = keys[i];
         }
@@ -885,7 +888,10 @@ class MyRevisionBuilder implements RevisionBuilder {
     private Table table;
     public MyRowBuilder rowBuilder;
 
-    public MyTableBuilder(Table table) {
+    public MyTableBuilder() {
+    }
+    
+    public void init(Table table) {
       this.table = table;
     }
 
@@ -919,16 +925,19 @@ class MyRevisionBuilder implements RevisionBuilder {
     }
   }
 
-  private TableBuilder tableBuilder = null;
+  private MyTableBuilder tableBuilder = null;
 
   public TableBuilder table(Table table)
   {
-    if(tableBuilder != null) {
-      TableBuilder ret = tableBuilder;
+    MyTableBuilder ret;
+    if(tableBuilder == null) {
+      ret = new MyTableBuilder();
+    } else {
+      ret = tableBuilder;
       tableBuilder = null;
-      return ret;
     }
-    return new MyTableBuilder(table);
+    ret.init(table);
+    return ret;
   }
 
   public void drop(Table table) {
