@@ -843,7 +843,7 @@ class MyRevisionBuilder implements RevisionBuilder {
       }
 
       public void init(Comparable[] keys) {
-        if(path.length < keys.length + 3) {
+        if(path.length != keys.length + 3) {
           path = new Object[3 + keys.length];
         }
         path[0] = table;
