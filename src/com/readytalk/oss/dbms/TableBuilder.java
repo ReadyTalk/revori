@@ -21,4 +21,11 @@ public interface TableBuilder {
    * @return the parent RevisionBuilder
    */
   public RevisionBuilder up();
+
+  /**
+   * Inserts the row with specified primary key,
+   * and no other columns.
+   * @return self
+   */
+  public TableBuilder key(Comparable... key);
 }

@@ -900,6 +900,12 @@ class MyRevisionBuilder implements RevisionBuilder {
       return ret;
     }
 
+    public TableBuilder key(Comparable ... key) {
+      MyRowBuilder row = (MyRowBuilder) row(key);
+      insert(DuplicateKeyResolution.Overwrite, row.path, 0, key.length + 1);
+      return row.up(); // identically, return this (but up() can recycle the RowBuilder)
+    }
+
     public TableBuilder delete(Comparable ... key) {
       return this;
     }
