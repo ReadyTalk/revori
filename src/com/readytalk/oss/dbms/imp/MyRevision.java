@@ -102,7 +102,7 @@ public class MyRevision implements Revision {
          + parameters.length + ")");
     }
 
-    if (template.hasAggregates) {
+    if (template.hasAggregates || (! template.orderByExpressions.isEmpty())) {
       View view = new View(template, parameters);
       MyRevisionBuilder builder = new MyRevisionBuilder
         (new Object(), myFork, new NodeStack());

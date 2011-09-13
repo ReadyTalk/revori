@@ -23,10 +23,12 @@ import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.Foldables;
 import com.readytalk.oss.dbms.View;
+import com.readytalk.oss.dbms.Expression;
 
 import java.util.Collections;
+import java.util.Set;
 
-public class Aggregates extends TestCase {
+public class Views extends TestCase {
   private static void expectEqual(Object actual, Object expected) {
     assertEquals(expected, actual);
   }
@@ -191,6 +193,54 @@ public class Aggregates extends TestCase {
     expectEqual(result.nextRow(), QueryResult.Type.Inserted);
     expectEqual(result.nextItem(), "tree");
     expectEqual(result.nextItem(), 19);
+    expectEqual(result.nextRow(), QueryResult.Type.End);
+  }
+
+  @Test
+  public void testOrderBy() {
+    Column<Integer> number = new Column<Integer>(Integer.class, "number");
+    Column<String> name = new Column<String>(String.class, "name");
+    Table things = new Table(cols(number), "things");
+    
+    RevisionBuilder builder = Revisions.Empty.builder();
+
+    builder.insert(Throw, things, 1, name, "tree");
+    builder.insert(Throw, things, 2, name, "truck");
+    builder.insert(Throw, things, 3, name, "planet");
+    builder.insert(Throw, things, 4, name, "planet");
+    builder.insert(Throw, things, 5, name, "tree");
+    builder.insert(Throw, things, 6, name, "tree");
+
+    Revision head = builder.commit();
+
+    TableReference thingsReference = new TableReference(things);
+
+    QueryResult result = Revisions.Empty.diff
+      (head, new QueryTemplate
+       (list
+        (reference(thingsReference, number), reference(thingsReference, name)),
+        thingsReference, constant(true),
+        (Set<Expression>) (Set) Collections.emptySet(),
+        list(reference(thingsReference, name))));
+
+    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+    expectEqual(result.nextItem(), 3);
+    expectEqual(result.nextItem(), "planet");
+    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+    expectEqual(result.nextItem(), 4);
+    expectEqual(result.nextItem(), "planet");
+    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+    expectEqual(result.nextItem(), 1);
+    expectEqual(result.nextItem(), "tree");
+    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+    expectEqual(result.nextItem(), 5);
+    expectEqual(result.nextItem(), "tree");
+    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+    expectEqual(result.nextItem(), 6);
+    expectEqual(result.nextItem(), "tree");
+    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+    expectEqual(result.nextItem(), 2);
+    expectEqual(result.nextItem(), "truck");
     expectEqual(result.nextRow(), QueryResult.Type.End);
   }
 }

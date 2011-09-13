@@ -45,6 +45,8 @@ public final class QueryTemplate implements Comparable<QueryTemplate> {
 
   public final Set<Expression> groupingExpressions;
 
+  public final List<Expression> orderByExpressions;
+
   public final boolean hasAggregates;
 
   /**
@@ -65,6 +67,16 @@ public final class QueryTemplate implements Comparable<QueryTemplate> {
                        Source source,
                        Expression test,
                        Set<Expression> groupingExpressions)
+  {
+    this(expressions, source, test, groupingExpressions,
+         (List<Expression>) (List) Collections.emptyList());
+  }
+
+  public QueryTemplate(List<Expression> expressions,
+                       Source source,
+                       Expression test,
+                       Set<Expression> groupingExpressions,
+                       List<Expression> orderByExpressions)
   {
     this.expressions = Collections.unmodifiableList
       (new ArrayList<Expression>(expressions));
@@ -90,6 +102,9 @@ public final class QueryTemplate implements Comparable<QueryTemplate> {
 
     this.groupingExpressions = Collections.unmodifiableSet
       (groupingExpressions);
+
+    this.orderByExpressions = Collections.unmodifiableList
+      (orderByExpressions);
   }
 
   private static int addBasics(Set<Expression> basics,

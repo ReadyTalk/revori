@@ -39,6 +39,13 @@ public final class View implements Comparable<View> {
       throw new IllegalArgumentException();
     }
 
+    for (Expression e: query.orderByExpressions) {
+      if (! primaryKeyExpressions.contains(e)) {
+        myPrimaryKey.add(makeColumn(e, Comparable.class));
+        myExpressions.add(e);
+      }
+    }
+
     if (query.hasAggregates) {
       for (Expression e: query.groupingExpressions) {
         if (! primaryKeyExpressions.contains(e)) {

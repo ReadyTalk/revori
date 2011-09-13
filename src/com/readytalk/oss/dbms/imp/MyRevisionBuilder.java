@@ -383,8 +383,10 @@ class MyRevisionBuilder implements RevisionBuilder {
       
         n.value = makeTree(stack, view.columns, expressions);
 
-        for (AggregateAdapter a: aggregates) {
-          a.value = Compare.Undefined;
+        if (view.query.hasAggregates) {
+          for (AggregateAdapter a: aggregates) {
+            a.value = Compare.Undefined;
+          }
         }
       } break;
 
@@ -424,8 +426,10 @@ class MyRevisionBuilder implements RevisionBuilder {
           delete(index);
         }
 
-        for (AggregateAdapter a: aggregates) {
-          a.value = Compare.Undefined;
+        if (view.query.hasAggregates) {
+          for (AggregateAdapter a: aggregates) {
+            a.value = Compare.Undefined;
+          }
         }
       } break;
       
