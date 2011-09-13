@@ -871,28 +871,29 @@ class MyRevisionBuilder implements RevisionBuilder {
       }
 
       public RowBuilder delete(Column<?> key) {
-        throw new RuntimeException("not implemented");
-        //return this;
+        path[path.length - 2] = key;
+        MyRevisionBuilder.this.delete(path, 0, path.length - 1);
+        return this;
       }
 
       public TableBuilder up() {
-        MyTableBuilder.this.row = this;
+        MyTableBuilder.this.rowBuilder = this;
         return MyTableBuilder.this;
       }
     }
 
     private Table table;
-    public MyRowBuilder row;
+    public MyRowBuilder rowBuilder;
 
     public MyTableBuilder(Table table) {
       this.table = table;
     }
 
     public RowBuilder row(Comparable ... key) {
-      if(row != null) {
-        row.init(key);
-        MyRowBuilder ret = row;
-        row = null;
+      if(rowBuilder != null) {
+        rowBuilder.init(key);
+        MyRowBuilder ret = rowBuilder;
+        rowBuilder = null;
         return ret;
       }
       MyRowBuilder ret = new MyRowBuilder();
@@ -907,18 +908,26 @@ class MyRevisionBuilder implements RevisionBuilder {
     }
 
     public TableBuilder delete(Comparable ... key) {
+      MyRowBuilder row = (MyRowBuilder) row(key);
+      MyRevisionBuilder.this.delete(row.path, 0, key.length + 1);
       return this;
     }
 
     public RevisionBuilder up() {
+      MyRevisionBuilder.this.tableBuilder = this;
       return MyRevisionBuilder.this;
     }
   }
 
-
+  private TableBuilder tableBuilder = null;
 
   public TableBuilder table(Table table)
   {
+    if(tableBuilder != null) {
+      TableBuilder ret = tableBuilder;
+      tableBuilder = null;
+      return ret;
+    }
     return new MyTableBuilder(table);
   }
 

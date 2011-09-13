@@ -75,4 +75,40 @@ public class TableBuilder extends TestCase {
     assertEquals(null, first.query(awesomeNumbers.primaryKey, 10.0, number));
   }
 
+  @Test
+  public void testDelete() {
+    Column<Double> number = new Column<Double>(Double.class);
+    Table awesomeNumbers = new Table(cols(number));
+
+    RevisionBuilder builder = Revisions.Empty.builder();
+
+    builder.table(awesomeNumbers)
+      .key(2 * Math.PI)
+      .key(Math.E)
+      .key(6.0)
+      .key(7.0)
+      .key(28.0);
+
+    Revision first = builder.commit();
+    
+    builder = first.builder();
+    // sorry, 7!
+    builder.table(awesomeNumbers)
+      .delete(7.0).up();
+    //sorry, e!
+    builder.table(awesomeNumbers)
+      .delete(Math.E).up();
+    
+    Revision second = builder.commit();
+
+    assertEquals(2 * Math.PI, second.query(awesomeNumbers.primaryKey, 2 * Math.PI, number));
+    assertEquals(null, second.query(awesomeNumbers.primaryKey, Math.E, number));
+    assertEquals(6.0, second.query(awesomeNumbers.primaryKey, 6.0, number));
+    assertEquals(null, second.query(awesomeNumbers.primaryKey, 7.0, number));
+    assertEquals(28.0, second.query(awesomeNumbers.primaryKey, 28.0, number));
+    
+    // 10 is decidedly non-awesome
+    assertEquals(null, second.query(awesomeNumbers.primaryKey, 10.0, number));
+  }
+
 }
