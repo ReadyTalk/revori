@@ -33,6 +33,7 @@ import com.readytalk.oss.dbms.DeleteTemplate;
 import com.readytalk.oss.dbms.UpdateTemplate;
 import com.readytalk.oss.dbms.ForeignKeyResolvers;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
@@ -78,7 +79,7 @@ public class SQLServer implements RevisionServer {
 
   private static final int ThreadPoolSize = 256;
 
-  private static final Tree Nothing = new Leaf();
+  private static final Tree Nothing = new Nothing();
 
   private static final Map<Class, Validator> validators = new HashMap();
 
@@ -549,15 +550,18 @@ public class SQLServer implements RevisionServer {
     public final Tree tree;
     public final String next;
     public final Set<String> completions;
+    public final boolean lastAtomic;
     public Task task;
 
     public ParseResult(Tree tree,
                        String next,
-                       Set<String> completions)
+                       Set<String> completions,
+                       boolean lastAtomic)
     {
       this.tree = tree;
       this.next = next;
       this.completions = completions;
+      this.lastAtomic = lastAtomic;
     }
   }
 
@@ -576,16 +580,16 @@ public class SQLServer implements RevisionServer {
   }
 
   private interface Parser {
-    public ParseResult parse(ParseContext context, String in);
+    public ParseResult parse(ParseContext context, String in, boolean lastAtomic);
   }
 
   private static class LazyParser implements Parser {
     public Parser parser;
 
-    public ParseResult parse(ParseContext context, String in) {
+    public ParseResult parse(ParseContext context, String in, boolean lastAtomic) {
       if (context.depth++ > 10) throw new RuntimeException("debug");
 
-      return parser.parse(context, in);
+      return parser.parse(context, in, lastAtomic);
     }
   }
 
@@ -614,7 +618,7 @@ public class SQLServer implements RevisionServer {
     }
   }
 
-  private static class Leaf implements Tree {
+  private static abstract class Leaf implements Tree {
     public Tree get(int index) {
       throw new UnsupportedOperationException();
     }
@@ -622,6 +626,12 @@ public class SQLServer implements RevisionServer {
     public int length() {
       throw new UnsupportedOperationException();
     }
+  }
+
+  private static class Nothing extends Leaf {
+    public String toString() {
+      return "nothing";
+    } 
   }
 
   private static class Terminal extends Leaf {
@@ -846,6 +856,14 @@ public class SQLServer implements RevisionServer {
     return server.binaryOperationTypes.get(name);
   }
 
+  private static Expression makeOrderExpression
+    (Server server,
+     Tree tree,
+     List<MyTableReference> tableReferences)
+  {
+    return makeExpression(server, tree.get(0), tableReferences);
+  }
+
   private static Expression makeExpression
     (Server server,
      Tree tree,
@@ -903,6 +921,18 @@ public class SQLServer implements RevisionServer {
     return expressions;
   }
 
+  private static List<Expression> makeOrderExpressionList
+    (Server server,
+     Tree tree,
+     List<MyTableReference> tableReferences)
+  {
+    List<Expression> expressions = new ArrayList<Expression>();
+    for (int i = 0; i < tree.length(); ++i) {
+      expressions.add(makeOrderExpression(server, tree.get(i), tableReferences));
+    }
+    return expressions;
+  }
+
   private static Expression makeExpressionFromWhere
     (Server server,
      Tree tree,
@@ -912,6 +942,30 @@ public class SQLServer implements RevisionServer {
       return new Constant(true);
     } else {
       return makeExpression(server, tree.get(1), tableReferences);
+    }
+  }
+
+  private static Set<Expression> makeExpressionsFromGroupBy
+    (Server server,
+     Tree tree,
+     List<MyTableReference> tableReferences)
+  {
+    if (tree == Nothing) {
+      return Collections.<Expression>emptySet();
+    } else {
+      return new HashSet<Expression>(makeExpressionList(server, tree.get(2), tableReferences));
+    }
+  }
+
+  private static List<Expression> makeOrderExpressionsFromOrderBy
+    (Server server,
+     Tree tree,
+     List<MyTableReference> tableReferences)
+  {
+    if (tree == Nothing) {
+      return Collections.<Expression>emptyList();
+    } else {
+      return makeOrderExpressionList(server, tree.get(2), tableReferences);
     }
   }
 
@@ -938,12 +992,17 @@ public class SQLServer implements RevisionServer {
       (client.server, tree.get(1), tableReferences);
 
     expressionCount[0] = expressions.size();
-
-    return new QueryTemplate
-      (expressions, source, validate
-       (Boolean.class, andExpressions
-        (makeExpressionFromWhere
-         (client.server, tree.get(4), tableReferences), tests)));
+    
+    System.out.println(tree.toString());
+    
+    return new QueryTemplate(expressions,
+        source,
+        validate(Boolean.class,
+         andExpressions(
+           makeExpressionFromWhere(client.server, tree.get(4), tableReferences),
+           tests)),
+         makeExpressionsFromGroupBy(client.server, tree.get(5), tableReferences),
+         makeOrderExpressionsFromOrderBy(client.server, tree.get(6), tableReferences));
   }
 
   private static MyColumn findColumn(MyTable table,
@@ -1598,8 +1657,8 @@ public class SQLServer implements RevisionServer {
 
     public static Parser task(final Parser parser, final Task task) {
       return new Parser() {
-        public ParseResult parse(ParseContext context, String in) {
-          ParseResult result = parser.parse(context, in);
+        public ParseResult parse(ParseContext context, String in, boolean lastAtomic) {
+          ParseResult result = parser.parse(context, in, lastAtomic);
           if (result.tree != null) {
             result.task = task;
           }
@@ -1610,13 +1669,15 @@ public class SQLServer implements RevisionServer {
 
     public static ParseResult success(Tree tree,
                                       String next,
-                                      Set<String> completions)
+                                      Set<String> completions,
+                                      boolean lastAtomic)
     {
-      return new ParseResult(tree, next, completions);
+      return new ParseResult(tree, next, completions, lastAtomic);
     }
 
     public static ParseResult fail(Set<String> completions) {
-      return new ParseResult(null, null, completions);
+      // TODO: is passing false for lastAtomic here correct?
+      return new ParseResult(null, null, completions, false);
     }
 
     public static String skipSpace(String in) {
@@ -1650,17 +1711,18 @@ public class SQLServer implements RevisionServer {
       }
       return null;
     }
-
+    
     public static Parser terminal(final String value,
-                                  final boolean completeIfEmpty)
+                                  final boolean completeIfEmpty,
+                                  final boolean atomic)
     {
       return new Parser() {
         private final Terminal terminal = new Terminal(value);
 
-        public ParseResult parse(ParseContext context, String in) {
+        public ParseResult parse(ParseContext context, String in, boolean lastAtomic) {
           String token = skipSpace(in);
-          if (token.startsWith(value)) {
-            return success(terminal, token.substring(value.length()), null);
+          if (token.startsWith(value) && (atomic || lastAtomic || token.length() < in.length())) {
+            return success(terminal, token.substring(value.length()), null, lastAtomic);
           } else if ((token.length() > 0 || completeIfEmpty)
                      && (token == context.start || token != in)
                      && value.startsWith(token))
@@ -1673,16 +1735,28 @@ public class SQLServer implements RevisionServer {
       };
     }
 
+    public static Parser symbol(final String value) {
+      return symbol(value, true);
+    }
+
+    public static Parser symbol(final String value, boolean completeIfEmpty) {
+      return terminal(value, completeIfEmpty, true);
+    }
+
     public static Parser terminal(final String value) {
       return terminal(value, true);
     }
 
+    public static Parser terminal(final String value, boolean completeIfEmpty) {
+      return terminal(value, completeIfEmpty, false);
+    }
+
     public static Parser or(final Parser ... parsers) {
       return new Parser() {
-        public ParseResult parse(ParseContext context, String in) {
+        public ParseResult parse(ParseContext context, String in, boolean lastAtomic) {
           Set<String> completions = null;
           for (Parser parser: parsers) {
-            ParseResult result = parser.parse(context, in);
+            ParseResult result = parser.parse(context, in, lastAtomic);
             if (result.tree != null) {
               return result;
             } else if (result.completions != null) {
@@ -1699,20 +1773,21 @@ public class SQLServer implements RevisionServer {
 
     public static Parser list(final Parser parser) {
       return new Parser() {
-        private final Parser comma = terminal(",");
+        private final Parser comma = symbol(",");
 
-        public ParseResult parse(ParseContext context, String in) {
+        public ParseResult parse(ParseContext context, String in, boolean lastAtomic) {
           TreeList list = new TreeList();
           while (true) {
-            ParseResult result = parser.parse(context, in);
+            ParseResult result = parser.parse(context, in, lastAtomic);
             if (result.tree != null) {
               list.add(result.tree);
 
-              ParseResult commaResult = comma.parse(context, result.next);
+              ParseResult commaResult = comma.parse(context, result.next, result.lastAtomic);
               if (commaResult.tree != null) {
                 in = commaResult.next;
+                lastAtomic = commaResult.lastAtomic;
               } else {
-                return success(list, result.next, result.completions);
+                return success(list, result.next, result.completions, result.lastAtomic);
               }
             } else {
               return fail(result.completions);
@@ -1724,17 +1799,18 @@ public class SQLServer implements RevisionServer {
 
     public static Parser sequence(final Parser ... parsers) {
       return new Parser() {
-        public ParseResult parse(ParseContext context, String in) {
+        public ParseResult parse(ParseContext context, String in, boolean lastAtomic) {
           TreeList list = new TreeList();
           ParseResult previous = null;
           for (Parser parser: parsers) {
-            ParseResult result = parser.parse(context, in);
+            ParseResult result = parser.parse(context, in, lastAtomic);
             if (result.tree != null) {
               list.add(result.tree);
               if (in.length() > 0) {
                 previous = result;
               }
               in = result.next;
+              lastAtomic = result.lastAtomic;
             } else {
               if (in.length() == 0 && previous != null) {
                 return fail(previous.completions);
@@ -1743,19 +1819,19 @@ public class SQLServer implements RevisionServer {
               return fail(result.completions);
             }
           }
-          return success(list, in, previous.completions);
+          return success(list, in, previous.completions, previous.lastAtomic);
         }
       };
     }
 
     public static Parser optional(final Parser parser) {
       return new Parser() {
-        public ParseResult parse(ParseContext context, String in) {
-          ParseResult result = parser.parse(context, in);
+        public ParseResult parse(ParseContext context, String in, boolean lastAtomic) {
+          ParseResult result = parser.parse(context, in, lastAtomic);
           if (result.tree != null) {
             return result;
           } else {
-            return success(Nothing, in, result.completions);
+            return success(Nothing, in, result.completions, lastAtomic);
           }
         }
       };
@@ -1766,10 +1842,10 @@ public class SQLServer implements RevisionServer {
                               final boolean addCompletion)
     {
       return new Parser() {
-        public ParseResult parse(ParseContext context, String in) {
+        public ParseResult parse(ParseContext context, String in, boolean lastAtomic) {
           String token = skipSpace(in);
           String name = parseName(token);
-          if (name != null) {
+          if (name != null && (lastAtomic || token.length() < in.length())) {
             if (addCompletion) {
               addCompletion(context, type, name);
             }
@@ -1777,7 +1853,8 @@ public class SQLServer implements RevisionServer {
               (new Name(name),
                token.substring(name.length()),
                (token == context.start || token != in) && findCompletions
-               ? findCompletions(context, type, name) : null);
+               ? findCompletions(context, type, name) : null,
+               false);
           } else {
             return fail
               ((token == context.start || token != in) && findCompletions
@@ -1789,7 +1866,7 @@ public class SQLServer implements RevisionServer {
 
     public static Parser stringLiteral() {
       return new Parser() {
-        public ParseResult parse(ParseContext context, String in) {
+        public ParseResult parse(ParseContext context, String in, boolean lastAtomic) {
           in = skipSpace(in);
           if (in.length() > 1) {
             StringBuilder sb = new StringBuilder();
@@ -1814,7 +1891,7 @@ public class SQLServer implements RevisionServer {
                     sb.append(c);
                   } else {
                     return success(new Literal(sb.toString()),
-                                   in.substring(i + 1), null);
+                                   in.substring(i + 1), null, true);
                   }
                   break;
 
@@ -1836,7 +1913,8 @@ public class SQLServer implements RevisionServer {
 
     public static Parser numberLiteral() {
       return new Parser() {
-        public ParseResult parse(ParseContext context, String in) {
+        public ParseResult parse(ParseContext context, String in, boolean lastAtomic) {
+          String begin = in;
           in = skipSpace(in);
           if (in.length() > 0) {
             char first = in.charAt(0);
@@ -1852,9 +1930,9 @@ public class SQLServer implements RevisionServer {
               }
             }
 
-            if (i > start) {
+            if (i > start && (lastAtomic || in.length() < begin.length())) {
               return success(new Literal(in.substring(0, i)),
-                             in.substring(i), null);
+                             in.substring(i), null, false);
             } else {
               return fail(null);
             }
@@ -1866,14 +1944,19 @@ public class SQLServer implements RevisionServer {
 
     public static Parser booleanLiteral() {
       return new Parser() {
-        public ParseResult parse(ParseContext context, String in) {
+        public ParseResult parse(ParseContext context, String in, boolean lastAtomic) {
+          String begin = in;
           in = skipSpace(in);
-          if (in.startsWith("true")) {
-            return success(new Literal("true"),
-                           in.substring(4), null);
-          } else if (in.startsWith("false")) {
-            return success(new Literal("false"),
-                           in.substring(5), null);
+          if(lastAtomic || in.length() < begin.length()) {
+            if (in.startsWith("true")) {
+              return success(new Literal("true"),
+                             in.substring(4), null, false);
+            } else if (in.startsWith("false")) {
+              return success(new Literal("false"),
+                             in.substring(5), null, false);
+            } else {
+              return fail(null);
+            }
           } else {
             return fail(null);
           }
@@ -1887,21 +1970,21 @@ public class SQLServer implements RevisionServer {
          stringLiteral(),
          numberLiteral(),
          booleanLiteral(),
-         sequence(terminal("(", false),
+         sequence(symbol("(", false),
                   expression(),
-                  terminal(")")),
+                  symbol(")")),
          sequence(terminal("not", false),
                   expression()));
     }
 
     public Parser comparison() {
       return sequence(simpleExpression(),
-                      or(terminal("="),
-                         terminal("<>"),
-                         terminal("<"),
-                         terminal("<="),
-                         terminal(">"),
-                         terminal(">=")),
+                      or(symbol("="),
+                          symbol("<>"),
+                          symbol("<"),
+                          symbol("<="),
+                          symbol(">"),
+                          symbol(">=")),
                       simpleExpression());
     }
 
@@ -1924,9 +2007,9 @@ public class SQLServer implements RevisionServer {
     public Parser simpleSource() {
       return or
         (name(NameType.Table, true, true),
-         sequence(terminal("(", false),
+         sequence(symbol("(", false),
                   source(),
-                  terminal(")")));
+                  symbol(")")));
     }
 
     public Parser source() {
@@ -1949,7 +2032,7 @@ public class SQLServer implements RevisionServer {
     public static Parser columnName() {
       return or
         (sequence(name(NameType.Table, false, false),
-                  terminal("."),
+            symbol("."),
                   name(NameType.Column, true, false)),
          name(NameType.Column, true, false));
     }
@@ -1958,11 +2041,15 @@ public class SQLServer implements RevisionServer {
       return task
         (sequence
          (terminal("select"),
-          or(terminal("*", false), list(expression())),
+          or(symbol("*", false), list(expression())),
           terminal("from"),
           source(),
           optional(sequence(terminal("where"),
-                            expression()))),
+                            expression())),
+          optional(sequence(terminal("group"), terminal("by"),
+              list(expression()))),
+          optional(sequence(terminal("order"), terminal("by"),
+              list(sequence(expression(), optional(or(terminal("desc"), terminal("asc")))))))),
          new Task() {
            public void run(Client client,
                            Tree tree,
@@ -1977,7 +2064,7 @@ public class SQLServer implements RevisionServer {
            }           
          });
     }
-
+    
     public Parser diff() {
       return task
         (sequence
@@ -2009,15 +2096,15 @@ public class SQLServer implements RevisionServer {
          (terminal("insert"),
           terminal("into"),
           name(NameType.Table, true, true),
-          optional(sequence(terminal("("),
+          optional(sequence(symbol("("),
                             list(columnName()),
-                            terminal(")"))),
+                            symbol(")"))),
           terminal("values"),
-          terminal("("),
+          symbol("("),
           list(or(stringLiteral(),
                   numberLiteral(),
                   booleanLiteral())),
-          terminal(")")),
+          symbol(")")),
          new Task() {
            public void run(Client client,
                            Tree tree,
@@ -2087,9 +2174,9 @@ public class SQLServer implements RevisionServer {
         (sequence
          (terminal("copy"),
           name(NameType.Table, true, true),
-          optional(sequence(terminal("("),
+          optional(sequence(symbol("("),
                             list(columnName()),
-                            terminal(")"))),
+                            symbol(")"))),
           terminal("from"),
           terminal("stdin")),
          new Task() {
@@ -2339,18 +2426,18 @@ public class SQLServer implements RevisionServer {
          (terminal("create"),
           terminal("table"),
           name(NameType.Table, false, false),
-          terminal("("),
+          symbol("("),
           list(or(sequence(terminal("primary"),
                            terminal("key"),
                            terminal("("),
                            list(name(NameType.Column, true, false)),
-                           terminal(")")),
+                           symbol(")")),
                   sequence(name(NameType.Column, false, true),
                            or(terminal("int32"),
                               terminal("int64"),
                               terminal("string"),
                               terminal("array"))))),
-          terminal(")")),
+          symbol(")")),
          new Task() {
            public void run(Client client,
                            Tree tree,
@@ -2431,7 +2518,7 @@ public class SQLServer implements RevisionServer {
           log.info("execute \"" + s + "\"");
         }
         ParseResult result = client.server.parser.parse
-          (new ParseContext(client, s), s);
+          (new ParseContext(client, s), s, true);
         if (result.task != null) {
           result.task.run(client, result.tree, in, out);
         } else {
@@ -2460,7 +2547,7 @@ public class SQLServer implements RevisionServer {
     }
     if (client.copyContext == null) {
       ParseResult result = client.server.parser.parse
-        (new ParseContext(client, s), s);
+        (new ParseContext(client, s), s, true);
       out.write(Response.Success.ordinal());
       if (result.completions == null) {
         if (Verbose) {

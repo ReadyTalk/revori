@@ -14,47 +14,115 @@ import com.readytalk.oss.dbms.server.SQLServer.Response;
 import com.readytalk.oss.dbms.server.SQLServer.RowSetFlag;
 
 public class SQL extends TestCase {
-  private static void expectEqual(Object actual, Object expected) {
-    assertEquals(expected, actual);
-  }
-
   @Test
   public void testLiterals() throws IOException {
     Connection connection = new SQLServer("test").makeConnection();
 
-    expectEqual
-      (connection.execute("create database test").read(),
-       Response.Success.ordinal());
+    assertEquals(Response.Success.ordinal(), connection.execute("create database test").read());
 
-    expectEqual
-      (connection.execute("use database test").read(),
-       Response.NewDatabase.ordinal());
+    assertEquals(Response.NewDatabase.ordinal(), connection.execute("use database test").read());
 
-    expectEqual
-      (connection.execute
-       ("create table test"
-        + " ( number int32, name string, primary key ( number ) )").read(),
-       Response.Success.ordinal());
+    assertEquals(Response.Success.ordinal(), connection.execute
+     ("create table test"
+      + " ( number int32, name string, primary key ( number ) )").read());
 
-    expectEqual
-      (connection.execute
-       ("insert into test values ( 42, 'forty-two' )").read(),
-       Response.Success.ordinal());
+    assertEquals(Response.Success.ordinal(), connection.execute
+     ("insert into test values ( 42, 'forty-two' )").read());
 
     InputStream in = connection.execute("select number from test");
 
-    expectEqual(in.read(), Response.RowSet.ordinal());
-    expectEqual(in.read(), RowSetFlag.InsertedRow.ordinal());
-    expectEqual(in.read(), RowSetFlag.Item.ordinal());
-    expectEqual(readString(in), "42");
-    expectEqual(in.read(), RowSetFlag.End.ordinal());
+    assertEquals(Response.RowSet.ordinal(), in.read());
+    assertEquals(RowSetFlag.InsertedRow.ordinal(), in.read());
+    assertEquals(RowSetFlag.Item.ordinal(), in.read());
+    assertEquals("42", readString(in));
+    assertEquals(RowSetFlag.End.ordinal(), in.read());
 
     in = connection.execute("select name from test where number = 42");
 
-    expectEqual(in.read(), Response.RowSet.ordinal());
-    expectEqual(in.read(), RowSetFlag.InsertedRow.ordinal());
-    expectEqual(in.read(), RowSetFlag.Item.ordinal());
-    expectEqual(readString(in), "forty-two");
-    expectEqual(in.read(), RowSetFlag.End.ordinal());
+    assertEquals(Response.RowSet.ordinal(), in.read());
+    assertEquals(RowSetFlag.InsertedRow.ordinal(), in.read());
+    assertEquals(RowSetFlag.Item.ordinal(), in.read());
+    assertEquals("forty-two", readString(in));
+    assertEquals(RowSetFlag.End.ordinal(), in.read());
+  }
+  
+  /*@Test
+  public void testAggregates()  throws IOException {
+    Connection connection = new SQLServer("test").makeConnection();
+
+    assertEquals(Response.Success.ordinal(), connection.execute("create database test").read());
+
+    assertEquals(Response.NewDatabase.ordinal(), connection.execute("use database test").read());
+
+    assertEquals(Response.Success.ordinal(), connection.execute
+     ("create table test"
+      + " ( number int32, name string, primary key ( number ) )").read());
+
+    assertEquals(Response.Success.ordinal(), connection.execute
+     ("insert into test values ( 42, 'forty-two' )").read());
+
+    assertEquals(Response.Success.ordinal(), connection.execute
+     ("insert into test values ( 28, 'twenty-eight' )").read());
+
+    InputStream in = connection.execute("select count(number) from test");
+
+    assertEquals(Response.RowSet.ordinal(), in.read());
+    assertEquals(RowSetFlag.InsertedRow.ordinal(), in.read());
+    assertEquals(RowSetFlag.Item.ordinal(), in.read());
+    assertEquals("2", readString(in));
+    assertEquals(RowSetFlag.End.ordinal(), in.read());
+  }*/
+  
+  @Test
+  public void testOrderBy() throws IOException {
+    Connection connection = new SQLServer("test").makeConnection();
+
+    assertEquals(Response.Success.ordinal(), connection.execute("create database test").read());
+
+    assertEquals(Response.NewDatabase.ordinal(), connection.execute("use database test").read());
+
+    assertEquals(Response.Success.ordinal(), connection.execute
+     ("create table test"
+      + " ( number int32, name string, primary key ( number ) )").read());
+
+    assertEquals(Response.Success.ordinal(), connection.execute
+     ("insert into test values ( 42, 'forty-two' )").read());
+
+    assertEquals(Response.Success.ordinal(), connection.execute
+     ("insert into test values ( 28, 'twenty-eight' )").read());
+
+    InputStream in = connection.execute("select name from test order by number asc");
+
+    assertEquals(Response.RowSet.ordinal(), in.read());
+    assertEquals(RowSetFlag.InsertedRow.ordinal(), in.read());
+    assertEquals(RowSetFlag.Item.ordinal(), in.read());
+    assertEquals("twenty-eight", readString(in));
+    assertEquals(RowSetFlag.InsertedRow.ordinal(), in.read());
+    assertEquals(RowSetFlag.Item.ordinal(), in.read());
+    assertEquals("forty-two", readString(in));
+    assertEquals(RowSetFlag.End.ordinal(), in.read());
+    
+    in = connection.execute("select name from test order by name asc");
+
+    assertEquals(Response.RowSet.ordinal(), in.read());
+    assertEquals(RowSetFlag.InsertedRow.ordinal(), in.read());
+    assertEquals(RowSetFlag.Item.ordinal(), in.read());
+    assertEquals("forty-two", readString(in));
+    assertEquals(RowSetFlag.InsertedRow.ordinal(), in.read());
+    assertEquals(RowSetFlag.Item.ordinal(), in.read());
+    assertEquals("twenty-eight", readString(in));
+    assertEquals(RowSetFlag.End.ordinal(), in.read());
+
+    in = connection.execute("select name from test order by name desc");
+
+    assertEquals(Response.RowSet.ordinal(), in.read());
+    assertEquals(RowSetFlag.InsertedRow.ordinal(), in.read());
+    assertEquals(RowSetFlag.Item.ordinal(), in.read());
+    assertEquals("twenty-eight", readString(in));
+    assertEquals(RowSetFlag.InsertedRow.ordinal(), in.read());
+    assertEquals(RowSetFlag.Item.ordinal(), in.read());
+    assertEquals("forty-two", readString(in));
+    assertEquals(RowSetFlag.End.ordinal(), in.read());
+
   }
 }
