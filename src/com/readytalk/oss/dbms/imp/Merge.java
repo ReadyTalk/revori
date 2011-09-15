@@ -101,10 +101,7 @@ class Merge {
             } else if (triple.right == null) {
               // do nothing -- left already has insert
             } else if (depth == bottom) {
-              if (Compare.equal
-                  (triple.left.value, triple.right.value,
-                   ((Column) triple.left.key).comparator))
-              {
+              if (Compare.equal(triple.left.value, triple.right.value)) {
                 // do nothing -- inserts match and left already has it
               } else {
                 conflict = true;
@@ -124,18 +121,12 @@ class Merge {
               } else if (triple.right == triple.base) {
                 // do nothing -- left already has update
               } else if (depth == bottom) {
-                if (Compare.equal
-                    (triple.left.value, triple.right.value,
-                     ((Column) triple.left.key).comparator)
-                    || Compare.equal
-                    (triple.base.value, triple.right.value,
-                     ((Column) triple.left.key).comparator))
+                if (Compare.equal(triple.left.value, triple.right.value)
+                    || Compare.equal(triple.base.value, triple.right.value))
                 {
                   // do nothing -- updates match or only left changed,
                   // and left already has it
-                } else if (Compare.equal
-                           (triple.base.value, triple.left.value,
-                            ((Column) triple.left.key).comparator))
+                } else if (Compare.equal(triple.base.value, triple.left.value))
                 {
                   builder.insertOrUpdate
                     (depth, triple.right.key, comparator,
@@ -170,10 +161,7 @@ class Merge {
                triple.left.value,
                triple.right.value);
 
-            if (Compare.equal
-                (result, triple.left.value,
-                 ((Column) triple.left.key).comparator))
-            {
+            if (Compare.equal(result, triple.left.value)) {
               // do nothing -- left already has insert
             } else if (result == null) {
               builder.deleteKey(depth, triple.left.key, comparator);

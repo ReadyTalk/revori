@@ -17,6 +17,7 @@ import com.readytalk.oss.dbms.ColumnReference;
 import com.readytalk.oss.dbms.Source;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.QueryTemplate;
+import com.readytalk.oss.dbms.QueryTemplate.OrderExpression;
 import com.readytalk.oss.dbms.PatchTemplate;
 import com.readytalk.oss.dbms.RevisionBuilder;
 import com.readytalk.oss.dbms.QueryResult;
@@ -32,8 +33,10 @@ import com.readytalk.oss.dbms.InsertTemplate;
 import com.readytalk.oss.dbms.DeleteTemplate;
 import com.readytalk.oss.dbms.UpdateTemplate;
 import com.readytalk.oss.dbms.ForeignKeyResolvers;
+import com.readytalk.oss.dbms.Comparators;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
@@ -856,12 +859,26 @@ public class SQLServer implements RevisionServer {
     return server.binaryOperationTypes.get(name);
   }
 
-  private static Expression makeOrderExpression
+  private static OrderExpression makeOrderExpression
     (Server server,
      Tree tree,
      List<MyTableReference> tableReferences)
   {
-    return makeExpression(server, tree.get(0), tableReferences);
+    Comparator comparator;
+    if (tree.length() == 2) {
+      String sort = ((Terminal) tree.get(1)).value;
+      if ("desc".equals(sort)) {
+        comparator = Comparators.Descending;
+      } else if ("asc".equals(sort)) {
+        comparator = Comparators.Ascending;
+      } else {
+        throw new RuntimeException("unrecognized sort: \"" + sort + "\"");
+      }
+    } else {
+      comparator = Comparators.Ascending;
+    }
+    return new OrderExpression
+      (makeExpression(server, tree.get(0), tableReferences), comparator);
   }
 
   private static Expression makeExpression
@@ -921,12 +938,12 @@ public class SQLServer implements RevisionServer {
     return expressions;
   }
 
-  private static List<Expression> makeOrderExpressionList
+  private static List<OrderExpression> makeOrderExpressionList
     (Server server,
      Tree tree,
      List<MyTableReference> tableReferences)
   {
-    List<Expression> expressions = new ArrayList<Expression>();
+    List<OrderExpression> expressions = new ArrayList<OrderExpression>();
     for (int i = 0; i < tree.length(); ++i) {
       expressions.add(makeOrderExpression(server, tree.get(i), tableReferences));
     }
@@ -957,13 +974,13 @@ public class SQLServer implements RevisionServer {
     }
   }
 
-  private static List<Expression> makeOrderExpressionsFromOrderBy
+  private static List<OrderExpression> makeOrderExpressionsFromOrderBy
     (Server server,
      Tree tree,
      List<MyTableReference> tableReferences)
   {
     if (tree == Nothing) {
-      return Collections.<Expression>emptyList();
+      return Collections.<OrderExpression>emptyList();
     } else {
       return makeOrderExpressionList(server, tree.get(2), tableReferences);
     }
@@ -993,7 +1010,7 @@ public class SQLServer implements RevisionServer {
 
     expressionCount[0] = expressions.size();
     
-    System.out.println(tree.toString());
+    // System.out.println(tree.toString());
     
     return new QueryTemplate(expressions,
         source,

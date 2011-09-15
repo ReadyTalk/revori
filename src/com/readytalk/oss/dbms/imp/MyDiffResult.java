@@ -155,10 +155,7 @@ class MyDiffResult implements DiffResult {
 
         if (pair.base != null && pair.fork != null) {
           if (depth > Constants.IndexDataDepth && depth == bottom) {
-            if (Compare.equal
-                (pair.base.value, pair.fork.value,
-                 ((Column) pair.base.key).comparator))
-            {
+            if (Compare.equal(pair.base.value, pair.fork.value)) {
               state = State.Iterate;
             } else {
               nextState = State.Value;
