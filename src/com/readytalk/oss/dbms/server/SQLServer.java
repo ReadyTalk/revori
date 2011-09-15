@@ -866,13 +866,18 @@ public class SQLServer implements RevisionServer {
   {
     Comparator comparator;
     if (tree.length() == 2) {
-      String sort = ((Terminal) tree.get(1)).value;
-      if ("desc".equals(sort)) {
-        comparator = Comparators.Descending;
-      } else if ("asc".equals(sort)) {
+      Tree t = tree.get(1);
+      if(t == Nothing) {
         comparator = Comparators.Ascending;
       } else {
-        throw new RuntimeException("unrecognized sort: \"" + sort + "\"");
+        String sort = ((Terminal) t).value;
+        if ("desc".equals(sort)) {
+          comparator = Comparators.Descending;
+        } else if ("asc".equals(sort)) {
+          comparator = Comparators.Ascending;
+        } else {
+          throw new RuntimeException("unrecognized sort: \"" + sort + "\"");
+        }
       }
     } else {
       comparator = Comparators.Ascending;
