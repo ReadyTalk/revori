@@ -2,6 +2,8 @@ package com.readytalk.oss.dbms;
 
 import static com.readytalk.oss.dbms.util.Util.list;
 
+import com.readytalk.oss.dbms.QueryTemplate.OrderExpression;
+
 /**
  * This class contains static convenience methods for concisely
  * defining expression trees.
@@ -28,6 +30,22 @@ public class ExpressionFactory {
                                      Column<T> column)
   {
     return new ColumnReference<T>(tableReference, column);
+  }
+
+  /**
+   * Alias for <code>new OrderExpression(expression, Comparators.Ascending)</code>
+   */
+  public static OrderExpression ascending(Expression expression)
+  {
+    return new OrderExpression(expression, Comparators.Ascending);
+  }
+
+  /**
+   * Alias for <code>new OrderExpression(expression, Comparators.Ascending)</code>
+   */
+  public static OrderExpression descending(Expression expression)
+  {
+    return new OrderExpression(expression, Comparators.Descending);
   }
 
   /**
