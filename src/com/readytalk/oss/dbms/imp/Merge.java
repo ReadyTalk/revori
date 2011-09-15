@@ -26,6 +26,8 @@ class Merge {
      ConflictResolver conflictResolver,
      ForeignKeyResolver foreignKeyResolver)
   {
+    // todo: handle views
+
     // System.out.println("base:");
     // Node.dump(base.root, System.out, 0);
     // System.out.println("left:");
@@ -33,11 +35,9 @@ class Merge {
     // System.out.println("right:");
     // Node.dump(right.root, System.out, 0);
 
-    if (base.root == right.root
-        || left.root == right.root)
-    {
+    if (base.equals(right) || left.equals(right)) {
       return left;
-    } else if (base.root == left.root) {
+    } else if (base.equals(left)) {
       if (left.equals(right)) {
         return left;
       } else {
