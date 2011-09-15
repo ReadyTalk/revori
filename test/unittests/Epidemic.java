@@ -27,6 +27,7 @@ import com.readytalk.oss.dbms.server.protocol.WriteContext;
 import java.io.IOException;
 import java.io.ByteArrayInputStream;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ArrayList;
@@ -288,7 +289,10 @@ public class Epidemic extends TestCase{
     expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
     expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
     
+    n1.server.updateView(Collections.<NodeID>emptySet());
+
     n2.start();
+    n1.server.updateView(set(n2.id));
     n2.server.updateView(set(n1.id));
     
     base = n1.server.head();
