@@ -4,6 +4,7 @@ import static com.readytalk.oss.dbms.util.Util.compare;
 import static com.readytalk.oss.dbms.util.Util.append;
 import static com.readytalk.oss.dbms.util.Util.union;
 
+import java.util.Comparator;
 import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
@@ -45,7 +46,7 @@ public final class QueryTemplate implements Comparable<QueryTemplate> {
 
   public final Set<Expression> groupingExpressions;
 
-  public final List<Expression> orderByExpressions;
+  public final List<OrderExpression> orderByExpressions;
 
   public final boolean hasAggregates;
 
@@ -59,8 +60,7 @@ public final class QueryTemplate implements Comparable<QueryTemplate> {
                        Source source,
                        Expression test)
   {
-    this(expressions, source, test,
-         (Set<Expression>) (Set) Collections.emptySet());
+    this(expressions, source, test, Collections.<Expression>emptySet());
   }
 
   public QueryTemplate(List<Expression> expressions,
@@ -69,14 +69,14 @@ public final class QueryTemplate implements Comparable<QueryTemplate> {
                        Set<Expression> groupingExpressions)
   {
     this(expressions, source, test, groupingExpressions,
-         (List<Expression>) (List) Collections.emptyList());
+         Collections.<OrderExpression>emptyList());
   }
 
   public QueryTemplate(List<Expression> expressions,
                        Source source,
                        Expression test,
                        Set<Expression> groupingExpressions,
-                       List<Expression> orderByExpressions)
+                       List<OrderExpression> orderByExpressions)
   {
     this.expressions = Collections.unmodifiableList
       (new ArrayList<Expression>(expressions));
@@ -158,5 +158,15 @@ public final class QueryTemplate implements Comparable<QueryTemplate> {
 
   public boolean equals(Object o) {
     return o instanceof QueryTemplate && compareTo((QueryTemplate) o) == 0;
+  }
+
+  public static class OrderExpression {
+    public final Expression expression;
+    public final Comparator comparator;
+
+    public OrderExpression(Expression expression, Comparator comparator) {
+      this.expression = expression;
+      this.comparator = comparator;
+    }
   }
 }

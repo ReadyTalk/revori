@@ -1,5 +1,7 @@
 package com.readytalk.oss.dbms;
 
+import java.util.Comparator;
+
 /**
  * Class representing a column which may be used to identify an item
  * of interest in a query or update.
@@ -21,6 +23,8 @@ public final class Column<T> implements Comparable<Column<?>> {
    */
   public final String id;
 
+  public final Comparator comparator;
+
   /**
    * Defines a column which is associated with the specified type and
    * ID.  The type specified here will be used for dynamic type
@@ -29,11 +33,17 @@ public final class Column<T> implements Comparable<Column<?>> {
    * class will be accepted.<p>
    */
   public Column(Class<T> type, String id) {
+    this(type, id, Comparators.Ascending);
+  }
+
+  public Column(Class<T> type, String id, Comparator comparator) {
     this.type = type;
     this.id = id;
+    this.comparator = comparator;
 
     if (type == null) throw new NullPointerException();
     if (id == null) throw new NullPointerException();
+    if (comparator == null) throw new NullPointerException();
   }
 
   /**

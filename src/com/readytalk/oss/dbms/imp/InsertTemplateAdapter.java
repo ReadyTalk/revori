@@ -6,6 +6,7 @@ import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Index;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.DuplicateKeyException;
+import com.readytalk.oss.dbms.Comparators;
 
 import java.util.List;
 import java.util.Map;
@@ -41,7 +42,9 @@ class InsertTemplateAdapter implements PatchTemplateAdapter {
     Node tree = Node.Null;
     Node.BlazeResult result = new Node.BlazeResult();
     for (Column<?> c: insert.columns) {
-      tree = Node.blaze(result, builder.token, builder.stack, tree, c);
+      tree = Node.blaze
+        (result, builder.token, builder.stack, tree, c,
+         Compare.ColumnComparator);
       result.node.value = map.get(c);
     }
 
@@ -49,19 +52,21 @@ class InsertTemplateAdapter implements PatchTemplateAdapter {
 
     Index index = insert.table.primaryKey;
 
-    builder.setKey(Constants.TableDataDepth, insert.table);
-    builder.setKey(Constants.IndexDataDepth, index);
+    builder.setKey(Constants.TableDataDepth, insert.table,
+                   Compare.TableComparator);
+    builder.setKey(Constants.IndexDataDepth, index, Compare.IndexComparator);
 
     List<Column<?>> columns = index.columns;
     int i;
     for (i = 0; i < columns.size() - 1; ++i) {
+      Column c = columns.get(i);
       builder.setKey
-        (i + Constants.IndexDataBodyDepth,
-         (Comparable) map.get(columns.get(i)));
+        (i + Constants.IndexDataBodyDepth, map.get(c), c.comparator);
     }
 
+    Column c = columns.get(i);
     Node n = builder.blaze
-      (i + Constants.IndexDataBodyDepth, (Comparable) map.get(columns.get(i)));
+      (i + Constants.IndexDataBodyDepth, map.get(c), c.comparator);
 
     if (n.value == Node.Null) {
       n.value = tree;

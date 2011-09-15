@@ -3,6 +3,7 @@ package com.readytalk.oss.dbms;
 import static com.readytalk.oss.dbms.util.Util.list;
 import static com.readytalk.oss.dbms.util.Util.compare;
 
+import java.util.Comparator;
 import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
@@ -39,17 +40,17 @@ public final class View implements Comparable<View> {
       throw new IllegalArgumentException();
     }
 
-    for (Expression e: query.orderByExpressions) {
-      if (! primaryKeyExpressions.contains(e)) {
-        myPrimaryKey.add(makeColumn(e, Comparable.class));
-        myExpressions.add(e);
-      }
+    for (QueryTemplate.OrderExpression e: query.orderByExpressions) {
+      myPrimaryKey.add
+        (makeColumn(e.expression, Comparable.class, e.comparator));
+      myExpressions.add(e.expression);
     }
 
     if (query.hasAggregates) {
       for (Expression e: query.groupingExpressions) {
         if (! primaryKeyExpressions.contains(e)) {
-          myPrimaryKey.add(makeColumn(e, Comparable.class));
+          myPrimaryKey.add
+            (makeColumn(e, Comparable.class, Comparators.Ascending));
           myExpressions.add(e);
         }
       }
@@ -63,7 +64,8 @@ public final class View implements Comparable<View> {
                   (tableReference, c);
 
                 if (! primaryKeyExpressions.contains(columnReference)) {
-                  myPrimaryKey.add(makeColumn(columnReference, null));
+                  myPrimaryKey.add
+                    (makeColumn(columnReference, null, Comparators.Ascending));
                   myExpressions.add(columnReference);
                 }
               }
@@ -106,7 +108,7 @@ public final class View implements Comparable<View> {
       }
 
       for (Aggregate<?> a: aggregates) {
-        myColumns.add(makeColumn(a, null));
+        myColumns.add(makeColumn(a, null, Comparators.Ascending));
         myExpressions.add(a);
       }
     } else {
@@ -147,7 +149,9 @@ public final class View implements Comparable<View> {
     return "view." + id;
   }
 
-  private static <T> Column<T> makeColumn(Expression e, Class<T> defaultType) {
+  private static <T> Column<T> makeColumn(Expression e, Class<T> defaultType,
+                                          Comparator comparator)
+  {
     Class<T> type;
     String id = Column.makeId();
     if (e instanceof ColumnReference) {
@@ -160,13 +164,14 @@ public final class View implements Comparable<View> {
     } else {
       type = defaultType;
     }
-    return new Column<T>(type, id);
+    return new Column<T>(type, id, comparator);
   }
 
   private static List<Column<?>> makeColumnList(List<Expression> expressions) {
     List<Column<?>> columns = new ArrayList<Column<?>>(expressions.size());
     for (int i = 0; i < expressions.size(); ++i) {
-      columns.add(makeColumn(expressions.get(i), Object.class));
+      columns.add
+        (makeColumn(expressions.get(i), Object.class, Comparators.Ascending));
     }
     return columns;
   }

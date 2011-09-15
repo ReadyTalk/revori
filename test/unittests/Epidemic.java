@@ -308,7 +308,7 @@ public class Epidemic extends TestCase{
     final int MaxIterations = 100;
     final Set<NodeID> ddt = new HashSet<NodeID>(Arrays.asList(dontDeliverTo));
     int iteration = 0;
-    System.out.println("-------flush-------");
+    // System.out.println("-------flush-------");
     List<Message> undelivered = new ArrayList<Message>();
     while (network.messages.size() > 0) {
       if (iteration++ > MaxIterations) {
@@ -344,7 +344,7 @@ public class Epidemic extends TestCase{
         }
       }
     }
-    System.out.println("-------done-------");
+    // System.out.println("-------done-------");
     network.messages.addAll(undelivered);
   }
 

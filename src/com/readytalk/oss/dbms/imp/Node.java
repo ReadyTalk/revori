@@ -3,6 +3,8 @@ package com.readytalk.oss.dbms.imp;
 import static com.readytalk.oss.dbms.util.Util.expect;
 import static com.readytalk.oss.dbms.util.Util.list;
 
+import java.util.Comparator;
+
 class Node {
   public static final Node Null = new Node(new Object(), null);
 
@@ -13,7 +15,7 @@ class Node {
   }
 
   public final Object token;
-  public Comparable key;
+  public Object key;
   public Object value;
   public Node left;
   public Node right;
@@ -39,16 +41,16 @@ class Node {
     }
   }
 
-  public static Node pathFind(Node root, Comparable ... path) {
+  public static Node pathFind(Node root, Object ... path) {
     for (int i = 0; i < path.length && root != Null; ++i) {
-      root = (Node) find(root, path[i]).value;
+      root = (Node) find(root, path[i], (Comparator) path[++i]).value;
     }
     return root;
   }
 
-  public static Node find(Node n, Comparable key) {
+  public static Node find(Node n, Object key, Comparator comparator) {
     while (n != Null) {
-      int difference = Compare.compare(key, n.key);
+      int difference = Compare.compare(key, n.key, comparator);
       if (difference < 0) {
         n = n.left;
       } else if (difference > 0) {
@@ -82,7 +84,8 @@ class Node {
                            Object token,
                            NodeStack stack,
                            Node root,
-                           Comparable key)
+                           Object key,
+                           Comparator comparator)
   {
     if (root == null) {
       root = Null;
@@ -94,7 +97,7 @@ class Node {
     Node old = root;
     Node new_ = newRoot;
     while (old != Null) {
-      int difference = Compare.compare(key, old.key);
+      int difference = Compare.compare(key, old.key, comparator);
       if (difference < 0) {
         stack.push(new_);
         old = old.left;
@@ -227,12 +230,13 @@ class Node {
   public static Node delete(Object token,
                             NodeStack stack,
                             Node root,
-                            Comparable key)
+                            Object key,
+                            Comparator comparator)
   {
     if (root == Null) {
       return root;
     } else if (root.left == Null && root.right == Null) {
-      if (Compare.equal(key, root.key)) {
+      if (Compare.equal(key, root.key, comparator)) {
         return Null;
       } else {
         return root;
@@ -245,7 +249,7 @@ class Node {
     Node old = root;
     Node new_ = newRoot;
     while (old != Null) {
-      int difference = Compare.compare(key, old.key);
+      int difference = Compare.compare(key, old.key, comparator);
       if (difference < 0) {
         stack.push(new_);
         old = old.left;
@@ -423,8 +427,9 @@ class Node {
     return newRoot;
   }
 
-  public static boolean valuesEqual(Node a, Node b) {
-    return (a != null && b != null && Compare.equal(a.value, b.value));
+  private static boolean valuesEqual(Node a, Node b, Comparator comparator) {
+    return a != null && b != null
+      && Compare.equal(a.value, b.value, comparator);
   }
 
   public Object value() {
@@ -434,23 +439,24 @@ class Node {
   public static boolean treeEqual(NodeStack baseStack,
                                   Node base,
                                   NodeStack forkStack,
-                                  Node fork)
+                                  Node fork,
+                                  Comparator comparator)
   {
     if (base == Node.Null) {
       return fork == Node.Null;
     } else if (fork == Node.Null) {
       return base == Node.Null;
     } else {
-      DiffIterator indexIterator = new DiffIterator
+      DiffIterator iterator = new DiffIterator
         (base, baseStack = new NodeStack(baseStack),
          fork, forkStack = new NodeStack(forkStack),
          list(Interval.Unbounded).iterator(),
-         true);
+         true, comparator);
 
       DiffIterator.DiffPair pair = new DiffIterator.DiffPair();
       boolean result = true;
-      while (indexIterator.next(pair)) {
-        if (! Node.valuesEqual(pair.base, pair.fork)) {
+      while (iterator.next(pair)) {
+        if (! Node.valuesEqual(pair.base, pair.fork, comparator)) {
           result = false;
           break;
         }
@@ -482,9 +488,6 @@ class Node {
     if (node == Null) {
       return;
     } else {
-      if (node.left != Null && node.key.compareTo(node.left.key) <= 0)
-        throw new RuntimeException(node.key + " <= " + node.left.key);
-
       dump(node.left, out, depth + 1, subtreeDepth);
 
       for (int i = 0; i < depth; ++i) {
@@ -498,9 +501,6 @@ class Node {
       } else {
         out.println(node.key + ": " + node.value);
       }
-
-      if (node.right != Null && node.key.compareTo(node.right.key) >= 0)
-        throw new RuntimeException(node.key + " >= " + node.right.key);
 
       dump(node.right, out, depth + 1, subtreeDepth);
     }

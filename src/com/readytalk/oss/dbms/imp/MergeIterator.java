@@ -2,21 +2,26 @@ package com.readytalk.oss.dbms.imp;
 
 import static com.readytalk.oss.dbms.util.Util.expect;
 
+import java.util.Comparator;
+
 class MergeIterator {
   public final NodeStack base;
   public final NodeStack left;
   public final NodeStack right;
+  public final Comparator comparator;
 
   public MergeIterator(Node baseRoot,
                        NodeStack base,
                        Node leftRoot,
                        NodeStack left,
                        Node rightRoot,
-                       NodeStack right)
+                       NodeStack right,
+                       Comparator comparator)
   {
     this.base = base;
     this.left = left;
     this.right = right;
+    this.comparator = comparator;
 
     if (baseRoot != Node.Null) {
       base.push(baseRoot);
@@ -34,11 +39,11 @@ class MergeIterator {
 
     // find leftmost nodes to start iteration
     while (true) {
-      int leftBase = compareForDescent(left.top, base.top);
+      int leftBase = compareForDescent(left.top, base.top, comparator);
       if (leftBase > 0) {
-        int rightBase = compareForDescent(right.top, base.top);
+        int rightBase = compareForDescent(right.top, base.top, comparator);
         if (rightBase > 0) {
-          int leftRight = compareForDescent(left.top, right.top);
+          int leftRight = compareForDescent(left.top, right.top, comparator);
           if (leftRight > 0) {
             // base < right < left
             left.descendLeft();
@@ -62,7 +67,7 @@ class MergeIterator {
           left.descendLeft();
         }
       } else if (leftBase < 0) {
-        int rightBase = compareForDescent(right.top, base.top);
+        int rightBase = compareForDescent(right.top, base.top, comparator);
         if (rightBase > 0) {
           // left < base < right
           right.descendLeft();
@@ -87,7 +92,7 @@ class MergeIterator {
           }
         }
       } else {
-        int rightBase = compareForDescent(right.top, base.top);
+        int rightBase = compareForDescent(right.top, base.top, comparator);
         if (rightBase > 0) {
           // left = base < right
           right.descendLeft();
@@ -126,20 +131,20 @@ class MergeIterator {
            && right.top != Node.Null);
   }
 
-  private static int compareForMerge(Node a, Node b) {
+  private static int compareForMerge(Node a, Node b, Comparator comparator) {
     if (a == null || b == null) {
       return 0;
     }
 
-    return Compare.compare(a.key, b.key);
+    return Compare.compare(a.key, b.key, comparator);
   }
 
-  private static int compareForDescent(Node a, Node b) {
+  private static int compareForDescent(Node a, Node b, Comparator comparator) {
     if (a == null || b == null) {
       return 0;
     }
 
-    int difference = Compare.compare(a.key, b.key);
+    int difference = Compare.compare(a.key, b.key, comparator);
     if (difference > 0) {
       if (a.left == Node.Null) {
         return 0;
@@ -159,9 +164,9 @@ class MergeIterator {
 
   public boolean next(MergeTriple triple) {
     while (true) {
-      int leftBase = compareForMerge(left.top, base.top);
+      int leftBase = compareForMerge(left.top, base.top, comparator);
       if (leftBase > 0) {
-        int rightBase = compareForMerge(right.top, base.top);
+        int rightBase = compareForMerge(right.top, base.top, comparator);
         if (rightBase > 0) {
           // base < right/left
           triple.left = null;
@@ -194,7 +199,7 @@ class MergeIterator {
           }
         }
       } else if (leftBase < 0) {
-        int rightBase = compareForMerge(right.top, base.top);
+        int rightBase = compareForMerge(right.top, base.top, comparator);
         if (rightBase >= 0) {
           // left < right <= base
           triple.left = left.top;
@@ -202,7 +207,7 @@ class MergeIterator {
           triple.base = null;
           left.next();
         } else {
-          int leftRight = compareForMerge(left.top, right.top);
+          int leftRight = compareForMerge(left.top, right.top, comparator);
           if (leftRight > 0) {
             // right < left < base
             triple.left = null;
@@ -232,7 +237,7 @@ class MergeIterator {
           }
         }
       } else {
-        int rightBase = compareForMerge(right.top, base.top);
+        int rightBase = compareForMerge(right.top, base.top, comparator);
         if (rightBase > 0) {
           // left = base < right
           if (left.top == null && base.top == null) {
@@ -254,7 +259,7 @@ class MergeIterator {
           triple.base = null;
           right.next();
         } else if (base.top == null) {
-          int leftRight = compareForMerge(left.top, right.top);
+          int leftRight = compareForMerge(left.top, right.top, comparator);
           if (leftRight > 0) {
             // right < left
             triple.left = null;

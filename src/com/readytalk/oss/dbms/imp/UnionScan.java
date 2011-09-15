@@ -1,5 +1,6 @@
 package com.readytalk.oss.dbms.imp;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -7,12 +8,15 @@ import java.util.Iterator;
 class UnionScan implements Scan {
   public final Scan left;
   public final Scan right;
+  public final Comparator comparator;
 
   public UnionScan(Scan left,
-                   Scan right)
+                   Scan right,
+                   Comparator comparator)
   {
     this.left = left;
     this.right = right;
+    this.comparator = comparator;
   }
 
   public boolean isUseful() {
@@ -45,7 +49,7 @@ class UnionScan implements Scan {
         rightItem = rightIterator.next();
       }
 
-      d = Compare.compare(leftItem, rightItem);
+      d = Compare.compare(leftItem, rightItem, comparator);
       if (d < -1) {
         result.add(leftItem);
         result.add(rightItem);
@@ -53,7 +57,7 @@ class UnionScan implements Scan {
         result.add(rightItem);
         result.add(leftItem);
       } else {
-        result.add(Interval.union(leftItem, rightItem));
+        result.add(Interval.union(leftItem, rightItem, comparator));
       }
     }
 

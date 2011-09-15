@@ -27,6 +27,8 @@ import com.readytalk.oss.dbms.ForeignKeyResolver;
 import com.readytalk.oss.dbms.ForeignKeyResolvers;
 import com.readytalk.oss.dbms.SourceVisitor;
 import com.readytalk.oss.dbms.Source;
+import com.readytalk.oss.dbms.Comparators;
+import java.util.Comparator;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -46,7 +48,8 @@ class MyRevisionBuilder implements RevisionBuilder {
 
   public Object token;
   public final NodeStack stack;
-  public final Comparable[] keys;
+  public final Object[] keys;
+  public final Comparator[] comparators;
   public final Node[] blazedRoots;
   public final Node[] blazedLeaves;
   public final Node[] found;
@@ -69,7 +72,8 @@ class MyRevisionBuilder implements RevisionBuilder {
     this.indexBase = base;
     this.result = base;
     this.stack = stack;
-    keys = new Comparable[Constants.MaxDepth + 1];
+    keys = new Object[Constants.MaxDepth + 1];
+    comparators = new Comparator[Constants.MaxDepth + 1];
     blazedRoots = new Node[Constants.MaxDepth + 1];
     blazedLeaves = new Node[Constants.MaxDepth + 1];
     found = new Node[Constants.MaxDepth + 1];
@@ -86,27 +90,30 @@ class MyRevisionBuilder implements RevisionBuilder {
     }
   }
 
-  public void setKey(int index, Comparable key) {
-    if (max < index || ! Compare.equal(key, keys[index])) {
+  public void setKey(int index, Object key, Comparator comparator) {
+    if (max < index || (! Compare.equal(key, keys[index], comparator))) {
       max = index;
       keys[index] = key;
+      comparators[index] = comparator;
       found[index] = null;
       blazedLeaves[index] = null;
       blazedRoots[index + 1] = null;
     }
   }
 
-  public Node blaze(int index, Comparable key) {
-    setKey(index, key);
+  public Node blaze(int index, Object key, Comparator comparator) {
+    setKey(index, key, comparator);
     return blaze(index);
   }
 
-  public void insertOrUpdate(int index, Comparable key, Object value) {
-    blaze(index, key).value = value;
+  public void insertOrUpdate(int index, Object key, Comparator comparator,
+                             Object value)
+  {
+    blaze(index, key, comparator).value = value;
   }
 
-  public void delete(int index, Comparable key) {
-    setKey(index, key);
+  public void deleteKey(int index, Object key, Comparator comparator) {
+    setKey(index, key, comparator);
     delete(index);
   }
 
@@ -119,7 +126,7 @@ class MyRevisionBuilder implements RevisionBuilder {
     Node root = blazedRoots[index];
     if (root == null) {
       if (index == 0) {
-        root = Node.delete(token, stack, result.root, keys[0]);
+        root = Node.delete(token, stack, result.root, keys[0], comparators[0]);
 
         if (root != result.root) {
           result = getRevision(token, result, root);
@@ -137,7 +144,8 @@ class MyRevisionBuilder implements RevisionBuilder {
           delete(index - 1);
         } else {
           root = Node.delete
-            (token, stack, (Node) blaze(index - 1).value, keys[index]);
+            (token, stack, (Node) blaze(index - 1).value, keys[index],
+             comparators[index]);
           blazedLeaves[index - 1].value = root;
           blazedRoots[index] = root;
           blazedLeaves[index] = null;
@@ -158,10 +166,11 @@ class MyRevisionBuilder implements RevisionBuilder {
       n = found[index];
       if (n == null) {
         if (index == 0) {
-          n = Node.find(result.root, keys[0]);
+          n = Node.find(result.root, keys[0], comparators[0]);
           found[0] = n;
         } else {
-          n = Node.find((Node) find(index - 1).value, keys[index]);
+          n = Node.find
+            ((Node) find(index - 1).value, keys[index], comparators[index]);
           found[index] = n;
         }
       }
@@ -171,12 +180,14 @@ class MyRevisionBuilder implements RevisionBuilder {
 
   private void deleteBlazed(int index) {
     blazedLeaves[index] = null;
-    Node root = Node.delete(token, stack, blazedRoots[index], keys[index]);
+    Node root = Node.delete
+      (token, stack, blazedRoots[index], keys[index], comparators[index]);
     blazedRoots[index] = root;
     blazedLeaves[index] = null;
     if (root == null) {
       if (index == 0) {
-        result.root = Node.delete(token, stack, result.root, keys[0]);
+        result.root = Node.delete
+          (token, stack, result.root, keys[0], comparators[0]);
       } else {
         deleteBlazed(index - 1);
       }
@@ -194,7 +205,7 @@ class MyRevisionBuilder implements RevisionBuilder {
     if (n == null) {
       if (index == 0) {
         Node root = Node.blaze
-          (blazeResult, token, stack, result.root, keys[0]);
+          (blazeResult, token, stack, result.root, keys[0], comparators[0]);
 
         if (root != result.root) {
           result = getRevision(token, result, root);
@@ -207,7 +218,7 @@ class MyRevisionBuilder implements RevisionBuilder {
       } else {
         Node root = Node.blaze
           (blazeResult, token, stack, (Node) blaze(index - 1).value,
-           keys[index]);
+           keys[index], comparators[index]);
 
         blazedLeaves[index - 1].value = root;
         blazedRoots[index] = root;
@@ -231,8 +242,8 @@ class MyRevisionBuilder implements RevisionBuilder {
       (reference(index.table), base, baseStack, result, forkStack,
        ConstantAdapter.True, new ExpressionContext(null), false);
 
-    setKey(Constants.TableDataDepth, index.table);
-    setKey(Constants.IndexDataDepth, index);
+    setKey(Constants.TableDataDepth, index.table, Compare.TableComparator);
+    setKey(Constants.IndexDataDepth, index, Compare.IndexComparator);
 
     List<Column<?>> keyColumns = index.columns;
 
@@ -247,14 +258,16 @@ class MyRevisionBuilder implements RevisionBuilder {
 
         int i = 0;
         for (; i < keyColumns.size() - 1; ++i) {
+          Column c = keyColumns.get(i);
           setKey
             (i + Constants.IndexDataBodyDepth,
-             (Comparable) Node.find(tree, keyColumns.get(i)).value);
+             Node.find(tree, c, Compare.ColumnComparator).value, c.comparator);
         }
 
+        Column c = keyColumns.get(i);
         Node n = blaze
           (i + Constants.IndexDataBodyDepth,
-           (Comparable) Node.find(tree, keyColumns.get(i)).value);
+           Node.find(tree, c, Compare.ColumnComparator).value, c.comparator);
 
         expect(n.value == Node.Null);
       
@@ -266,14 +279,16 @@ class MyRevisionBuilder implements RevisionBuilder {
 
         int i = 0;
         for (; i < keyColumns.size() - 1; ++i) {
+          Column c = keyColumns.get(i);
           setKey
             (i + Constants.IndexDataBodyDepth,
-             (Comparable) Node.find(tree, keyColumns.get(i)).value);
+             Node.find(tree, c, Compare.ColumnComparator).value, c.comparator);
         }
 
-        delete
+        Column c = keyColumns.get(i);
+        deleteKey
           (i + Constants.IndexDataBodyDepth,
-           (Comparable) Node.find(tree, keyColumns.get(i)).value);            
+           Node.find(tree, c, Compare.ColumnComparator).value, c.comparator);
       } break;
       
       default:
@@ -295,7 +310,7 @@ class MyRevisionBuilder implements RevisionBuilder {
         throw new ClassCastException
           (v.getClass().getName() + " cannot be cast to " + c.type.getName());
       }
-      n = Node.blaze(result, token, stack, n, c);
+      n = Node.blaze(result, token, stack, n, c, Compare.ColumnComparator);
       result.node.value = v;
     }
     return n;
@@ -310,8 +325,9 @@ class MyRevisionBuilder implements RevisionBuilder {
       (base, baseStack, result, forkStack, view.query,
        view.parameters.toArray(new Object[view.parameters.size()]));
 
-    setKey(Constants.TableDataDepth, view.table);
-    setKey(Constants.IndexDataDepth, view.table.primaryKey);
+    setKey(Constants.TableDataDepth, view.table, Compare.TableComparator);
+    setKey(Constants.IndexDataDepth, view.table.primaryKey,
+           Compare.IndexComparator);
 
     List<Column<?>> keyColumns = view.table.primaryKey.columns;
 
@@ -353,14 +369,14 @@ class MyRevisionBuilder implements RevisionBuilder {
         for (; i < keyColumns.size() - 1; ++i) {
           setKey
             (i + Constants.IndexDataBodyDepth,
-             (Comparable) expressions.get
-             (view.primaryKeyOffset + i).evaluate(true));
+             expressions.get(view.primaryKeyOffset + i).evaluate(true),
+             keyColumns.get(i).comparator);
         }
 
         Node n = blaze
           (i + Constants.IndexDataBodyDepth,
-           (Comparable) expressions.get
-           (view.primaryKeyOffset + i).evaluate(true));
+           expressions.get(view.primaryKeyOffset + i).evaluate(true),
+           keyColumns.get(i).comparator);
 
         // System.out.println("inserted " + Util.toString(keys, 0, Constants.IndexDataBodyDepth + i + 1));
 
@@ -374,8 +390,8 @@ class MyRevisionBuilder implements RevisionBuilder {
 
             a.add
               (Node.find
-               ((Node) n.value, view.columns.get(columnOffset++)).value,
-               values);
+               ((Node) n.value, view.columns.get(columnOffset++),
+                Compare.ColumnComparator).value, values);
           }
         } else {
           expect(n.value == Node.Null);
@@ -394,8 +410,8 @@ class MyRevisionBuilder implements RevisionBuilder {
         for (int i = 0; i < keyColumns.size(); ++i) {
           setKey
             (i + Constants.IndexDataBodyDepth,
-             (Comparable) expressions.get
-             (view.primaryKeyOffset + i).evaluate(true));
+             expressions.get(view.primaryKeyOffset + i).evaluate(true),
+             keyColumns.get(i).comparator);
         }
         int index = keyColumns.size() - 1 + Constants.IndexDataBodyDepth;
 
@@ -412,7 +428,8 @@ class MyRevisionBuilder implements RevisionBuilder {
             }
             a.subtract
               (Node.find
-               ((Node) n.value, view.columns.get(columnOffset++)).value,
+               ((Node) n.value, view.columns.get(columnOffset++),
+                Compare.ColumnComparator).value,
                values);
           }
         }
@@ -456,8 +473,8 @@ class MyRevisionBuilder implements RevisionBuilder {
           for (int i = 0; i < keyColumns.size(); ++i) {
             setKey
               (i + Constants.IndexDataBodyDepth,
-               (Comparable) expressions.get
-               (view.primaryKeyOffset + i).evaluate(true));
+               expressions.get(view.primaryKeyOffset + i).evaluate(true),
+               keyColumns.get(i).comparator);
           }
 
           int index = keyColumns.size() - 1 + Constants.IndexDataBodyDepth;
@@ -466,7 +483,8 @@ class MyRevisionBuilder implements RevisionBuilder {
           for (AggregateAdapter a: aggregates) {
             a.value = Node.find
               ((Node) find(index).value,
-               view.columns.get(columnOffset++)).value;
+               view.columns.get(columnOffset++),
+               Compare.ColumnComparator).value;
           }
 
           // System.out.print("filter: ");
@@ -514,7 +532,7 @@ class MyRevisionBuilder implements RevisionBuilder {
       DiffIterator iterator = new DiffIterator
         (indexBase.root, indexUpdateBaseStack,
          result.root, indexUpdateForkStack,
-         list(Interval.Unbounded).iterator(), false);
+         list(Interval.Unbounded).iterator(), false, Compare.TableComparator);
 
       DiffIterator.DiffPair pair = new DiffIterator.DiffPair();
 
@@ -523,8 +541,9 @@ class MyRevisionBuilder implements RevisionBuilder {
         if (pair.fork != null) {
           for (NodeIterator indexes = new NodeIterator
                  (indexUpdateIterateStack, Node.pathFind
-                  (result.root, Constants.IndexTable,
-                   Constants.IndexTable.primaryKey, (Table) pair.fork.key));
+                  (result.root, Constants.IndexTable, Compare.TableComparator,
+                   Constants.IndexTable.primaryKey, Compare.IndexComparator,
+                   pair.fork.key, Constants.TableColumn.comparator));
                indexes.hasNext();)
           {
             updateIndexTree
@@ -534,8 +553,9 @@ class MyRevisionBuilder implements RevisionBuilder {
 
           for (NodeIterator views = new NodeIterator
                  (indexUpdateIterateStack, Node.pathFind
-                  (result.root, Constants.ViewTable,
-                   Constants.ViewTable.primaryKey, (Table) pair.fork.key));
+                  (result.root, Constants.ViewTable, Compare.TableComparator,
+                   Constants.ViewTable.primaryKey, Compare.IndexComparator,
+                   pair.fork.key, Constants.TableColumn.comparator));
                views.hasNext();)
           {
             viewSet.add((View) views.next().key);
@@ -554,7 +574,9 @@ class MyRevisionBuilder implements RevisionBuilder {
   }
 
   public void updateIndex(Index index) {
-    if (! Compare.equal(index.table.primaryKey, index)) {
+    if (! Compare.equal
+        (index.table.primaryKey, index, Compare.IndexComparator))
+    {
       updateIndexes();
     }
   }
@@ -575,10 +597,14 @@ class MyRevisionBuilder implements RevisionBuilder {
     // freeze a copy of the last revision which contained up-to-date
     // indexes so we can do a diff later and use it to update them
 
-    if (Node.pathFind(result.root, Constants.IndexTable,
-                      Constants.IndexTable.primaryKey, table) != Node.Null
-        || Node.pathFind(result.root, Constants.ViewTable,
-                         Constants.ViewTable.primaryKey, table) != Node.Null)
+    if (Node.pathFind
+        (result.root, Constants.IndexTable, Compare.TableComparator,
+         Constants.IndexTable.primaryKey, Compare.IndexComparator,
+         table, Constants.TableColumn.comparator) != Node.Null
+        || Node.pathFind
+        (result.root, Constants.ViewTable, Compare.TableComparator,
+         Constants.ViewTable.primaryKey, Compare.IndexComparator,
+         table, Constants.TableColumn.comparator) != Node.Null)
     {
       dirtyIndexes = true;
 
@@ -588,35 +614,42 @@ class MyRevisionBuilder implements RevisionBuilder {
     }
   }
 
-  private void pathInsert(Table table, Comparable ... path) {
-    setKey(Constants.TableDataDepth, table);
-    setKey(Constants.IndexDataDepth, table.primaryKey);
+  private void pathInsert(Table table, Object ... path) {
+    setKey(Constants.TableDataDepth, table, Compare.TableComparator);
+    setKey(Constants.IndexDataDepth, table.primaryKey,
+           Compare.IndexComparator);
 
     Node tree = Node.Null;
     Node.BlazeResult result = new Node.BlazeResult();
     List<Column<?>> columns = table.primaryKey.columns;
     for (int i = 0; i < columns.size(); ++i) {
-      tree = Node.blaze(result, token, stack, tree, columns.get(i));
+      tree = Node.blaze
+        (result, token, stack, tree, columns.get(i), Compare.ColumnComparator);
+
       result.node.value = path[i];
 
+      Comparator comparator = columns.get(i).comparator;
       if (i == columns.size() - 1) {
-        insertOrUpdate(Constants.IndexDataBodyDepth + i, path[i], tree);
+        insertOrUpdate
+          (Constants.IndexDataBodyDepth + i, path[i], comparator, tree);
       } else {
-        setKey(Constants.IndexDataBodyDepth + i, path[i]);
+        setKey(Constants.IndexDataBodyDepth + i, path[i], comparator);
       }
     }
   }
 
-  private void pathDelete(Table table, Comparable ... path) {
-    setKey(Constants.TableDataDepth, table);
-    setKey(Constants.IndexDataDepth, table.primaryKey);
+  private void pathDelete(Table table, Object ... path) {
+    setKey(Constants.TableDataDepth, table, Compare.TableComparator);
+    setKey(Constants.IndexDataDepth, table.primaryKey,
+           Compare.IndexComparator);
 
     List<Column<?>> columns = table.primaryKey.columns;
     for (int i = 0; i < columns.size(); ++i) {
+      Comparator comparator = columns.get(i).comparator;
       if (i == columns.size() - 1) {
-        delete(Constants.IndexDataBodyDepth + i, path[i]);
+        deleteKey(Constants.IndexDataBodyDepth + i, path[i], comparator);
       } else {
-        setKey(Constants.IndexDataBodyDepth + i, path[i]);
+        setKey(Constants.IndexDataBodyDepth + i, path[i], comparator);
       }
     }
   }
@@ -625,8 +658,10 @@ class MyRevisionBuilder implements RevisionBuilder {
   {
     if (index.equals(index.table.primaryKey)
         || Node.pathFind
-        (result.root, Constants.IndexTable, Constants.IndexTable.primaryKey,
-         index.table, index) != Node.Null)
+        (result.root, Constants.IndexTable, Compare.TableComparator,
+         Constants.IndexTable.primaryKey, Compare.IndexComparator,
+         index.table, Constants.TableColumn.comparator,
+         index, Constants.IndexColumn.comparator) != Node.Null)
     {
       // the specified index is already present -- ignore
       return;
@@ -653,8 +688,8 @@ class MyRevisionBuilder implements RevisionBuilder {
 
     pathDelete(Constants.IndexTable, index.table, index);
 
-    setKey(Constants.TableDataDepth, index.table);
-    delete(Constants.IndexDataDepth, index);
+    setKey(Constants.TableDataDepth, index.table, Compare.TableComparator);
+    deleteKey(Constants.IndexDataDepth, index, Compare.IndexComparator);
   }
 
   private void addView(View view)
@@ -670,8 +705,10 @@ class MyRevisionBuilder implements RevisionBuilder {
             Table table = ((TableReference) source).table;
 
             if (Node.pathFind
-                (result.root, Constants.ViewTable,
-                 Constants.ViewTable.primaryKey, table, view) != Node.Null)
+                (result.root, Constants.ViewTable, Compare.TableComparator,
+                 Constants.ViewTable.primaryKey, Compare.IndexComparator,
+                 table, Constants.TableColumn.comparator,
+                 view, Constants.ViewColumn.comparator) != Node.Null)
             {
               // the specified view is already present -- ignore
               return;
@@ -705,14 +742,15 @@ class MyRevisionBuilder implements RevisionBuilder {
         }
       });
 
-    delete(Constants.TableDataDepth, view.table);
+    deleteKey(Constants.TableDataDepth, view.table, Compare.TableComparator);
   }
 
   private void addForeignKey(ForeignKey constraint)
   {
     if (Node.pathFind
-        (result.root, Constants.ForeignKeyTable,
-         Constants.ForeignKeyTable.primaryKey, constraint) != Node.Null)
+        (result.root, Constants.ForeignKeyTable, Compare.TableComparator,
+         Constants.ForeignKeyTable.primaryKey, Compare.IndexComparator,
+         constraint, Constants.ForeignKeyColumn.comparator) != Node.Null)
     {
       // the specified foreign key is already present -- ignore
       return;
@@ -735,7 +773,10 @@ class MyRevisionBuilder implements RevisionBuilder {
   {
     pathDelete(Constants.ForeignKeyTable, constraint);
 
-    if (Node.pathFind(result.root, Constants.ForeignKeyTable) == Node.Null) {
+    if (Node.pathFind
+        (result.root, Constants.ForeignKeyTable, Compare.TableComparator)
+        == Node.Null)
+    {
       // the last foreign key constraint has been removed -- remove
       // the indexes
 
@@ -747,7 +788,7 @@ class MyRevisionBuilder implements RevisionBuilder {
     }
   }
 
-  private void delete(Comparable[] keys)
+  private void doDelete(Object[] keys)
   {
     if (keys.length == 0) {
       deleteAll();
@@ -757,29 +798,34 @@ class MyRevisionBuilder implements RevisionBuilder {
     Table table = (Table) keys[0];
 
     if (keys.length == 1) {
-      delete(Constants.TableDataDepth, table);
+      deleteKey(Constants.TableDataDepth, table, Compare.TableComparator);
       return;
     }
 
     prepareForUpdate(table);
 
-    setKey(Constants.TableDataDepth, table);
-    setKey(Constants.IndexDataDepth, table.primaryKey);
+    setKey(Constants.TableDataDepth, table, Compare.TableComparator);
+    setKey(Constants.IndexDataDepth, table.primaryKey,
+           Compare.IndexComparator);
 
     int i = 1;
     for (; i < keys.length - 1; ++i) {
-      setKey(i - 1 + Constants.IndexDataBodyDepth, keys[i]);
+      setKey(i - 1 + Constants.IndexDataBodyDepth, keys[i],
+             table.primaryKey.columns.get(i - 1).comparator);
     }
 
-    delete(i - 1 + Constants.IndexDataBodyDepth, keys[i]);
+    deleteKey(i - 1 + Constants.IndexDataBodyDepth, keys[i],
+              keys.length > table.primaryKey.columns.size() + 1
+              ? Compare.ColumnComparator
+              : table.primaryKey.columns.get(i - 1).comparator);
   }
 
   private void insert(int depth,
                       List<Column<?>> columns,
-                      Comparable[] path)
+                      Object[] path)
   {
     for (int i = 0; i < path.length; ++i) {
-      blaze(depth, columns.get(i)).value = path[i];
+      blaze(depth, columns.get(i), Compare.ColumnComparator).value = path[i];
     }
   }
 
@@ -787,22 +833,26 @@ class MyRevisionBuilder implements RevisionBuilder {
                       Table table,
                       Column<?> column,
                       Object value,
-                      Comparable[] path)
+                      Object[] path)
   {
     prepareForUpdate(table);
 
-    setKey(Constants.TableDataDepth, table);
-    setKey(Constants.IndexDataDepth, table.primaryKey);
+    setKey(Constants.TableDataDepth, table, Compare.TableComparator);
+    setKey(Constants.IndexDataDepth, table.primaryKey,
+           Compare.IndexComparator);
 
     for (int i = 0; i < path.length; ++i) {
-      setKey(i + Constants.IndexDataBodyDepth, path[i]);
+      setKey(i + Constants.IndexDataBodyDepth, path[i],
+             table.primaryKey.columns.get(i).comparator);
     }
 
     Node n;
     if (column == null) {
       n = blaze((path.length - 1) + Constants.IndexDataBodyDepth);
     } else {
-      n = blaze(path.length + Constants.IndexDataBodyDepth, column);
+      n = blaze
+        (path.length + Constants.IndexDataBodyDepth, column,
+         Compare.ColumnComparator);
     }
 
     if (n.value == Node.Null) {
@@ -842,7 +892,7 @@ class MyRevisionBuilder implements RevisionBuilder {
         path = new Object[3 + table.primaryKey.columns.size()];
       }
 
-      public void init(Comparable[] keys) {
+      public void init(Object[] keys) {
         if(path.length != keys.length + 3) {
           path = new Object[3 + keys.length];
         }
@@ -899,7 +949,7 @@ class MyRevisionBuilder implements RevisionBuilder {
       this.table = table;
     }
 
-    public RowBuilder row(Comparable ... key) {
+    public RowBuilder row(Object ... key) {
       if(rowBuilder != null) {
         rowBuilder.init(key);
         MyRowBuilder ret = rowBuilder;
@@ -911,13 +961,13 @@ class MyRevisionBuilder implements RevisionBuilder {
       return ret;
     }
 
-    public TableBuilder key(Comparable ... key) {
+    public TableBuilder key(Object ... key) {
       MyRowBuilder row = (MyRowBuilder) row(key);
       insert(DuplicateKeyResolution.Overwrite, row.path, 0, key.length + 1);
       return row.up(); // identically, return this (but up() can recycle the RowBuilder)
     }
 
-    public TableBuilder delete(Comparable ... key) {
+    public TableBuilder delete(Object ... key) {
       MyRowBuilder row = (MyRowBuilder) row(key);
       MyRevisionBuilder.this.delete(row.path, 0, key.length + 1);
       return this;
@@ -975,12 +1025,10 @@ class MyRevisionBuilder implements RevisionBuilder {
                      int pathOffset,
                      int pathLength)
   {
-    Comparable[] myPath = new Comparable[pathLength];
-    for (int i = 0; i < pathLength; ++i) {
-      myPath[i] = (Comparable) path[pathOffset + i];
-    }
+    Object[] myPath = new Object[pathLength];
+    System.arraycopy(path, pathOffset, myPath, 0, pathLength);
     
-    delete(myPath);
+    doDelete(myPath);
   }
 
   public void delete(Object ... path)
@@ -1004,10 +1052,8 @@ class MyRevisionBuilder implements RevisionBuilder {
     List<Column<?>> columns = table.primaryKey.columns;
 
     if (pathLength == columns.size() + 1) {
-      Comparable[] myPath = new Comparable[columns.size()];
-      for (int i = 0; i < myPath.length; ++i) {
-        myPath[i] = (Comparable) path[pathOffset + i + 1];
-      }
+      Object[] myPath = new Object[columns.size()];
+      System.arraycopy(path, pathOffset + 1, myPath, 0, myPath.length);
 
       insert(duplicateKeyResolution, table, null, null, myPath);
     } else if (pathLength == columns.size() + 3) {
@@ -1025,14 +1071,13 @@ class MyRevisionBuilder implements RevisionBuilder {
           (value.getClass() + " cannot be cast to " + column.type);
       }
 
-      Comparable[] myPath = new Comparable[columns.size()];
+      Object[] myPath = new Object[columns.size()];
       for (int i = 0; i < myPath.length; ++i) {
-        Comparable c = (Comparable) path[pathOffset + i + 1];
         if (columns.get(i) == column) {
           throw new IllegalArgumentException
             ("cannot use insert to update a primary key column");        
         }
-        myPath[i] = c;
+        myPath[i] = path[pathOffset + i + 1];
       }
 
       insert(duplicateKeyResolution, table, column, value, myPath);

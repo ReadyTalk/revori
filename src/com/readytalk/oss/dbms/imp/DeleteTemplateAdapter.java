@@ -6,6 +6,7 @@ import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Index;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.QueryResult;
+import com.readytalk.oss.dbms.Comparators;
 
 import java.util.List;
 
@@ -21,7 +22,9 @@ class DeleteTemplateAdapter implements PatchTemplateAdapter {
     ExpressionAdapter test = ExpressionAdapterFactory.makeAdapter
       (expressionContext, delete.test);
 
-    builder.setKey(Constants.TableDataDepth, delete.tableReference.table);
+    builder.setKey
+      (Constants.TableDataDepth, delete.tableReference.table,
+       Compare.TableComparator);
 
     Plan plan = Plan.choosePlan
       (MyRevision.Empty, NodeStack.Null, builder.result, builder.stack, test,
@@ -34,7 +37,7 @@ class DeleteTemplateAdapter implements PatchTemplateAdapter {
     Table table = delete.tableReference.table;
     Index index = table.primaryKey;
 
-    builder.setKey(Constants.IndexDataDepth, index);
+    builder.setKey(Constants.IndexDataDepth, index, Compare.IndexComparator);
 
     TableIterator iterator = new TableIterator
       (delete.tableReference, MyRevision.Empty, NodeStack.Null, revision,
@@ -66,14 +69,16 @@ class DeleteTemplateAdapter implements PatchTemplateAdapter {
 
         int i = 0;
         for (; i < keyColumns.size() - 1; ++i) {
+          Column c = keyColumns.get(i);
           builder.setKey
             (i + Constants.IndexDataBodyDepth,
-             (Comparable) Node.find(tree, keyColumns.get(i)).value);
+             Node.find(tree, c, Compare.ColumnComparator).value, c.comparator);
         }
 
-        builder.delete
+        Column c = keyColumns.get(i);
+        builder.deleteKey
           (i + Constants.IndexDataBodyDepth,
-           (Comparable) Node.find(tree, keyColumns.get(i)).value);
+           Node.find(tree, c, Compare.ColumnComparator).value, c.comparator);
       } break;
 
       default:

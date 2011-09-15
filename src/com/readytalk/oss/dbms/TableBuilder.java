@@ -7,13 +7,13 @@ public interface TableBuilder {
    * primary key.
    * @return said row builder
    */
-  public RowBuilder row(Comparable ... key);
+  public RowBuilder row(Object ... key);
 
   /**
    * Deletes the row with the specified primary key.
    * @return self
    */
-  public TableBuilder delete(Comparable ... key);
+  public TableBuilder delete(Object ... key);
 
   /**
    * Indicate that no further updates will
@@ -27,5 +27,5 @@ public interface TableBuilder {
    * and no other columns.
    * @return self
    */
-  public TableBuilder key(Comparable... key);
+  public TableBuilder key(Object... key);
 }

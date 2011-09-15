@@ -3,6 +3,7 @@ package com.readytalk.oss.dbms.imp;
 import com.readytalk.oss.dbms.imp.DiffIterator.DiffPair;
 import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.TableReference;
+import com.readytalk.oss.dbms.Comparators;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -35,8 +36,10 @@ class TableIterator implements SourceIterator {
                        boolean visitUnchanged)
   {
     this.tableReference = tableReference;
-    this.base = Node.pathFind(base.root, tableReference.table);
-    this.fork = Node.pathFind(fork.root, tableReference.table);
+    this.base = Node.pathFind
+      (base.root, tableReference.table, Compare.TableComparator);
+    this.fork = Node.pathFind
+      (fork.root, tableReference.table, Compare.TableComparator);
     this.test = test;
     this.expressionContext = expressionContext;
     this.visitUnchanged = visitUnchanged;
@@ -49,12 +52,12 @@ class TableIterator implements SourceIterator {
     // System.out.println("intervals: " + plan.scans[0].evaluate());
 
     plan.iterators[0] = new DiffIterator
-      (Node.pathFind(this.base, plan.index),
+      (Node.pathFind(this.base, plan.index, Compare.IndexComparator),
        this.baseStack = new NodeStack(baseStack),
-       Node.pathFind(this.fork, plan.index),
+       Node.pathFind(this.fork, plan.index, Compare.IndexComparator),
        this.forkStack = new NodeStack(forkStack),
        plan.scans[0].evaluate().iterator(),
-       visitUnchanged);
+       visitUnchanged, plan.index.columns.get(0).comparator);
 
     for (ColumnReferenceAdapter r: expressionContext.columnReferences) {
       if (r.tableReference == tableReference) {
@@ -105,7 +108,8 @@ class TableIterator implements SourceIterator {
               return QueryResult.Type.Deleted;
             } else if (pair.base == pair.fork
                        || Node.treeEqual(baseStack, (Node) pair.base.value,
-                                         forkStack, (Node) pair.fork.value))
+                                         forkStack, (Node) pair.fork.value,
+                                         plan.iterators[depth].comparator))
             {
               if (visitUnchanged) {
                 return QueryResult.Type.Unchanged;
@@ -156,7 +160,7 @@ class TableIterator implements SourceIterator {
       Node tree = (Node) node.value;
         
       for (ColumnReferenceAdapter r: columnReferences) {
-        Object v = Node.find(tree, r.column).value();
+        Object v = Node.find(tree, r.column, Compare.ColumnComparator).value();
         if (v != null && ! r.column.type.isInstance(v)) {
           throw new ClassCastException
             (v.getClass().getName() + " cannot be cast to "
@@ -198,7 +202,8 @@ class TableIterator implements SourceIterator {
        fork == null ? Node.Null : (Node) fork.value,
        forkStack = new NodeStack(forkStack),
        plan.scans[depth].evaluate().iterator(),
-       visitUnchanged);
+       visitUnchanged, depth == plan.index.columns.size()
+       ? Compare.ColumnComparator : plan.index.columns.get(depth).comparator);
   }
 
   private void ascend() {

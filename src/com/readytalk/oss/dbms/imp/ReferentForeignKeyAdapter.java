@@ -14,6 +14,7 @@ import com.readytalk.oss.dbms.TableReference;
 import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.ForeignKey;
+import com.readytalk.oss.dbms.Comparators;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -69,7 +70,7 @@ public class ReferentForeignKeyAdapter {
   private Object[] parameters(List<Column<?>> columns, Node tree) {
     Object[] parameters = new Object[columns.size()];
     for (int i = 0; i < parameters.length; ++i) {
-      Node n = Node.find(tree, columns.get(i));
+      Node n = Node.find(tree, columns.get(i), Compare.ColumnComparator);
       parameters[i] = n == Node.Null ? null : n.value;
     }
     return parameters;
