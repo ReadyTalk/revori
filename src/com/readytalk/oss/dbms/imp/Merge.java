@@ -9,7 +9,9 @@ import com.readytalk.oss.dbms.Index;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.DiffResult;
+import com.readytalk.oss.dbms.Comparators;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -68,9 +70,9 @@ class Merge {
     NodeStack rightStack = new NodeStack();
 
     { MergeIterator[] iterators = new MergeIterator[Constants.MaxDepth + 1];
-    
       iterators[0] = new MergeIterator
-        (base.root, baseStack, left.root, leftStack, right.root, rightStack);
+        (base.root, baseStack, left.root, leftStack, right.root, rightStack,
+         Compare.TableComparator);
 
       int depth = 0;
       int bottom = -1;
@@ -85,18 +87,24 @@ class Merge {
                  && triple.left != Node.Null
                  && triple.right != Node.Null);
 
+          Comparator comparator = iterators[depth].comparator;
+
           boolean descend = false;
           boolean conflict = false;
           if (triple.base == null) {
             if (triple.left == null) {
               if(depth != Constants.IndexDataDepth || ((Index)triple.right.key).isPrimary()) {
                 builder.insertOrUpdate
-                  (depth, triple.right.key, triple.right.value);
+                  (depth, triple.right.key, comparator,
+                   triple.right.value);
               }
             } else if (triple.right == null) {
               // do nothing -- left already has insert
             } else if (depth == bottom) {
-              if (Compare.equal(triple.left.value, triple.right.value)) {
+              if (Compare.equal
+                  (triple.left.value, triple.right.value,
+                   ((Column) triple.left.key).comparator))
+              {
                 // do nothing -- inserts match and left already has it
               } else {
                 conflict = true;
@@ -111,19 +119,27 @@ class Merge {
                   indexes.remove(triple.right.key);
                 }
                 builder.insertOrUpdate
-                  (depth, triple.right.key, triple.right.value);
+                  (depth, triple.right.key, comparator,
+                   triple.right.value);
               } else if (triple.right == triple.base) {
                 // do nothing -- left already has update
               } else if (depth == bottom) {
-                if (Compare.equal(triple.left.value, triple.right.value)
-                    || Compare.equal(triple.base.value, triple.right.value))
+                if (Compare.equal
+                    (triple.left.value, triple.right.value,
+                     ((Column) triple.left.key).comparator)
+                    || Compare.equal
+                    (triple.base.value, triple.right.value,
+                     ((Column) triple.left.key).comparator))
                 {
                   // do nothing -- updates match or only left changed,
                   // and left already has it
-                } else if (Compare.equal(triple.base.value, triple.left.value))
+                } else if (Compare.equal
+                           (triple.base.value, triple.left.value,
+                            ((Column) triple.left.key).comparator))
                 {
                   builder.insertOrUpdate
-                    (depth, triple.right.key, triple.right.value);
+                    (depth, triple.right.key, comparator,
+                     triple.right.value);
                 } else {
                   conflict = true;
                 }
@@ -131,7 +147,7 @@ class Merge {
                 descend = true;
               }
             } else {
-              builder.delete(depth, triple.left.key);
+              builder.deleteKey(depth, triple.left.key, comparator);
             }
           } else {
             // do nothing -- left already has delete
@@ -154,27 +170,38 @@ class Merge {
                triple.left.value,
                triple.right.value);
 
-            if (Compare.equal(result, triple.left.value)) {
+            if (Compare.equal
+                (result, triple.left.value,
+                 ((Column) triple.left.key).comparator))
+            {
               // do nothing -- left already has insert
             } else if (result == null) {
-              builder.delete(depth, triple.left.key);
+              builder.deleteKey(depth, triple.left.key, comparator);
             } else {
-              builder.insertOrUpdate(depth, triple.left.key, result);
+              builder.insertOrUpdate
+                (depth, triple.left.key, comparator, result);
             }
           } else if (descend) {
+            Comparator nextComparator;
             if (depth == Constants.TableDataDepth) {
               table = (Table) triple.left.key;
+              nextComparator = Compare.IndexComparator;
 
               if (table != Constants.IndexTable) {
                 DiffIterator indexIterator = new DiffIterator
-                  (Node.pathFind(left.root, Constants.IndexTable,
-                                 Constants.IndexTable.primaryKey, table),
+                  (Node.pathFind
+                   (left.root, Constants.IndexTable, Compare.TableComparator,
+                    Constants.IndexTable.primaryKey, Compare.IndexComparator,
+                    table, Constants.TableColumn.comparator),
                    baseStack = new NodeStack(baseStack),
-                   Node.pathFind(builder.result.root, Constants.IndexTable,
-                                 Constants.IndexTable.primaryKey, table),
+                   Node.pathFind
+                   (builder.result.root,
+                    Constants.IndexTable, Compare.TableComparator,
+                    Constants.IndexTable.primaryKey, Compare.IndexComparator,
+                    table, Constants.TableColumn.comparator),
                    leftStack = new NodeStack(leftStack),
                    list(Interval.Unbounded).iterator(),
-                   true);
+                   true, Compare.IndexComparator);
           
                 DiffIterator.DiffPair pair = new DiffIterator.DiffPair();
                 while (indexIterator.next(pair)) {
@@ -185,9 +212,12 @@ class Merge {
                         indexes.add(index);
                       }
                     } else {
-                      builder.setKey(Constants.TableDataDepth, table);
-                      builder.delete
-                        (Constants.IndexDataDepth, (Index) pair.base.key);
+                      builder.setKey
+                        (Constants.TableDataDepth, table,
+                         Compare.TableComparator);
+                      builder.deleteKey
+                        (Constants.IndexDataDepth, pair.base.key,
+                         Compare.IndexComparator);
                     }
                   } else if (pair.fork != null) {
                     Index index = (Index) pair.fork.key;
@@ -202,16 +232,23 @@ class Merge {
               }
             } else if (depth == Constants.IndexDataDepth) {
               Index index = (Index) triple.left.key;
-              if (Compare.equal(index, table.primaryKey)) {
+              nextComparator = table.primaryKey.columns.get(0).comparator;
+
+              if (Compare.equal(index, table.primaryKey, comparator)) {
                 bottom = index.columns.size() + Constants.IndexDataBodyDepth;
               } else {
                 // skip non-primary-key index data trees -- we'll handle
                 // those later
                 continue;
               }
+            } else if (depth + 1 == bottom) {
+              nextComparator = Compare.ColumnComparator;
+            } else {
+              nextComparator = table.primaryKey.columns.get
+                (depth + 1 - Constants.IndexDataBodyDepth).comparator;
             }
 
-            builder.setKey(depth, triple.left.key);
+            builder.setKey(depth, triple.left.key, comparator);
           
             ++ depth;
 
@@ -221,7 +258,8 @@ class Merge {
                (Node) triple.left.value,
                leftStack = new NodeStack(leftStack),
                (Node) triple.right.value,
-               rightStack = new NodeStack(rightStack));
+               rightStack = new NodeStack(rightStack),
+               nextComparator);
           }
         } else if (depth == 0) {
           break;

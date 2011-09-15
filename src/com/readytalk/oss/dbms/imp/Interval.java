@@ -1,5 +1,7 @@
 package com.readytalk.oss.dbms.imp;
 
+import java.util.Comparator;
+
 class Interval {
   public enum BoundType {
     Inclusive, Exclusive;
@@ -15,14 +17,14 @@ class Interval {
   public static final Interval Unbounded = new Interval
     (Compare.Undefined, Compare.Undefined);
 
-  public final Comparable low;
+  public final Object low;
   public final BoundType lowBoundType;
-  public final Comparable high;
+  public final Object high;
   public final BoundType highBoundType;
 
-  public Interval(Comparable low,
+  public Interval(Object low,
                   BoundType lowBoundType,
-                  Comparable high,
+                  Object high,
                   BoundType highBoundType)
   {
     this.low = low;
@@ -31,8 +33,8 @@ class Interval {
     this.highBoundType = highBoundType;
   }
 
-  public Interval(Comparable low,
-                  Comparable high)
+  public Interval(Object low,
+                  Object high)
   {
     this(low, BoundType.Inclusive, high, BoundType.Inclusive);
   }
@@ -43,11 +45,14 @@ class Interval {
   }
 
   public static Interval intersection(Interval left,
-                                      Interval right)
+                                      Interval right,
+                                      Comparator comparator)
   {
-    Comparable low;
+    Object low;
     BoundType lowBoundType;
-    int lowDifference = Compare.compare(left.low, false, right.low, false);
+    int lowDifference = Compare.compare
+      (left.low, false, right.low, false, comparator);
+
     if (lowDifference > 0) {
       low = left.low;
       lowBoundType = left.lowBoundType;
@@ -61,9 +66,11 @@ class Interval {
                       ? BoundType.Exclusive : BoundType.Inclusive);
     }
 
-    Comparable high;
+    Object high;
     BoundType highBoundType;
-    int highDifference = Compare.compare(left.high, true, right.high, true);
+    int highDifference = Compare.compare
+      (left.high, true, right.high, true, comparator);
+
     if (highDifference > 0) {
       high = right.high;
       highBoundType = right.highBoundType;
@@ -81,11 +88,14 @@ class Interval {
   }
 
   public static Interval union(Interval left,
-                               Interval right)
+                               Interval right,
+                               Comparator comparator)
   {
-    Comparable low;
+    Object low;
     BoundType lowBoundType;
-    int lowDifference = Compare.compare(left.low, false, right.low, false);
+    int lowDifference = Compare.compare
+      (left.low, false, right.low, false, comparator);
+
     if (lowDifference > 0) {
       low = right.low;
       lowBoundType = right.lowBoundType;
@@ -99,9 +109,11 @@ class Interval {
                       ? BoundType.Inclusive : BoundType.Exclusive);
     }
 
-    Comparable high;
+    Object high;
     BoundType highBoundType;
-    int highDifference = Compare.compare(left.high, true, right.high, true);
+    int highDifference = Compare.compare
+      (left.high, true, right.high, true, comparator);
+
     if (highDifference > 0) {
       high = left.high;
       highBoundType = left.highBoundType;

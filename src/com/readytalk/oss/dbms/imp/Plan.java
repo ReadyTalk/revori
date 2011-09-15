@@ -5,6 +5,7 @@ import static com.readytalk.oss.dbms.util.Util.list;
 import com.readytalk.oss.dbms.TableReference;
 import com.readytalk.oss.dbms.Index;
 import com.readytalk.oss.dbms.Column;
+import com.readytalk.oss.dbms.Comparators;
 
 class Plan {
   public final Index index;
@@ -98,20 +99,24 @@ class Plan {
       (null, tableReference.table.primaryKey, test, tableReference);
 
     DiffIterator indexIterator = new DiffIterator
-      (Node.pathFind(base.root, Constants.IndexTable,
-                     Constants.IndexTable.primaryKey, tableReference.table),
+      (Node.pathFind(base.root, Constants.IndexTable, Compare.TableComparator,
+                     Constants.IndexTable.primaryKey, Compare.IndexComparator,
+                     tableReference.table, Constants.TableColumn.comparator),
        baseStack = new NodeStack(baseStack),
-       Node.pathFind(fork.root, Constants.IndexTable,
-                     Constants.IndexTable.primaryKey, tableReference.table),
+       Node.pathFind(fork.root, Constants.IndexTable, Compare.TableComparator,
+                     Constants.IndexTable.primaryKey, Compare.IndexComparator,
+                     tableReference.table, Constants.TableColumn.comparator),
        forkStack = new NodeStack(forkStack),
        list(Interval.Unbounded).iterator(),
-       true);
+       true, Compare.IndexComparator);
 
     boolean baseEmpty
-      = Node.find(base.root, tableReference.table) == Node.Null;
+      = Node.find(base.root, tableReference.table, Compare.TableComparator)
+      == Node.Null;
 
     boolean forkEmpty
-      = Node.find(fork.root, tableReference.table) == Node.Null;
+      = Node.find(fork.root, tableReference.table, Compare.TableComparator)
+      == Node.Null;
 
     DiffIterator.DiffPair pair = new DiffIterator.DiffPair();
     while (indexIterator.next(pair)) {

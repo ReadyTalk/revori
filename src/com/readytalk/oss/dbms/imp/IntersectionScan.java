@@ -1,5 +1,6 @@
 package com.readytalk.oss.dbms.imp;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -7,12 +8,15 @@ import java.util.Iterator;
 class IntersectionScan implements Scan {
   public final Scan left;
   public final Scan right;
+  public final Comparator comparator;
 
   public IntersectionScan(Scan left,
-                          Scan right)
+                          Scan right,
+                          Comparator comparator)
   {
     this.left = left;
     this.right = right;
+    this.comparator = comparator;
   }
 
   public boolean isUseful() {
@@ -45,9 +49,9 @@ class IntersectionScan implements Scan {
         rightItem = rightIterator.next();
       }
 
-      d = Compare.compare(leftItem, rightItem);
+      d = Compare.compare(leftItem, rightItem, comparator);
       if (d >= -1 && d <= 1) {
-        result.add(Interval.intersection(leftItem, rightItem));
+        result.add(Interval.intersection(leftItem, rightItem, comparator));
       }
     }
 

@@ -2,6 +2,7 @@ package com.readytalk.oss.dbms.imp;
 
 import com.readytalk.oss.dbms.imp.Interval.BoundType;
 
+import java.util.Comparator;
 import java.util.Iterator;
 
 class DiffIterator {
@@ -13,6 +14,7 @@ class DiffIterator {
   public final NodeStack fork;
   public final Iterator<Interval> intervalIterator;
   public final boolean visitUnchanged;
+  public final Comparator comparator;
   public Interval currentInterval;
   public boolean foundStart;
 
@@ -21,7 +23,8 @@ class DiffIterator {
                       Node forkRoot,
                       NodeStack fork,
                       Iterator<Interval> intervalIterator,
-                      boolean visitUnchanged)
+                      boolean visitUnchanged,
+                      Comparator comparator)
   {
     this.baseRoot = baseRoot;
     this.base = base;
@@ -29,28 +32,31 @@ class DiffIterator {
     this.fork = fork;
     this.intervalIterator = intervalIterator;
     this.visitUnchanged = visitUnchanged;
+    this.comparator = comparator;
     this.currentInterval = intervalIterator.next();
   }
   
   private static int compareForDescent(Node n,
-                                       Comparable key,
+                                       Object key,
                                        BoundType boundType,
-                                       boolean high)
+                                       boolean high,
+                                       Comparator comparator)
   {
     if (n == Node.Null) {
       return 0;
     }
 
-    int difference = Compare.compare(n.key, key, boundType, high);
+    int difference = Compare.compare(n.key, key, boundType, high, comparator);
     if (difference > 0) {
       n = n.left;
       if (n == Node.Null) {
         return 0;
-      } else if (Compare.compare(n.key, key, boundType, high) >= 0) {
+      } else if (Compare.compare(n.key, key, boundType, high, comparator) >= 0)
+      {
         return 1;
       } else {
         while (n != Node.Null
-               && Compare.compare(n.key, key, boundType, high) < 0)
+               && Compare.compare(n.key, key, boundType, high, comparator) < 0)
         {
           n = n.right;
         }
@@ -102,10 +108,10 @@ class DiffIterator {
 
     while (true) {
       int baseDifference = compareForDescent
-        (base.top, interval.low, interval.lowBoundType, false);
+        (base.top, interval.low, interval.lowBoundType, false, comparator);
 
       int forkDifference = compareForDescent
-        (fork.top, interval.low, interval.lowBoundType, false);
+        (fork.top, interval.low, interval.lowBoundType, false, comparator);
 
       if (baseDifference == 0) {
         if (forkDifference == 0) {
@@ -128,7 +134,7 @@ class DiffIterator {
             break;
           }
         } else {
-          difference = Compare.compare(base.top.key, fork.top.key);
+          difference = Compare.compare(base.top.key, fork.top.key, comparator);
         }
 
         if (difference > 0) {
@@ -152,7 +158,8 @@ class DiffIterator {
       
     if (base.top != null
         && (base.top == Node.Null || Compare.compare
-            (base.top.key, interval.low, interval.lowBoundType, false) < 0))
+            (base.top.key, interval.low, interval.lowBoundType, false,
+             comparator) < 0))
     {
       base.clear();
     }
@@ -165,7 +172,8 @@ class DiffIterator {
 
     if (fork.top != null
         && (fork.top == Node.Null || Compare.compare
-            (fork.top.key, interval.low, interval.lowBoundType, false) < 0))
+            (fork.top.key, interval.low, interval.lowBoundType, false,
+             comparator) < 0))
     {
       fork.clear();
     }
@@ -186,10 +194,12 @@ class DiffIterator {
 
     while (true) {
       int baseDifference = base.top == null ? 1 : Compare.compare
-        (base.top.key, interval.high, interval.highBoundType, true);
+        (base.top.key, interval.high, interval.highBoundType, true,
+         comparator);
 
       int forkDifference = fork.top == null ? 1 : Compare.compare
-        (fork.top.key, interval.high, interval.highBoundType, true);
+        (fork.top.key, interval.high, interval.highBoundType, true,
+         comparator);
       
       if (baseDifference <= 0) {
         if (forkDifference <= 0) {
@@ -203,7 +213,8 @@ class DiffIterator {
               continue;
             }
           } else {
-            difference = Compare.compare(base.top.key, fork.top.key);
+            difference = Compare.compare
+              (base.top.key, fork.top.key, comparator);
           }
 
           if (difference > 0) {

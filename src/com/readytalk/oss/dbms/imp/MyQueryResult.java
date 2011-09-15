@@ -5,6 +5,7 @@ import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.Source;
 import com.readytalk.oss.dbms.TableReference;
 import com.readytalk.oss.dbms.Expression;
+import com.readytalk.oss.dbms.Comparators;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -24,8 +25,10 @@ class MyQueryResult implements QueryResult {
     public void visit(SourceAdapter adapter) {
       if (adapter instanceof TableAdapter) {
         TableAdapter tableAdapter = (TableAdapter) adapter;
-        if (Node.find(base.root, tableAdapter.tableReference.table)
-            != Node.find(fork.root, tableAdapter.tableReference.table))
+        if (Node.find(base.root, tableAdapter.tableReference.table,
+                      Compare.TableComparator)
+            != Node.find(fork.root, tableAdapter.tableReference.table,
+                         Compare.TableComparator))
         {
           foundChanged = true;
         }

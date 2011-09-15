@@ -6,6 +6,7 @@ import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Index;
 import com.readytalk.oss.dbms.DiffResult;
+import com.readytalk.oss.dbms.Comparators;
 import com.readytalk.oss.dbms.imp.DiffIterator.DiffPair;
 
 import java.util.List;
@@ -104,7 +105,7 @@ class MyDiffResult implements DiffResult {
        fork.root,
        this.forkStack = new NodeStack(forkStack),
        list(Interval.Unbounded).iterator(),
-       false);
+       false, Compare.TableComparator);
 
     pairs[0] = new DiffPair();
 
@@ -154,7 +155,10 @@ class MyDiffResult implements DiffResult {
 
         if (pair.base != null && pair.fork != null) {
           if (depth > Constants.IndexDataDepth && depth == bottom) {
-            if (Compare.equal(pair.base.value, pair.fork.value)) {
+            if (Compare.equal
+                (pair.base.value, pair.fork.value,
+                 ((Column) pair.base.key).comparator))
+            {
               state = State.Iterate;
             } else {
               nextState = State.Value;
@@ -166,8 +170,7 @@ class MyDiffResult implements DiffResult {
         } else {
           if (depth > Constants.IndexDataDepth) {
             if (depth == bottom) {
-              Comparable key = pair.base == null
-                ? pair.fork.key : pair.base.key;
+              Object key = pair.base == null ? pair.fork.key : pair.base.key;
 
               if (primaryKey.contains(key)) {
                 // no need to report the addition/subtraction of primary
@@ -223,7 +226,9 @@ class MyDiffResult implements DiffResult {
             Index index = (Index)
               (pair.base == null ? pair.fork.key : pair.base.key);
 
-            if (Compare.equal(index, table.primaryKey)) {
+            if (Compare.equal
+                (index, table.primaryKey, Compare.IndexComparator))
+            {
               bottom = index.columns.size() + Constants.IndexDataBodyDepth;
               primaryKey = new TreeSet<Column<?>>(table.primaryKey.columns);
               descend();
@@ -280,7 +285,10 @@ class MyDiffResult implements DiffResult {
        fork == null ? Node.Null : (Node) fork.value,
        forkStack = new NodeStack(forkStack),
        list(Interval.Unbounded).iterator(),
-       false);
+       false, depth == Constants.IndexDataDepth ? Compare.IndexComparator
+       : (depth == bottom ? Compare.ColumnComparator
+          : table.primaryKey.columns.get
+          (depth - Constants.IndexDataBodyDepth).comparator));
 
     if (pairs[depth] == null) {
       pairs[depth] = new DiffPair();

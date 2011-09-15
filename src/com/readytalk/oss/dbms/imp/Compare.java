@@ -1,6 +1,12 @@
 package com.readytalk.oss.dbms.imp;
 
+import com.readytalk.oss.dbms.Table;
+import com.readytalk.oss.dbms.Index;
+import com.readytalk.oss.dbms.Column;
+
 import com.readytalk.oss.dbms.imp.Interval.BoundType;
+
+import java.util.Comparator;
 
 public class Compare {
   public static final Comparable Undefined = new Comparable() {
@@ -23,6 +29,34 @@ public class Compare {
       }
     };
 
+  public static Comparator TableComparator = new Comparator<Table>() {
+    public int compare(Table a, Table b) {
+      if (a == b) {
+        return 0;
+      }
+
+      if (a.equals(Constants.IndexTable)) {
+        return -1;
+      } else if (b.equals(Constants.IndexTable)) {
+        return 1;
+      } else {
+        return a.compareTo(b);
+      }
+    }
+  };
+
+  public static Comparator IndexComparator = new Comparator<Index>() {
+    public int compare(Index a, Index b) {
+      return a.compareTo(b);
+    }
+  };
+
+  public static Comparator ColumnComparator = new Comparator<Column>() {
+    public int compare(Column a, Column b) {
+      return a.compareTo(b);
+    }
+  };
+
   public static Object validate(Object value, Class type) {
     if (value == null) {
       return null;
@@ -34,8 +68,9 @@ public class Compare {
     }
   }
 
-  public static int compare(Comparable left,
-                            Comparable right)
+  public static int compare(Object left,
+                            Object right,
+                            Comparator comparator)
   {
     if (left == right) {
       return 0;
@@ -44,8 +79,15 @@ public class Compare {
     } else if (right == Dummy) {
       return 1;
     } else {
-      return ((Comparable) left).compareTo(right);
+      return comparator.compare(left, right);
     }
+  }
+
+  public static boolean equal(Object left,
+                              Object right,
+                              Comparator comparator)
+  {
+    return comparator.compare(left, right) == 0;
   }
 
   public static boolean equal(Object left,
@@ -55,11 +97,16 @@ public class Compare {
   }
 
   public static int compare(Interval left,
-                            Interval right)
+                            Interval right,
+                            Comparator comparator)
   {
-    int leftHighRightHigh = compare(left.high, true, right.high, true);
+    int leftHighRightHigh = compare
+      (left.high, true, right.high, true, comparator);
+
     if (leftHighRightHigh > 0) {
-      int leftLowRightHigh = compare(left.low, false, right.high, true);
+      int leftLowRightHigh = compare
+        (left.low, false, right.high, true, comparator);
+
       if (leftLowRightHigh < 0
           || left.lowBoundType == BoundType.Inclusive
           || right.lowBoundType == BoundType.Inclusive)
@@ -69,7 +116,9 @@ public class Compare {
         return 2;
       }
     } else if (leftHighRightHigh < 0) {
-      int rightLowLeftHigh = compare(right.low, false, left.high, true);
+      int rightLowLeftHigh = compare
+        (right.low, false, left.high, true, comparator);
+
       if (rightLowLeftHigh < 0
           || right.lowBoundType == BoundType.Inclusive
           || left.lowBoundType == BoundType.Inclusive)
@@ -93,10 +142,11 @@ public class Compare {
     }
   }
 
-  public static int compare(Comparable left,
+  public static int compare(Object left,
                             boolean leftHigh,
-                            Comparable right,
-                            boolean rightHigh)
+                            Object right,
+                            boolean rightHigh,
+                            Comparator comparator)
   {
     if (left == Undefined) {
       if (right == Undefined) {
@@ -123,13 +173,14 @@ public class Compare {
         return 1;
       }
     } else {
-      return compare(left, right);
+      return compare(left, right, comparator);
     }
   }
 
-  public static int compare(Comparable left,
-                            Comparable right,
-                            boolean rightHigh)
+  public static int compare(Object left,
+                            Object right,
+                            boolean rightHigh,
+                            Comparator comparator)
   {
     if (right == Undefined) {
       if (rightHigh) {
@@ -138,16 +189,17 @@ public class Compare {
         return 1;
       }
     } else {
-      return compare(left, right);
+      return compare(left, right, comparator);
     }
   }
 
-  public static int compare(Comparable left,
-                            Comparable right,
+  public static int compare(Object left,
+                            Object right,
                             BoundType rightBoundType,
-                            boolean rightHigh)
+                            boolean rightHigh,
+                            Comparator comparator)
   {
-    int difference = compare(left, right, rightHigh);
+    int difference = compare(left, right, rightHigh, comparator);
     if (difference == 0) {
       if (rightBoundType == BoundType.Exclusive) {
         if (rightHigh) {

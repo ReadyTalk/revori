@@ -15,6 +15,7 @@ import com.readytalk.oss.dbms.QueryTemplate;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.ForeignKey;
 import com.readytalk.oss.dbms.ForeignKeyException;
+import com.readytalk.oss.dbms.Comparators;
 
 import java.util.List;
 import java.util.Collections;
@@ -43,7 +44,7 @@ public class RefererForeignKeyAdapter {
   private Object[] parametersOrNull(List<Column<?>> columns, Node tree) {
     Object[] parameters = new Object[columns.size()];
     for (int i = 0; i < parameters.length; ++i) {
-      Node n = Node.find(tree, columns.get(i));
+      Node n = Node.find(tree, columns.get(i), Compare.ColumnComparator);
       if(n == Node.Null) {
         return null;
       }

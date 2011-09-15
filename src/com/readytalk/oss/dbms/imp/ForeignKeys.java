@@ -6,6 +6,7 @@ import com.readytalk.oss.dbms.ForeignKeyException;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.DiffResult;
+import com.readytalk.oss.dbms.Comparators;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -117,7 +118,8 @@ class ForeignKeys {
               // new and updated rows
 
               ForeignKey constraint = (ForeignKey)
-                Node.find(forkTree, Constants.ForeignKeyColumn).value;
+                Node.find(forkTree, Constants.ForeignKeyColumn,
+                          Compare.ColumnComparator).value;
 
               checkForeignKeys
                 (new NodeStack(), MyRevision.Empty,
@@ -159,8 +161,9 @@ class ForeignKeys {
 
     for (NodeIterator keys = new NodeIterator
            (stack, Node.pathFind
-            (root, Constants.ForeignKeyTable,
-             Constants.ForeignKeyRefererIndex, table));
+            (root, Constants.ForeignKeyTable, Compare.TableComparator,
+             Constants.ForeignKeyRefererIndex, Compare.IndexComparator,
+             table, Constants.ForeignKeyRefererColumn.comparator));
          keys.hasNext();)
     {
       list.add(new RefererForeignKeyAdapter((ForeignKey) keys.next().key));
@@ -176,8 +179,9 @@ class ForeignKeys {
 
     for (NodeIterator keys = new NodeIterator
            (stack, Node.pathFind
-            (root, Constants.ForeignKeyTable,
-             Constants.ForeignKeyReferentIndex, table));
+            (root, Constants.ForeignKeyTable, Compare.TableComparator,
+             Constants.ForeignKeyReferentIndex, Compare.IndexComparator,
+             table, Constants.ForeignKeyReferentColumn.comparator));
          keys.hasNext();)
     {
       list.add(new ReferentForeignKeyAdapter((ForeignKey) keys.next().key));
@@ -186,9 +190,10 @@ class ForeignKeys {
     return list;
   }
 
-  private static void fillRow(Object[] row, List<Column<?>> columns, Node tree) {
+  private static void fillRow(Object[] row, List<Column<?>> columns, Node tree)
+  {
     for (int i = 0; i < row.length; ++i) {
-      Node n = Node.find(tree, columns.get(i));
+      Node n = Node.find(tree, columns.get(i), Compare.ColumnComparator);
       row[i] = n == Node.Null ? null : n.value;
     }
   }

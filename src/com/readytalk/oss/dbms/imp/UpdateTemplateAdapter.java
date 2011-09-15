@@ -8,6 +8,7 @@ import com.readytalk.oss.dbms.Index;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.DuplicateKeyException;
+import com.readytalk.oss.dbms.Comparators;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -34,7 +35,7 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
 
     Table table = update.tableReference.table;
 
-    builder.setKey(Constants.TableDataDepth, table);
+    builder.setKey(Constants.TableDataDepth, table, Compare.TableComparator);
 
     Plan plan = Plan.choosePlan
       (MyRevision.Empty, NodeStack.Null, builder.result, builder.stack, test,
@@ -49,7 +50,7 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
 
     Index index = table.primaryKey;
 
-    builder.setKey(Constants.IndexDataDepth, index);
+    builder.setKey(Constants.IndexDataDepth, index, Compare.IndexComparator);
 
     TableIterator iterator = new TableIterator
       (update.tableReference, MyRevision.Empty, NodeStack.Null, revision,
@@ -107,8 +108,10 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
           // row unless at least one is actually changing to a new
           // value
           for (int columnIndex: keyColumnsUpdated) {
-            if (! Compare.equal(values[columnIndex], Node.find
-                                (original, keyColumns.get(columnIndex)).value))
+            Column c = keyColumns.get(columnIndex);
+            if (! Compare.equal
+                (values[columnIndex], Node.find
+                 (original, c, Compare.ColumnComparator).value, c.comparator))
             {
               keyValuesChanged = true;
               break;
@@ -125,14 +128,18 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
 
           int i = 0;
           for (; i < keyColumns.size() - 1; ++i) {
+            Column c = keyColumns.get(i);
             builder.setKey
               (i + Constants.IndexDataBodyDepth,
-               (Comparable<?>) Node.find(original, keyColumns.get(i)).value);
+               Node.find(original, c, Compare.ColumnComparator).value,
+               c.comparator);
           }
 
-          builder.delete
+          Column c = keyColumns.get(i);
+          builder.deleteKey
             (i + Constants.IndexDataBodyDepth,
-             (Comparable<?>) Node.find(original, keyColumns.get(i)).value);
+             Node.find(original, c, Compare.ColumnComparator).value,
+             c.comparator);
         }
 
         Node tree = original;
@@ -142,24 +149,29 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
           Object value = Compare.validate(values[i], column.type);
 
           if (value == null) {
-            tree = Node.delete(builder.token, builder.stack, tree, column);
+            tree = Node.delete
+              (builder.token, builder.stack, tree, column,
+               Compare.ColumnComparator);
           } else {
             tree = Node.blaze
-              (result, builder.token, builder.stack, tree, column);
+              (result, builder.token, builder.stack, tree, column,
+               Compare.ColumnComparator);
             result.node.value = value;
           }
         }
 
         int i = 0;
         for (; i < keyColumns.size() - 1; ++i) {
+            Column c = keyColumns.get(i);
           builder.setKey
             (i + Constants.IndexDataBodyDepth,
-             (Comparable<?>) Node.find(tree, keyColumns.get(i)).value);
+             Node.find(tree, c, Compare.ColumnComparator).value, c.comparator);
         }
 
+        Column c = keyColumns.get(i);
         Node n = builder.blaze
           (i + Constants.IndexDataBodyDepth,
-           (Comparable<?>) Node.find(tree, keyColumns.get(i)).value);
+           Node.find(tree, c, Compare.ColumnComparator).value, c.comparator);
 
         if (n.value == Node.Null || (! keyValuesChanged)) {
           n.value = tree;

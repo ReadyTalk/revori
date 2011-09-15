@@ -16,6 +16,7 @@ import com.readytalk.oss.dbms.TableReference;
 import com.readytalk.oss.dbms.ColumnReference;
 import com.readytalk.oss.dbms.Constant;
 import com.readytalk.oss.dbms.Expression;
+import com.readytalk.oss.dbms.Comparators;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -63,14 +64,19 @@ public class MyRevision implements Revision {
         ("expected column as second-to-last element of path");        
     }
 
-    Comparable[] myPath = new Comparable[columns.size() + 2];
+    Object[] myPath = new Object[(columns.size() + 2) * 2];
     myPath[0] = index.table;
-    myPath[1] = index;
+    myPath[1] = Compare.TableComparator;
+    myPath[2] = index;
+    myPath[3] = Compare.IndexComparator;
     for (int i = 0; i < columns.size(); ++i) {
-      myPath[i + 2] = (Comparable) path[pathOffset + i + 1];
+      myPath[(i + 2) * 2] = path[pathOffset + i + 1];
+      myPath[((i + 2) * 2) + 1] = columns.get(i).comparator;
     }
 
-    Node n = Node.find(Node.pathFind(root, myPath), column);
+    Node n = Node.find
+      (Node.pathFind(root, myPath), column, Compare.ColumnComparator);
+
     if (n == Node.Null) {
       return null;
     } else {
@@ -103,6 +109,10 @@ public class MyRevision implements Revision {
     }
 
     if (template.hasAggregates || (! template.orderByExpressions.isEmpty())) {
+      // todo: we might be able to honor orderByExpressions without
+      // using a temporary view if there's an appropriate index
+      // available.
+
       View view = new View(template, parameters);
       MyRevisionBuilder builder = new MyRevisionBuilder
         (new Object(), myFork, new NodeStack());

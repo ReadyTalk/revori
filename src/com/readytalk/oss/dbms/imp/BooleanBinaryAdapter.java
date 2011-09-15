@@ -65,10 +65,12 @@ class BooleanBinaryAdapter implements ExpressionAdapter {
 
     switch (type) {
     case And:
-      return new IntersectionScan(leftScan, rightScan);
+      return new IntersectionScan
+        (leftScan, rightScan, reference.column.comparator);
 
     case Or:
-      return new UnionScan(leftScan, rightScan);
+      return new UnionScan
+        (leftScan, rightScan, reference.column.comparator);
 
     default: throw new RuntimeException
         ("unexpected comparison type: " + type);
