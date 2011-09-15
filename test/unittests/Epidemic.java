@@ -54,8 +54,8 @@ public class Epidemic extends TestCase{
     n1.server.updateView(set(n2.id));
     n2.server.updateView(set(n1.id));
 
-    Column number = new Column(Integer.class);
-    Column name = new Column(String.class);
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
     Table numbers = new Table(cols(number));
 
     Revision base = n1.server.head();
@@ -184,8 +184,8 @@ public class Epidemic extends TestCase{
     n1.server.updateView(set(n2.id));
     n2.server.updateView(set(n1.id));
 
-    Column number = new Column(Integer.class);
-    Column value = new Column(Integer.class);
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<Integer> value = new Column<Integer>(Integer.class);
     Table numbers = new Table(cols(number));
 
     Revision base = n1.server.head();
@@ -256,6 +256,52 @@ public class Epidemic extends TestCase{
     expectEqual(n2.server.head().query(numbersKey, 1, value), 44);
     expectEqual(n1.server.head().query(numbersKey, 2, value), 59);
     expectEqual(n2.server.head().query(numbersKey, 2, value), 59);
+  }
+
+  @Test
+  public void testTwoNodeRestart() {
+    NodeNetwork network = new NodeNetwork();
+    NodeConflictResolver conflictResolver = new MyConflictResolver();
+    ForeignKeyResolver foreignKeyResolver = ForeignKeyResolvers.Delete;
+
+    Node n1 = new Node(conflictResolver, foreignKeyResolver, network, 1);
+    Node n2 = new Node(conflictResolver, foreignKeyResolver, network, 2);
+
+    n1.server.updateView(set(n2.id));
+    n2.server.updateView(set(n1.id));
+
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Table numbers = new Table(cols(number));
+
+    Revision base = n1.server.head();
+    RevisionBuilder builder = base.builder();
+    
+    builder.insert(Throw, numbers, 1, name, "one");
+
+    n1.server.merge(base, builder.commit());
+    
+    Index numbersKey = numbers.primaryKey;
+
+    flush(network);
+
+    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
+    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
+    
+    n2.start();
+    n2.server.updateView(set(n1.id));
+    
+    base = n1.server.head();
+    builder = base.builder();
+    builder.insert(Throw, numbers, 2, name, "two");
+    n1.server.merge(base, builder.commit());
+    
+    flush(network);
+
+    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
+    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
+    expectEqual(n1.server.head().query(numbersKey, 2, name), "two");
+    expectEqual(n1.server.head().query(numbersKey, 2, name), "two");
   }
 
   private static void flush(NodeNetwork network, NodeID... dontDeliverTo) {
@@ -337,7 +383,10 @@ public class Epidemic extends TestCase{
 
   private static class Node {
     public final NodeID id;
-    public final EpidemicServer server;
+    public EpidemicServer server;
+    private final NodeConflictResolver conflictResolver;
+    private final ForeignKeyResolver foreignKeyResolver;
+    private final Network network;
 
     public Node(NodeConflictResolver conflictResolver,
                 ForeignKeyResolver foreignKeyResolver,
@@ -345,9 +394,15 @@ public class Epidemic extends TestCase{
                 int id)
     {
       this.id = new NodeID(String.valueOf(id));
-      this.server = new EpidemicServer
-        (conflictResolver, foreignKeyResolver, network, this.id);
+      this.conflictResolver = conflictResolver;
+      this.foreignKeyResolver = foreignKeyResolver;
+      this.network = network;
       network.nodes.put(this.id, this);
+      start();
+    }
+    
+    public void start() {
+      this.server = new EpidemicServer(conflictResolver, foreignKeyResolver, network, this.id);
     }
   }
 
