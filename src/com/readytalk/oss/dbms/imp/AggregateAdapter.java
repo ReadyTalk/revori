@@ -14,11 +14,15 @@ class AggregateAdapter implements ExpressionAdapter {
   public void add(Object accumulation, Object ... increment) {
     value = aggregate.function.add
       (accumulation == Node.Null ? null : accumulation, increment);
+
+    // System.out.println("add " + accumulation + " " + java.util.Arrays.toString(increment) + ": " + value);
   }
 
   public void subtract(Object accumulation, Object ... increment) {
     value = aggregate.function.subtract
       (accumulation == Node.Null ? null : accumulation, increment);
+
+    // System.out.println("subtract " + accumulation + " " + java.util.Arrays.toString(increment) + ": " + value);
   }
 
   public void visit(ExpressionAdapterVisitor visitor) {

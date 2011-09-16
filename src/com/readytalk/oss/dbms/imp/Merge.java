@@ -10,6 +10,7 @@ import com.readytalk.oss.dbms.Table;
 import com.readytalk.oss.dbms.Column;
 import com.readytalk.oss.dbms.DiffResult;
 import com.readytalk.oss.dbms.Comparators;
+import com.readytalk.oss.dbms.View;
 
 import java.util.Comparator;
 import java.util.List;
@@ -26,8 +27,6 @@ class Merge {
      ConflictResolver conflictResolver,
      ForeignKeyResolver foreignKeyResolver)
   {
-    // todo: handle views
-
     // System.out.println("base:");
     // Node.dump(base.root, System.out, 0);
     // System.out.println("left:");
@@ -50,12 +49,12 @@ class Merge {
     // steps:
     //
     //  1. Merge the primary key data trees of each table and delete
-    //     obsolete index data trees.
+    //     obsolete index and view data trees.
     //
-    //  2. Update non-primary-key data trees, removing obsolete rows
-    //     and adding new or updated ones.
+    //  2. Update non-primary-key index and view data trees, removing
+    //     obsolete rows and adding new or updated ones.
     //
-    //  3. Build data trees for any new indexes added.
+    //  3. Build data trees for any new indexes and views added.
     //
     //  4. Verify foreign keys constraints.
 
@@ -64,6 +63,9 @@ class Merge {
 
     Set<Index> indexes = new TreeSet<Index>();
     Set<Index> newIndexes = new TreeSet<Index>();
+
+    Set<View> views = new TreeSet<View>();
+    Set<View> newViews = new TreeSet<View>();
 
     NodeStack baseStack = new NodeStack();
     NodeStack leftStack = new NodeStack();
@@ -173,10 +175,19 @@ class Merge {
             Comparator nextComparator;
             if (depth == Constants.TableDataDepth) {
               table = (Table) triple.left.key;
+
+              if (Node.pathFind
+                  (left.root, Constants.ViewTable, Compare.TableComparator,
+                   Constants.ViewTableIndex, Compare.IndexComparator,
+                   table, Constants.ViewTableColumn.comparator) != Node.Null)
+              {
+                // skip views -- we'll handle them later
+                continue;
+              }
+
               nextComparator = Compare.IndexComparator;
 
-              if (table != Constants.IndexTable) {
-                DiffIterator indexIterator = new DiffIterator
+              { DiffIterator indexIterator = new DiffIterator
                   (Node.pathFind
                    (left.root, Constants.IndexTable, Compare.TableComparator,
                     Constants.IndexTable.primaryKey, Compare.IndexComparator,
@@ -189,7 +200,7 @@ class Merge {
                     table, Constants.TableColumn.comparator),
                    leftStack = new NodeStack(leftStack),
                    list(Interval.Unbounded).iterator(),
-                   true, Compare.IndexComparator);
+                   true, Constants.IndexColumn.comparator);
           
                 DiffIterator.DiffPair pair = new DiffIterator.DiffPair();
                 while (indexIterator.next(pair)) {
@@ -218,9 +229,43 @@ class Merge {
                 baseStack = baseStack.popStack();
                 leftStack = leftStack.popStack();
               }
+
+              { DiffIterator indexIterator = new DiffIterator
+                  (Node.pathFind
+                   (left.root, Constants.ViewTable, Compare.TableComparator,
+                    Constants.ViewTable.primaryKey, Compare.IndexComparator,
+                    table, Constants.TableColumn.comparator),
+                   baseStack = new NodeStack(baseStack),
+                   Node.pathFind
+                   (builder.result.root,
+                    Constants.ViewTable, Compare.TableComparator,
+                    Constants.ViewTable.primaryKey, Compare.IndexComparator,
+                    table, Constants.TableColumn.comparator),
+                   leftStack = new NodeStack(leftStack),
+                   list(Interval.Unbounded).iterator(),
+                   true, Constants.ViewColumn.comparator);
+          
+                DiffIterator.DiffPair pair = new DiffIterator.DiffPair();
+                while (indexIterator.next(pair)) {
+                  if (pair.base != null) {
+                    View view = (View) pair.base.key;
+                    if (pair.fork != null) {
+                      views.add(view);
+                    } else {
+                      builder.deleteKey
+                        (Constants.TableDataDepth, view.table,
+                         Compare.TableComparator);
+                    }
+                  } else if (pair.fork != null) {
+                    newViews.add((View) pair.fork.key);
+                  }
+                }
+
+                baseStack = baseStack.popStack();
+                leftStack = leftStack.popStack();
+              }
             } else if (depth == Constants.IndexDataDepth) {
               Index index = (Index) triple.left.key;
-              nextComparator = table.primaryKey.columns.get(0).comparator;
 
               if (Compare.equal(index, table.primaryKey, comparator)) {
                 bottom = index.columns.size() + Constants.IndexDataBodyDepth;
@@ -229,6 +274,8 @@ class Merge {
                 // those later
                 continue;
               }
+
+              nextComparator = table.primaryKey.columns.get(0).comparator;
             } else if (depth + 1 == bottom) {
               nextComparator = Compare.ColumnComparator;
             } else {
@@ -263,14 +310,24 @@ class Merge {
       }
     }
 
-    // Update non-primary-key data trees
+    // Update non-primary-key index data trees
     for (Index index: indexes) {
       builder.updateIndexTree(index, left, leftStack, baseStack);
     }
 
-    // build data trees for any new index keys
+    // Update view data trees
+    for (View view: views) {
+      builder.updateViewTree(view, left, leftStack, baseStack);
+    }
+
+    // build data trees for any new indexes
     for (Index index: newIndexes) {
       builder.updateIndexTree(index, MyRevision.Empty, leftStack, baseStack);
+    }
+
+    // build data trees for any new views
+    for (View view: newViews) {
+      builder.updateViewTree(view, MyRevision.Empty, leftStack, baseStack);
     }
 
     // verify all foreign key constraints

@@ -37,6 +37,12 @@ class Constants {
     = new Table(cols(TableColumn, ViewColumn),
                 "ViewTable.Constants.imp.dbms.oss.readytalk.com");
 
+  public static final Column<Table> ViewTableColumn = new Column<Table>
+    (Table.class, "ViewTableColumn.Constants.imp.dbms.oss.readytalk.com");
+
+  public static final Index ViewTableIndex = new Index
+    (ViewTable, cols(ViewTableColumn));
+
   public static final Column<Table> ForeignKeyRefererColumn
     = new Column<Table>(Table.class,
      "ForeignKeyRefererColumn.Constants.imp.dbms.oss.readytalk.com");

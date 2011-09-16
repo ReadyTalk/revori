@@ -378,7 +378,7 @@ class MyRevisionBuilder implements RevisionBuilder {
            expressions.get(view.primaryKeyOffset + i).evaluate(true),
            keyColumns.get(i).comparator);
 
-        // System.out.println("inserted " + Util.toString(keys, 0, Constants.IndexDataBodyDepth + i + 1));
+        // System.out.println("inserted " + com.readytalk.oss.dbms.util.Util.toString(keys, 0, Constants.IndexDataBodyDepth + i + 1));
 
         if (view.query.hasAggregates) {
           int columnOffset = view.aggregateOffset;
@@ -415,13 +415,13 @@ class MyRevisionBuilder implements RevisionBuilder {
         }
         int index = keyColumns.size() - 1 + Constants.IndexDataBodyDepth;
 
-        // System.out.println("deleted " + Util.toString(keys, 0, index + 1));
+        // System.out.println("deleted " + com.readytalk.oss.dbms.util.Util.toString(keys, 0, index + 1));
 
         if (view.query.hasAggregates) {
           Node n = find(index);
 
           int columnOffset = view.aggregateOffset;
-          int expressionOffset = view.aggregateOffset;
+          int expressionOffset = view.aggregateExpressionOffset;
           for (AggregateAdapter a: aggregates) {
             for (int j = 0; j < a.aggregate.expressions.size(); ++j) {
               values[j] = expressions.get(expressionOffset++).evaluate(true);
@@ -714,7 +714,12 @@ class MyRevisionBuilder implements RevisionBuilder {
               return;
             }
 
-            pathInsert(Constants.ViewTable, table, view);
+            insert(DuplicateKeyResolution.Throw, Constants.ViewTable, table,
+                   view, Constants.ViewTableColumn, view.table);
+
+            add(Constants.ViewTableIndex);
+
+            dirtyIndexes = true;
           }
         }
       });
@@ -738,11 +743,24 @@ class MyRevisionBuilder implements RevisionBuilder {
             Table table = ((TableReference) source).table;
 
             pathDelete(Constants.ViewTable, table, view);
+
+            if (Node.pathFind
+                (result.root, Constants.ViewTable, Compare.TableComparator)
+                == Node.Null)
+            {
+              // the last view has been removed -- remove the index
+
+              remove(Constants.ViewTableIndex);
+            } else {
+              dirtyIndexes = true;
+            }
           }
         }
       });
 
     deleteKey(Constants.TableDataDepth, view.table, Compare.TableComparator);
+
+    updateIndexes();
   }
 
   private void addForeignKey(ForeignKey constraint)

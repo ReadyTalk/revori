@@ -233,7 +233,7 @@ public class Views extends TestCase {
     expectEqual(result.nextItem(), 19);
     expectEqual(result.nextRow(), QueryResult.Type.Inserted);
     expectEqual(result.nextItem(), "planet");
-    expectEqual(result.nextItem(), 7);
+    expectEqual(result.nextItem(), 15);
     expectEqual(result.nextRow(), QueryResult.Type.Inserted);
     expectEqual(result.nextItem(), "tree");
     expectEqual(result.nextItem(), 18);
