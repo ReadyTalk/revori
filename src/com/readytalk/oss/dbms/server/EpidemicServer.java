@@ -76,7 +76,17 @@ public class EpidemicServer implements RevisionServer {
   public synchronized void unregisterListener(Runnable listener) {
     listeners.remove(listener);
   }
-
+  
+  // listeners are removed after being run
+  public synchronized void registerSyncListener(NodeID node, Runnable listener) {
+    ConnectionState state = state(node).connectionState;
+    if(state.gotSync) {
+      listener.run();
+    } else {
+      state.syncListeners.add(listener);
+    }
+  }
+  
   public void setId(String id) {
     this.id = id;
   }
@@ -313,7 +323,11 @@ public class EpidemicServer implements RevisionServer {
     
     if (! state.connectionState.gotSync) {
       state.connectionState.gotSync = true;
-
+      for(Runnable r : state.connectionState.syncListeners) {
+        r.run();
+      }
+      state.connectionState.syncListeners = null;
+      
       sendNext();
     }
   }
@@ -490,6 +504,7 @@ public class EpidemicServer implements RevisionServer {
     public boolean readyToReceive;
     public boolean sentHello;
     public boolean gotHello;
+    public Set<Runnable> syncListeners = new HashSet<Runnable>();
     public boolean sentSync;
     public boolean gotSync;
   }
