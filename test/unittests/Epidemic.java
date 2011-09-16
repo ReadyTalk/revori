@@ -363,18 +363,16 @@ public class Epidemic extends TestCase{
   }
   
   @Test
-  public void testAddConnectionLate() {
+  public void testReconnect() {
     NodeNetwork network = new NodeNetwork();
     NodeConflictResolver conflictResolver = new MyConflictResolver();
     ForeignKeyResolver foreignKeyResolver = ForeignKeyResolvers.Delete;
 
     Node n1 = new Node(conflictResolver, foreignKeyResolver, network, 1);
     Node n2 = new Node(conflictResolver, foreignKeyResolver, network, 2);
-    Node n3 = new Node(conflictResolver, foreignKeyResolver, network, 3);
 
     n1.server.updateView(set(n2.id));
-    n2.server.updateView(set(n1.id, n3.id));
-    n3.server.updateView(set(n2.id));
+    n2.server.updateView(set(n1.id));
 
     Column<Integer> number = new Column<Integer>(Integer.class);
     Column<String> name = new Column<String>(String.class);
@@ -393,10 +391,9 @@ public class Epidemic extends TestCase{
 
     expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
     expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n3.server.head().query(numbersKey, 1, name), "one");
     
-    n1.server.updateView(set(n2.id, n3.id));
-    n3.server.updateView(set(n1.id, n2.id));
+    n1.server.updateView(Collections.<NodeID>emptySet());
+    n2.server.updateView(Collections.<NodeID>emptySet());
     
     base = n1.server.head();
     builder = base.builder();
@@ -405,12 +402,15 @@ public class Epidemic extends TestCase{
     
     flush(network);
 
+    n1.server.updateView(set(n2.id));
+    n2.server.updateView(set(n1.id));
+    
+    flush(network);
+
     expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
     expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n3.server.head().query(numbersKey, 1, name), "one");
     expectEqual(n1.server.head().query(numbersKey, 2, name), "two");
     expectEqual(n2.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n3.server.head().query(numbersKey, 2, name), "two");
   }
 
   private static void flush(NodeNetwork network, NodeID... dontDeliverTo) {
