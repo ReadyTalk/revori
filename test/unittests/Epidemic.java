@@ -305,7 +305,60 @@ public class Epidemic extends TestCase{
     expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
     expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
     expectEqual(n1.server.head().query(numbersKey, 2, name), "two");
+    expectEqual(n2.server.head().query(numbersKey, 2, name), "two");
+  }
+  @Test
+  public void testThreeNodeRestart() {
+    NodeNetwork network = new NodeNetwork();
+    NodeConflictResolver conflictResolver = new MyConflictResolver();
+    ForeignKeyResolver foreignKeyResolver = ForeignKeyResolvers.Delete;
+
+    Node n1 = new Node(conflictResolver, foreignKeyResolver, network, 1);
+    Node n2 = new Node(conflictResolver, foreignKeyResolver, network, 2);
+    Node n3 = new Node(conflictResolver, foreignKeyResolver, network, 3);
+
+    n1.server.updateView(set(n2.id));
+    n2.server.updateView(set(n1.id, n3.id));
+    n3.server.updateView(set(n2.id));
+
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Table numbers = new Table(cols(number));
+
+    Revision base = n1.server.head();
+    RevisionBuilder builder = base.builder();
+    
+    builder.insert(Throw, numbers, 1, name, "one");
+
+    n1.server.merge(base, builder.commit());
+    
+    Index numbersKey = numbers.primaryKey;
+
+    flush(network);
+
+    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
+    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
+    expectEqual(n3.server.head().query(numbersKey, 1, name), "one");
+    
+    n2.server.updateView(set(n1.id));
+
+    n3.start();
+    n2.server.updateView(set(n1.id, n3.id));
+    n3.server.updateView(set(n2.id));
+    
+    base = n1.server.head();
+    builder = base.builder();
+    builder.insert(Throw, numbers, 2, name, "two");
+    n1.server.merge(base, builder.commit());
+    
+    flush(network);
+
+    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
+    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
+    expectEqual(n3.server.head().query(numbersKey, 1, name), "one");
     expectEqual(n1.server.head().query(numbersKey, 2, name), "two");
+    expectEqual(n2.server.head().query(numbersKey, 2, name), "two");
+    expectEqual(n3.server.head().query(numbersKey, 2, name), "two");
   }
 
   private static void flush(NodeNetwork network, NodeID... dontDeliverTo) {
