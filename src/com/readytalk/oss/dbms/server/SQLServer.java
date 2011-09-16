@@ -96,13 +96,17 @@ public class SQLServer implements RevisionServer {
 
     validators.put(Constant.class, new Validator<Constant>() {
       public Expression validate(Class type, Constant expression) {
-        if (type == null
+        if(expression.value instanceof Literal) {
+          return new Constant(parse(type, ((Literal)expression.value).value, false)); 
+        } else if(expression.value instanceof StringLiteral) {
+          return new Constant(parse(type, ((StringLiteral)expression.value).value, true)); 
+        } else if (type == null
             || expression.value == null
             || type.isInstance(expression.value))
         {
           return expression;
         } else {
-          return new Constant(parse(type, (String) expression.value));
+          throw new RuntimeException("couldn't validate value: " + expression.value.toString());
         }
       }
     });
@@ -673,6 +677,18 @@ public class SQLServer implements RevisionServer {
     }
   }
 
+  private static class StringLiteral extends Leaf {
+    public final String value;
+
+    public StringLiteral(String value) {
+      this.value = value;
+    }
+
+    public String toString() {
+      return "stringLiteral[" + value + "]";
+    }
+  }
+
   private interface Task {
     public void run(Client client,
                     Tree tree,
@@ -757,8 +773,10 @@ public class SQLServer implements RevisionServer {
     return validators.get(expression.getClass()).validate(type, expression);
   }
 
-  private static Object parse(Class type, String value) {
-    if (Stringable.class.isAssignableFrom(type)) {
+  private static Object parse(Class type, String value, boolean quoted) {
+    if("null".equals(value) && (type != String.class || !quoted)) {
+      return null;
+    } else if (Stringable.class.isAssignableFrom(type)) {
       try {
         return type.getConstructor(String.class).newInstance(value);
       } catch (NoSuchMethodException e) {
@@ -780,6 +798,8 @@ public class SQLServer implements RevisionServer {
       return Byte.parseByte(value);
     } else if (type == Boolean.class) {
       return Boolean.parseBoolean(value);
+    } else if(type == String.class) {
+      return value;
     }
     // todo: handle types like byte arrays, enums, etc., and use a map
     // of types to parsers instead of a big if/else chain
@@ -894,8 +914,9 @@ public class SQLServer implements RevisionServer {
     if (tree instanceof Name) {
       return makeColumnReference
         (tableReferences, null, ((Name) tree).value);
-    } else if (tree instanceof Literal) {
-      return new Constant(((Literal) tree).value);
+    } else if (tree instanceof Literal || tree instanceof StringLiteral) {
+      // the validator will later take the literal and unwrap it, because it knows the expected type
+      return new Constant(tree);
     } if (tree.length() == 3) {
       if (tree.get(0) instanceof Name
           && ".".equals(((Terminal) tree.get(1)).value))
@@ -1912,7 +1933,7 @@ public class SQLServer implements RevisionServer {
                     sawEscape = false;
                     sb.append(c);
                   } else {
-                    return success(new Literal(sb.toString()),
+                    return success(new StringLiteral(sb.toString()),
                                    in.substring(i + 1), null, true);
                   }
                   break;
@@ -1986,12 +2007,32 @@ public class SQLServer implements RevisionServer {
       };
     }
 
+
+    public static Parser nullLiteral() {
+      return new Parser() {
+        public ParseResult parse(ParseContext context, String in, boolean lastAtomic) {
+          String begin = in;
+          in = skipSpace(in);
+          if(lastAtomic || in.length() < begin.length()) {
+            if (in.startsWith("null")) {
+              return success(new Literal("null"),
+                             in.substring(4), null, false);
+            } else {
+              return fail(null);
+            }
+          } else {
+            return fail(null);
+          }
+        }
+      };
+    }
     public Parser simpleExpression() {
       return or
-        (columnName(),
+        (booleanLiteral(),
+         nullLiteral(),
+         columnName(),
          stringLiteral(),
          numberLiteral(),
-         booleanLiteral(),
          sequence(symbol("(", false),
                   expression(),
                   symbol(")")),
@@ -2125,7 +2166,8 @@ public class SQLServer implements RevisionServer {
           symbol("("),
           list(or(stringLiteral(),
                   numberLiteral(),
-                  booleanLiteral())),
+                  booleanLiteral(),
+                  nullLiteral())),
           symbol(")")),
          new Task() {
            public void run(Client client,

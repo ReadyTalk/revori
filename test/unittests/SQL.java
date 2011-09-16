@@ -44,6 +44,17 @@ public class SQL extends TestCase {
     assertEquals(RowSetFlag.Item.ordinal(), in.read());
     assertEquals("forty-two", readString(in));
     assertEquals(RowSetFlag.End.ordinal(), in.read());
+
+    assertEquals(Response.Success.ordinal(), connection.execute
+     ("update test set name = null").read());
+
+    in = connection.execute("select name from test where number = 42");
+
+    assertEquals(Response.RowSet.ordinal(), in.read());
+    assertEquals(RowSetFlag.InsertedRow.ordinal(), in.read());
+    assertEquals(RowSetFlag.Item.ordinal(), in.read());
+    assertEquals("null", readString(in));
+    assertEquals(RowSetFlag.End.ordinal(), in.read());
   }
   
   /*@Test
@@ -102,7 +113,7 @@ public class SQL extends TestCase {
     assertEquals("forty-two", readString(in));
     assertEquals(RowSetFlag.End.ordinal(), in.read());
     
-    in = connection.execute("select name from test order by name asc");
+    in = connection.execute("select name from test order by name");
 
     assertEquals(Response.RowSet.ordinal(), in.read());
     assertEquals(RowSetFlag.InsertedRow.ordinal(), in.read());
