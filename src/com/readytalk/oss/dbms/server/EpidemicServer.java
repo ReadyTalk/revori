@@ -109,7 +109,10 @@ public class EpidemicServer implements RevisionServer {
 
       for (NodeID node: directlyConnectedNodes) {
         NodeState state = state(node);
+
         if (state.connectionState == null) {
+          initState(state);
+
           state.connectionState = new ConnectionState();
           state.connectionState.readyToReceive = true;
 
@@ -177,39 +180,43 @@ public class EpidemicServer implements RevisionServer {
     if (state == null) {
       states.put(node, state = new NodeState(node));
 
-      state.head = new Record(node, Revisions.Empty, 0, null);
-
-      for (NodeState s: states.values()) {
-        debugMessage(s.id + " sees " + node + " at 0");
-        s.acknowledged.put(state.id, state.head);
-
-        // todo: switch from weak references to reference counting to
-        // ensure that we don't follow the chain of records back
-        // further than we need to.
-        Record tail = s.head;
-        Record previous;
-        while (tail.previous != null
-               && (previous = tail.previous.get()) != null)
-        {
-          tail = previous;
-        }
-        
-        if (tail.merged != null && tail.merged.node == s.id) {
-          tail = tail.merged;
-        }
-        
-        Record rec;
-        if (tail.sequenceNumber == 0) {
-          rec = tail;
-        } else {
-          rec = new Record(s.id, Revisions.Empty, 0, null);
-          rec.next = tail;
-        }
-
-        state.acknowledged.put(s.id, rec);
-      }
+      initState(state);
     }
     return state;
+  }
+
+  private void initState(NodeState state) {
+    state.head = new Record(state.id, Revisions.Empty, 0, null);
+
+    for (NodeState s: states.values()) {
+      debugMessage(s.id + " sees " + state.id + " at 0");
+      s.acknowledged.put(state.id, state.head);
+
+      // todo: switch from weak references to reference counting to
+      // ensure that we don't follow the chain of records back
+      // further than we need to.
+      Record tail = s.head;
+      Record previous;
+      while (tail.previous != null
+             && (previous = tail.previous.get()) != null)
+      {
+        tail = previous;
+      }
+        
+      if (tail.merged != null && tail.merged.node == s.id) {
+        tail = tail.merged;
+      }
+        
+      Record rec;
+      if (tail.sequenceNumber == 0) {
+        rec = tail;
+      } else {
+        rec = new Record(s.id, Revisions.Empty, 0, null);
+        rec.next = tail;
+      }
+
+      state.acknowledged.put(s.id, rec);
+    }
   }
 
   private boolean readyForDataFromNewNode() {
@@ -265,7 +272,7 @@ public class EpidemicServer implements RevisionServer {
 
   private boolean needsUpdate(NodeState state, Record target) {
     Record acknowledged = state.acknowledged.get(target.node);
-    // debugMessage("needsUpdate(psn: " + acknowledge.sequenceNumber + ", tsn: " + target.sequenceNumber + ")");
+    // debugMessage("needsUpdate(asn: " + acknowledged.sequenceNumber + ", tsn: " + target.sequenceNumber + ")");
     if (acknowledged.sequenceNumber < target.sequenceNumber) {
       Record lastSent = state.connectionState.lastSent.get(target.node);
       if (lastSent == null) {

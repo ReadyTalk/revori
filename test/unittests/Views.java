@@ -25,6 +25,8 @@ import com.readytalk.oss.dbms.Foldables;
 import com.readytalk.oss.dbms.View;
 import com.readytalk.oss.dbms.Expression;
 import com.readytalk.oss.dbms.Comparators;
+import com.readytalk.oss.dbms.ConflictResolver;
+import com.readytalk.oss.dbms.ForeignKeyResolvers;
 
 import java.util.Collections;
 import java.util.Set;
@@ -194,6 +196,47 @@ public class Views extends TestCase {
     expectEqual(result.nextRow(), QueryResult.Type.Inserted);
     expectEqual(result.nextItem(), "tree");
     expectEqual(result.nextItem(), 19);
+    expectEqual(result.nextRow(), QueryResult.Type.End);
+
+    builder = head.builder();
+
+    builder.insert(Throw, things, 10, name, "bear");
+
+    Revision left = builder.commit();
+
+    builder = head.builder();
+
+    builder.insert(Throw, things, 8, name, "planet");
+    builder.insert(Throw, things, 9, name, "bear");
+    builder.delete(things, 1);
+
+    Revision right = builder.commit();
+
+    head = head.merge(left, right, new ConflictResolver() {
+        public Object resolveConflict(Table table,
+                                      Column column,
+                                      Object[] primaryKeyValues,
+                                      Object baseValue,
+                                      Object leftValue,
+                                      Object rightValue)
+        {
+          fail("unexpected conflict in " + table + " " + column + ": base "
+               + baseValue + " left " + leftValue + " right " + rightValue);
+          throw new RuntimeException();
+        }
+      }, ForeignKeyResolvers.Delete);
+
+    result = Revisions.Empty.diff(head, viewQuery);
+
+    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+    expectEqual(result.nextItem(), "bear");
+    expectEqual(result.nextItem(), 19);
+    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+    expectEqual(result.nextItem(), "planet");
+    expectEqual(result.nextItem(), 7);
+    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+    expectEqual(result.nextItem(), "tree");
+    expectEqual(result.nextItem(), 18);
     expectEqual(result.nextRow(), QueryResult.Type.End);
   }
 
