@@ -2191,7 +2191,7 @@ public class SQLServer implements RevisionServer {
           name(NameType.Table, true, true),
           terminal("set"),
           list(sequence(columnName(),
-                        terminal("="),
+                        symbol("="),
                         expression())),
           optional(sequence(terminal("where"),
                             expression()))),
