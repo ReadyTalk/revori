@@ -109,9 +109,15 @@ public class MyRevision implements Revision {
     }
 
     if (template.hasAggregates || (! template.orderByExpressions.isEmpty())) {
-      // todo: we might be able to honor orderByExpressions without
-      // using a temporary view if there's an appropriate index
-      // available.
+      // todo: look for an index or view which will allow us to
+      // fulfill this query without creating a temporary view;
+      // i.e. teach the query planner about order-by clauses,
+      // aggregates, and views, so we only fall back to using a
+      // temporary view when an exisiting view or index does not
+      // suffice.  The query planner may be able to use a view even
+      // for queries which do not involve aggregates or order-by
+      // clauses.  Ultimately, it may help to remove the distinction
+      // between indexes and views.
 
       View view = new View(template, parameters);
       MyRevisionBuilder builder = new MyRevisionBuilder

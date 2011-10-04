@@ -68,7 +68,7 @@ class MyQueryResult implements QueryResult {
         expressions = new ArrayList<ExpressionAdapter>
           (template.expressions.size());
 
-        expressionContext = new ExpressionContext(parameters);
+        expressionContext = new ExpressionContext(parameters, expressions);
 
         for (Expression e: template.expressions) {
           expressions.add

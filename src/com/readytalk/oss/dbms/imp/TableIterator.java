@@ -5,8 +5,10 @@ import com.readytalk.oss.dbms.QueryResult;
 import com.readytalk.oss.dbms.TableReference;
 import com.readytalk.oss.dbms.Comparators;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Set;
 
 class TableIterator implements SourceIterator {
   private static final boolean Verbose = false;
@@ -101,15 +103,22 @@ class TableIterator implements SourceIterator {
     }
 
     while (true) {
+      // System.err.println("depth: " + depth + "\n\tkey: " + (Constants.IndexDataBodyDepth + tableReference.table.primaryKey.columns.size()));
       if (plan.iterators[depth].next(pair)) {
         if (depth == plan.size - 1) {
           if (test(pair.base)) {
             if (pair.fork == null) {
               return QueryResult.Type.Deleted;
             } else if (pair.base == pair.fork
-                       || Node.treeEqual(baseStack, (Node) pair.base.value,
-                                         forkStack, (Node) pair.fork.value,
-                                         plan.iterators[depth].comparator))
+                       || (expressionContext.queryExpressions == null
+                           ? Node.treeEqual(baseStack, (Node) pair.base.value,
+                                            forkStack, (Node) pair.fork.value,
+                                            plan.iterators[depth].comparator)
+                           : valuesEqual(expressionContext.queryExpressions,
+                                         expressionContext.columnReferences,
+                                         (Node) pair.base.value,
+                                         (Node) pair.fork.value)))
+                       
             {
               if (visitUnchanged) {
                 return QueryResult.Type.Unchanged;
@@ -155,18 +164,52 @@ class TableIterator implements SourceIterator {
       && test(pair.fork);
   }
 
+  private static void setValue(ColumnReferenceAdapter r, Node tree) {
+    Object v = Node.find(tree, r.column, Compare.ColumnComparator).value();
+    if (v != null && ! r.column.type.isInstance(v)) {
+      throw new ClassCastException
+        (v.getClass().getName() + " cannot be cast to "
+         + r.column.type.getName());
+    }
+    r.value = v;
+  }
+
+  private static Object[] evaluate
+    (List<ExpressionAdapter> expressions,
+     Set<ColumnReferenceAdapter> columnReferences, Node tree)
+  {
+    for (ColumnReferenceAdapter r: columnReferences) {
+      setValue(r, tree);
+    }
+
+    Object[] values = new Object[expressions.size()];
+    int i = 0;
+    for (ExpressionAdapter e: expressions) {
+      values[i++] = e.evaluate(false);
+    }
+
+    return values;
+  }
+
+  private static boolean valuesEqual
+    (List<ExpressionAdapter> expressions,
+     Set<ColumnReferenceAdapter> columnReferences, Node base, Node fork)
+  {
+    Object[] forkValues = evaluate(expressions, columnReferences, fork);
+    Object[] baseValues = evaluate(expressions, columnReferences, base);
+
+    boolean equal = Arrays.equals(baseValues, forkValues);
+    // System.err.println("valuesEqual: " + equal + "\n\tbase: " + Arrays.toString(baseValues) + "\n\tfork: " + Arrays.toString(forkValues));
+    //    System.exit(0);
+    return equal;
+  }
+
   private boolean test(Node node) {
     if (node != null) {
       Node tree = (Node) node.value;
         
       for (ColumnReferenceAdapter r: columnReferences) {
-        Object v = Node.find(tree, r.column, Compare.ColumnComparator).value();
-        if (v != null && ! r.column.type.isInstance(v)) {
-          throw new ClassCastException
-            (v.getClass().getName() + " cannot be cast to "
-             + r.column.type.getName());
-        }
-        r.value = v;
+        setValue(r, tree);
       }
 
       Object result = test.evaluate(false);

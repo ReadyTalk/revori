@@ -20,7 +20,7 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
   {
     UpdateTemplate update = (UpdateTemplate) template;
 
-    ExpressionContext expressionContext = new ExpressionContext(parameters);
+    ExpressionContext expressionContext = new ExpressionContext(parameters, null);
 
     ExpressionAdapter test = ExpressionAdapterFactory.makeAdapter
       (expressionContext, update.test);

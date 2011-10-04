@@ -17,7 +17,7 @@ class DeleteTemplateAdapter implements PatchTemplateAdapter {
   {
     DeleteTemplate delete = (DeleteTemplate) template;
 
-    ExpressionContext expressionContext = new ExpressionContext(parameters);
+    ExpressionContext expressionContext = new ExpressionContext(parameters, null);
 
     ExpressionAdapter test = ExpressionAdapterFactory.makeAdapter
       (expressionContext, delete.test);

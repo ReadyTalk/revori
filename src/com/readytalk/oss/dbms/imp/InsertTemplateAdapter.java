@@ -20,7 +20,7 @@ class InsertTemplateAdapter implements PatchTemplateAdapter {
   {
     InsertTemplate insert = (InsertTemplate) template;
 
-    ExpressionContext expressionContext = new ExpressionContext(parameters);
+    ExpressionContext expressionContext = new ExpressionContext(parameters, null);
 
     Map<Column<?>, Object> map = new HashMap<Column<?>, Object>();
     { int index = 0;

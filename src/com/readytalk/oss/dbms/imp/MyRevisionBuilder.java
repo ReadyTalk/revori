@@ -240,7 +240,7 @@ class MyRevisionBuilder implements RevisionBuilder {
     TableIterator iterator
       = new TableIterator
       (reference(index.table), base, baseStack, result, forkStack,
-       ConstantAdapter.True, new ExpressionContext(null), false);
+       ConstantAdapter.True, new ExpressionContext(null, null), false);
 
     setKey(Constants.TableDataDepth, index.table, Compare.TableComparator);
     setKey(Constants.IndexDataDepth, index, Compare.IndexComparator);
