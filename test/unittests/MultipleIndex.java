@@ -248,6 +248,8 @@ public class MultipleIndex extends TestCase{
 
         QueryResult result = tail.diff(first, greaterThanAndLessThan, parameters);
 
+        // System.out.println("first: " + first);
+
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
         assertEquals(result.nextItem(), "nine");
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
