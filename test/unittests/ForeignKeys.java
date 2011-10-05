@@ -288,8 +288,9 @@ public class ForeignKeys extends TestCase {
   private static void testDiff(boolean skipBrokenReferences) {
     Column<Integer> number = new Column<Integer>(Integer.class);
     Column<String> name = new Column<String>(String.class);
-    Table englishNumbers = new Table(cols(number));
-    Table spanishNumbers = new Table(cols(number));
+    Table englishNumbers = new Table(cols(number), "english");
+    Table spanishNumbers = new Table
+      (cols(number), "spanish", list(englishNumbers));
 
     RevisionBuilder builder = Revisions.Empty.builder();
 
