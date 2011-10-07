@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.EOFException;
 import java.io.ByteArrayInputStream;
+import java.util.UUID;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
@@ -32,6 +33,9 @@ import java.util.Iterator;
 
 public class EpidemicServer implements RevisionServer {
   private static final boolean Debug = false;
+
+  private static final UUID DefaultInstance = UUID.fromString
+    ("1c8f9a38-aad4-0d8c-8d62-b52500a8dfa1");
 
   private static final int End = 0;
   private static final int Descend = 1;
@@ -46,7 +50,7 @@ public class EpidemicServer implements RevisionServer {
   private final ForeignKeyResolver foreignKeyResolver;
   private final Network network;
   private final Object lock = new Object();
-  private final Map<NodeID, NodeState> states = new HashMap<NodeID, NodeState>();
+  private final Map<NodeKey, NodeState> states = new HashMap<NodeKey, NodeState>();
   private final Map<NodeID, NodeState> directlyConnectedStates = new HashMap<NodeID, NodeState>();
   private final NodeState localNode;
   private long nextLocalSequenceNumber = 1;
@@ -54,17 +58,59 @@ public class EpidemicServer implements RevisionServer {
   public EpidemicServer(NodeConflictResolver conflictResolver,
                         ForeignKeyResolver foreignKeyResolver,
                         Network network,
-                        NodeID self)
+                        NodeID self,
+                        UUID instance)
   {
     this.conflictResolver = conflictResolver;
     this.foreignKeyResolver = foreignKeyResolver;
     this.network = network;
-    this.localNode = state(self);
+    this.localNode = state(new NodeKey(self, instance));
+  }
+
+  public EpidemicServer(NodeConflictResolver conflictResolver,
+                        ForeignKeyResolver foreignKeyResolver,
+                        Network network,
+                        NodeID self)
+  {
+    this(conflictResolver, foreignKeyResolver, network, self,
+         UUID.randomUUID());
+  }
+
+  public void dump(java.io.PrintStream out) {
+    out.println(localNode.key.toString());
+    for (NodeState state:
+           new java.util.TreeMap<NodeKey, NodeState>(states).values())
+    {
+      out.print("  ");
+      out.print(state.key.toString());
+      out.println(" acknowledged");
+      for (Map.Entry<NodeKey, Record> e:
+             new java.util.TreeMap<NodeKey, Record>(state.acknowledged).entrySet()) {
+        out.print("    ");
+        out.print(e.getKey());
+        out.print(": ");
+        out.println(e.getValue().sequenceNumber);
+      }
+      if (state.connectionState != null) {
+        out.print("  ");
+        out.print(state.key.toString());
+        out.println(" last sent");
+        for (Map.Entry<NodeKey, Record> e:
+               new java.util.TreeMap<NodeKey, Record>(state.connectionState.lastSent)
+               .entrySet())
+        {
+          out.print("    ");
+          out.print(e.getKey());
+          out.print(": ");
+          out.println(e.getValue().sequenceNumber);          
+        }
+      }
+    }
   }
 
   private void debugMessage(String message) {
     if(Debug) {
-      System.out.println(id + ": " + (localNode != null ? localNode.id : "(null)") + ": " + message);
+      System.out.println(id + ": " + (localNode != null ? localNode.key.toString() : "(null)") + ": " + message);
     }
   }
 
@@ -79,8 +125,9 @@ public class EpidemicServer implements RevisionServer {
   
   // listeners are removed after being run
   public synchronized void registerSyncListener(NodeID node, Runnable listener) {
-    ConnectionState state = state(node).connectionState;
-    if(state.gotSync) {
+    ConnectionState state = state
+      (new NodeKey(node, DefaultInstance)).connectionState;
+    if (state.gotSync) {
       listener.run();
     } else {
       state.syncListeners.add(listener);
@@ -100,24 +147,25 @@ public class EpidemicServer implements RevisionServer {
            it.hasNext();)
       {
         NodeState state = it.next();
-        if (! directlyConnectedNodes.contains(state.id)) {
-          debugMessage("remove directly connected state " + state);
+        if (! directlyConnectedNodes.contains(state.key)) {
+          debugMessage("remove directly connected state " + state.key.id);
           it.remove();
           state.connectionState = null;
         }
       }
 
       for (NodeID node: directlyConnectedNodes) {
-        NodeState state = state(node);
+        NodeState state = directlyConnectedStates.get(node);
+        if (state == null) {
+          state = new NodeState(new NodeKey(node, DefaultInstance));
+          state.head = tail(state);
+          directlyConnectedStates.put(node, state);
+        }
 
         if (state.connectionState == null) {
-          initState(state);
-
+          debugMessage("add directly connected state " + state.key.id);
           state.connectionState = new ConnectionState();
           state.connectionState.readyToReceive = true;
-
-          debugMessage("add directly connected state " + node);
-          directlyConnectedStates.put(node, state);
 
           sendNext(state);
         }
@@ -146,7 +194,7 @@ public class EpidemicServer implements RevisionServer {
 
   public ConflictResolver conflictResolver() {
     return new MyConflictResolver
-      (localNode.id, localNode.id, conflictResolver);
+      (localNode.key.id, localNode.key.id, conflictResolver);
   }
 
   public ForeignKeyResolver foreignKeyResolver() {
@@ -172,50 +220,73 @@ public class EpidemicServer implements RevisionServer {
 
     // debugMessage("send " + message + " to " + state.id);
 
-    network.send(localNode.id, state.id, message);
+    network.send(localNode.key.id, state.key.id, message);
   }
 
-  private NodeState state(NodeID node) {
-    NodeState state = states.get(node);
+  private NodeState state(NodeKey key) {
+    NodeState state = states.get(key);
     if (state == null) {
-      states.put(node, state = new NodeState(node));
+      states.put(key, state = new NodeState(key));
 
       initState(state);
     }
+
     return state;
   }
 
+  private Record head(NodeState state) {
+    Record head = state.head;
+    while (head.next != null) {
+      head = head.next;
+    }
+    return head;
+  }
+
+  private Record tail(NodeState state) {
+    // todo: switch from weak references to reference counting to
+    // ensure that we don't follow the chain of records back
+    // further than we need to.
+    Record tail = state.head;
+    if (tail == null) {
+      return new Record(state.key, Revisions.Empty, 0, null);
+    }
+
+    Record previous;
+    while (tail.previous != null
+           && (previous = tail.previous.get()) != null)
+    {
+      tail = previous;
+    }
+        
+    if (tail.merged != null && tail.merged.node == state.key) {
+      tail = tail.merged;
+    }
+        
+    Record r;
+    if (tail.sequenceNumber == 0) {
+      r = tail;
+    } else {
+      r = new Record(state.key, Revisions.Empty, 0, null);
+      r.next = tail;
+    }
+
+    return r;
+  }
+
   private void initState(NodeState state) {
-    state.head = new Record(state.id, Revisions.Empty, 0, null);
+    state.head = tail(state);
 
     for (NodeState s: states.values()) {
-      debugMessage(s.id + " sees " + state.id + " at 0");
-      s.acknowledged.put(state.id, state.head);
+      debugMessage(s.key + " sees " + state.key + " at 0 " + state.head.hashCode());
 
-      // todo: switch from weak references to reference counting to
-      // ensure that we don't follow the chain of records back
-      // further than we need to.
-      Record tail = s.head;
-      Record previous;
-      while (tail.previous != null
-             && (previous = tail.previous.get()) != null)
-      {
-        tail = previous;
-      }
-        
-      if (tail.merged != null && tail.merged.node == s.id) {
-        tail = tail.merged;
-      }
-        
-      Record rec;
-      if (tail.sequenceNumber == 0) {
-        rec = tail;
-      } else {
-        rec = new Record(s.id, Revisions.Empty, 0, null);
-        rec.next = tail;
+      if (! state.key.instance.equals(DefaultInstance)) {
+        s.acknowledged.put(state.key, state.head);
+        if (s.connectionState != null) {
+          s.connectionState.lastSent.remove(state.key);
+        }
       }
 
-      state.acknowledged.put(s.id, rec);
+      state.acknowledged.put(s.key, tail(s));
     }
   }
 
@@ -244,8 +315,8 @@ public class EpidemicServer implements RevisionServer {
     if (! cs.sentHello && readyForDataFromNewNode()) {
       state.connectionState.sentHello = true;
 
-      debugMessage("hello to " + state.id);
-      send(state, Hello.Instance);
+      debugMessage("hello to " + state.key);
+      send(state, new Hello(localNode.key.instance));
       return;
     }
 
@@ -254,7 +325,7 @@ public class EpidemicServer implements RevisionServer {
     }
 
     for (NodeState other: states.values()) {
-      // debugMessage("sendNext: other: " + other.id + ", state: " + state.id+ ", nu: " + needsUpdate(state, other.head));
+      debugMessage("sendNext: other: " + other.key + ", state: " + state.key + ", nu: " + needsUpdate(state, other.head));
       if (other != state && needsUpdate(state, other.head)) {
         cs.sentSync = false;
         sendUpdate(state, other.head);
@@ -264,15 +335,15 @@ public class EpidemicServer implements RevisionServer {
       
     if (! cs.sentSync) {
       cs.sentSync = true;
-      debugMessage("sync to " + state.id);
-      send(state, Sync.Instance);
+      debugMessage("sync to " + state.key);
+      send(state, new Sync(localNode.key.instance));
       return;
     }
   }
 
   private boolean needsUpdate(NodeState state, Record target) {
     Record acknowledged = state.acknowledged.get(target.node);
-    // debugMessage("needsUpdate(asn: " + acknowledged.sequenceNumber + ", tsn: " + target.sequenceNumber + ")");
+    debugMessage("needsUpdate(asn: " + acknowledged.sequenceNumber + " " + acknowledged.hashCode() + ", tsn: " + target.sequenceNumber + " " + target.hashCode() + ")");
     if (acknowledged.sequenceNumber < target.sequenceNumber) {
       Record lastSent = state.connectionState.lastSent.get(target.node);
       if (lastSent == null) {
@@ -282,6 +353,8 @@ public class EpidemicServer implements RevisionServer {
         lastSent = acknowledged;
         state.connectionState.lastSent.put(target.node, lastSent);
       }
+
+      debugMessage("needsUpdate(lsn: " + lastSent.sequenceNumber + " " + lastSent.hashCode() + ")");
 
       return lastSent.sequenceNumber < target.sequenceNumber;
     }
@@ -296,7 +369,7 @@ public class EpidemicServer implements RevisionServer {
       Record lastSent = state.connectionState.lastSent.get(target.node);
       Record record = lastSent.next;
 
-      debugMessage("ls: " + lastSent.hashCode() + ", rec: " + record.hashCode());
+      debugMessage("ls: " + lastSent.hashCode() + ", rec: " + (record == null ? " null " : String.valueOf(record.hashCode())));
             
       if (record.merged != null) {
         if (needsUpdate(state, record.merged)) {
@@ -304,7 +377,7 @@ public class EpidemicServer implements RevisionServer {
           continue;
         }
 
-        debugMessage("ack to " + state.id + ": " + record.node + " "
+        debugMessage("ack to " + state.key + ": " + record.node + " "
                      + record.sequenceNumber + " merged "
                      + record.merged.node + " "
                      + record.merged.sequenceNumber);
@@ -313,7 +386,7 @@ public class EpidemicServer implements RevisionServer {
              (record.node, record.sequenceNumber, record.merged.node,
               record.merged.sequenceNumber));
       } else {
-        debugMessage("diff to " + state.id + ": " + target.node + " " + lastSent.sequenceNumber + " " + record.sequenceNumber);
+        debugMessage("diff to " + state.key + ": " + target.node + " " + lastSent.sequenceNumber + " " + record.sequenceNumber);
         send(state, new Diff
              (target.node, lastSent.sequenceNumber, record.sequenceNumber,
               new RevisionDiffBody(lastSent.revision, record.revision)));
@@ -324,9 +397,25 @@ public class EpidemicServer implements RevisionServer {
     }
   }
 
-  private void acceptSync(NodeID origin) {
-    debugMessage("sync from " + origin);
+  private NodeState accept(NodeKey origin) {
     NodeState state = state(origin);
+
+    NodeState defaultState = directlyConnectedStates.get(origin.id);
+
+    if (state != defaultState) {
+      expect(defaultState.head.sequenceNumber == 0);
+    
+      state.connectionState = defaultState.connectionState;
+
+      directlyConnectedStates.put(origin.id, state);
+    }
+    
+    return state;
+  }
+
+  private void acceptSync(NodeKey origin) {
+    debugMessage("sync from " + origin);
+    NodeState state = accept(origin);
     
     if (! state.connectionState.gotSync) {
       state.connectionState.gotSync = true;
@@ -339,24 +428,27 @@ public class EpidemicServer implements RevisionServer {
     }
   }
 
-  private void acceptHello(NodeID origin) {
+  private void acceptHello(NodeKey origin) {
     debugMessage("hello from " + origin);
-    NodeState state = state(origin);
-    
+    NodeState state = accept(origin);
+
     state.connectionState.gotHello = true;
     sendNext(state);
   }
 
-  private void acceptDiff(NodeID origin,
+  private void acceptDiff(NodeKey origin,
                           long startSequenceNumber,
                           long endSequenceNumber,
                           DiffBody body)
   {
-    debugMessage("accept diff " + origin + " " + startSequenceNumber + " " + endSequenceNumber);
     NodeState state = state(origin);
 
-    if (startSequenceNumber <= state.head.sequenceNumber) {
-      Record record = state.head;
+    Record head = head(state);
+
+    debugMessage("accept diff " + origin + " " + startSequenceNumber + " " + endSequenceNumber + " head " + head);
+
+    if (startSequenceNumber <= head.sequenceNumber) {
+      Record record = head;
       while (record != null
              && endSequenceNumber != record.sequenceNumber
              && startSequenceNumber < record.sequenceNumber)
@@ -365,10 +457,9 @@ public class EpidemicServer implements RevisionServer {
       }
 
       if (record != null) {
-        if (endSequenceNumber == record.sequenceNumber) {
-          // do nothing -- we already have this revision
-          debugMessage("ignore diff " + origin + " " + startSequenceNumber + " " + endSequenceNumber);
-        } else if (startSequenceNumber == record.sequenceNumber) {
+        if (endSequenceNumber == record.sequenceNumber
+            || startSequenceNumber == record.sequenceNumber)
+        {
           acceptRevision
             (state, endSequenceNumber, body.apply(this, record.revision));
         } else {
@@ -389,7 +480,7 @@ public class EpidemicServer implements RevisionServer {
     insertRevision(state, sequenceNumber, revision, null);
 
     acceptAck
-      (localNode.id, nextLocalSequenceNumber++, state.id, sequenceNumber);
+      (localNode.key, nextLocalSequenceNumber++, state.key, sequenceNumber);
   }
 
   private void insertRevision(NodeState state,
@@ -397,26 +488,30 @@ public class EpidemicServer implements RevisionServer {
                               Revision revision,
                               Record merged)
   {
-    Record record = state.head;
+    Record record = head(state);
     debugMessage("insertRevision: record: " + record.hashCode());
     while (sequenceNumber < record.sequenceNumber) {
       record = record.previous.get();
     }
 
-    if (sequenceNumber == record.sequenceNumber) {
-      throw new RuntimeException("redundant revision");
+    if (sequenceNumber != record.sequenceNumber) {
+      Record next = record.next;
+      Record newRecord = new Record
+        (state.key, revision, sequenceNumber, merged);
+      record.next = newRecord;
+      newRecord.previous = new WeakReference<Record>(record);
+      debugMessage("link " + record.sequenceNumber + " " + record.hashCode() + " to " + newRecord.sequenceNumber + " " + newRecord.hashCode());
+      if (next != null) {
+        debugMessage("link " + newRecord.sequenceNumber + " " + newRecord.hashCode() + " to " + next.sequenceNumber + " " + next.hashCode());
+        newRecord.next = next;
+        next.previous = new WeakReference<Record>(newRecord);
+      }
+
+      record = newRecord;
     }
 
-    Record next = record.next;
-    Record newRecord = new Record
-      (state.id, revision, sequenceNumber, merged);
-    record.next = newRecord;
-    newRecord.previous = new WeakReference<Record>(record);
-    if (next != null) {
-      newRecord.next = next;
-      next.previous = new WeakReference<Record>(newRecord);
-    } else {
-      state.head = newRecord;
+    if (state.head.sequenceNumber < record.sequenceNumber) {
+      state.head = record;
 
       if (state == localNode) {
         debugMessage("notify listeners");
@@ -428,14 +523,14 @@ public class EpidemicServer implements RevisionServer {
       }
     }
 
-    debugMessage("insertRevision state.id: " + state.id + ", sequenceNo: " + sequenceNumber + ", record: " + newRecord.hashCode());
+    debugMessage("insertRevision state.key: " + state.key + ", sequenceNo: " + sequenceNumber + ", record: " + record.hashCode());
   }
 
   private Revision merge(Record base, Record head, Record fork,
-                         NodeID headNode, NodeID forkNode)
+                         NodeKey headKey, NodeKey forkKey)
   {
     MyConflictResolver resolver = new MyConflictResolver
-      (headNode, forkNode, conflictResolver);
+      (headKey.id, forkKey.id, conflictResolver);
 
     Revision result = head.revision;
     Record record = base.next;
@@ -452,9 +547,9 @@ public class EpidemicServer implements RevisionServer {
     return result;
   }
 
-  private void acceptAck(NodeID acknowledger,
+  private void acceptAck(NodeKey acknowledger,
                          long acknowledgerSequenceNumber,
-                         NodeID diffOrigin,
+                         NodeKey diffOrigin,
                          long diffSequenceNumber)
   {
     debugMessage("accept ack " + acknowledger + " " + acknowledgerSequenceNumber + " diff " + diffOrigin + " " + diffSequenceNumber);
@@ -478,12 +573,10 @@ public class EpidemicServer implements RevisionServer {
         }
 
         state.acknowledged.put(diffOrigin, record);
-            
-        sendNext();
 
         if (record.merged == null) {
           acceptAck
-            (localNode.id, nextLocalSequenceNumber++, acknowledger,
+            (localNode.key, nextLocalSequenceNumber++, acknowledger,
              acknowledgerSequenceNumber);
         }
       } else {
@@ -492,22 +585,25 @@ public class EpidemicServer implements RevisionServer {
     } else {
       // obsolete ack -- ignore
     }
+            
+    sendNext();
   }
 
   private static class NodeState {
-    public final NodeID id;
+    public final NodeKey key;
     public Record head;
-    public final Map<NodeID, Record> acknowledged
-      = new HashMap<NodeID, Record>();
+    public final Map<NodeKey, Record> acknowledged
+      = new HashMap<NodeKey, Record>();
     public ConnectionState connectionState;
 
-    public NodeState(NodeID id) {
-      this.id = id;
+    public NodeState(NodeKey key) {
+      this.key = key;
     }
   }
 
   private static class ConnectionState {
-    public final Map<NodeID, Record> lastSent = new HashMap<NodeID, Record>();
+    public final Map<NodeKey, Record> lastSent
+      = new HashMap<NodeKey, Record>();
     public boolean readyToReceive;
     public boolean sentHello;
     public boolean gotHello;
@@ -517,14 +613,14 @@ public class EpidemicServer implements RevisionServer {
   }
 
   private static class Record {
-    public final NodeID node;
+    public final NodeKey node;
     public final Revision revision;
     public final long sequenceNumber;
     public final Record merged;
     public WeakReference<Record> previous;
     public Record next;
 
-    public Record(NodeID node,
+    public Record(NodeKey node,
                   Revision revision,
                   long sequenceNumber,
                   Record merged)
@@ -542,15 +638,15 @@ public class EpidemicServer implements RevisionServer {
 
   // public for deserialization
   public static class Ack implements Message {
-    private NodeID acknowledger;
+    private NodeKey acknowledger;
     private long acknowledgerSequenceNumber;
-    private NodeID diffOrigin;
+    private NodeKey diffOrigin;
     private long diffSequenceNumber;
 
-    private Ack(NodeID acknowledger,
-               long acknowledgerSequenceNumber,
-               NodeID diffOrigin,
-               long diffSequenceNumber)
+    private Ack(NodeKey acknowledger,
+                long acknowledgerSequenceNumber,
+                NodeKey diffOrigin,
+                long diffSequenceNumber)
     {
       this.acknowledger = acknowledger;
       this.acknowledgerSequenceNumber = acknowledgerSequenceNumber;
@@ -564,18 +660,18 @@ public class EpidemicServer implements RevisionServer {
     public void writeTo(WriteContext context)
       throws IOException
     {
-      StreamUtil.writeString(context.out, acknowledger.id);
+      StreamUtil.writeString(context.out, acknowledger.asString());
       StreamUtil.writeLong(context.out, acknowledgerSequenceNumber);
-      StreamUtil.writeString(context.out, diffOrigin.id);
+      StreamUtil.writeString(context.out, diffOrigin.asString());
       StreamUtil.writeLong(context.out, diffSequenceNumber);
     }
 
     public void readFrom(ReadContext context)
       throws IOException
     {
-      acknowledger = new NodeID(StreamUtil.readString(context.in));
+      acknowledger = new NodeKey(StreamUtil.readString(context.in));
       acknowledgerSequenceNumber = StreamUtil.readLong(context.in);
-      diffOrigin = new NodeID(StreamUtil.readString(context.in));
+      diffOrigin = new NodeKey(StreamUtil.readString(context.in));
       diffSequenceNumber = StreamUtil.readLong(context.in);
     }
 
@@ -588,12 +684,12 @@ public class EpidemicServer implements RevisionServer {
 
   // public for deserialization
   public static class Diff implements Message {
-    private NodeID origin;
+    private NodeKey origin;
     private long startSequenceNumber;
     private long endSequenceNumber;
     private DiffBody body;
 
-    private Diff(NodeID origin,
+    private Diff(NodeKey origin,
                  long startSequenceNumber,
                  long endSequenceNumber,
                  DiffBody body)
@@ -610,7 +706,7 @@ public class EpidemicServer implements RevisionServer {
     public void writeTo(WriteContext context)
       throws IOException
     {
-      StreamUtil.writeString(context.out, origin.id);
+      StreamUtil.writeString(context.out, origin.asString());
       StreamUtil.writeLong(context.out, startSequenceNumber);
       StreamUtil.writeLong(context.out, endSequenceNumber);
       ((Writable) body).writeTo(context);
@@ -619,7 +715,7 @@ public class EpidemicServer implements RevisionServer {
     public void readFrom(ReadContext context)
       throws IOException
     {
-      origin = new NodeID(StreamUtil.readString(context.in));
+      origin = new NodeKey(StreamUtil.readString(context.in));
       startSequenceNumber = StreamUtil.readLong(context.in);
       endSequenceNumber = StreamUtil.readLong(context.in);
       BufferDiffBody list = new BufferDiffBody();
@@ -637,31 +733,47 @@ public class EpidemicServer implements RevisionServer {
     }
   }
 
-  private static abstract class Singleton implements Message {
-    public void writeTo(WriteContext context) {
-      // ignore
+  private static abstract class UUIDMessage implements Message {
+    public UUID instance;
+
+    public UUIDMessage() { }
+
+    public UUIDMessage(UUID instance) {
+      this.instance = instance;
     }
 
-    public void readFrom(ReadContext context) {
-      // ignore
+    public void writeTo(WriteContext context) throws IOException {
+      StreamUtil.writeString(context.out, instance.toString());
+    }
+
+    public void readFrom(ReadContext context) throws IOException {
+      instance = UUID.fromString(StreamUtil.readString(context.in));
     }
   }
 
   // public for deserialization
-  public static class Hello extends Singleton {
-    private static final Hello Instance = new Hello();
+  public static class Hello extends UUIDMessage {
+    public Hello() { }
+
+    public Hello(UUID instance) {
+      super(instance);
+    }
 
     public void deliver(NodeID source, EpidemicServer server) {
-      server.acceptHello(source);
+      server.acceptHello(new NodeKey(source, instance));
     }
   }
 
   // public for deserialization
-  public static class Sync extends Singleton {
-    private static final Sync Instance = new Sync();
+  public static class Sync extends UUIDMessage {
+    public Sync() { }
+
+    public Sync(UUID instance) {
+      super(instance);
+    }
 
     public void deliver(NodeID source, EpidemicServer server) {
-      server.acceptSync(source);
+      server.acceptSync(new NodeKey(source, instance));
     }
   }
 
@@ -983,7 +1095,7 @@ public class EpidemicServer implements RevisionServer {
     }
 
     public boolean equals(Object o) {
-      return o instanceof NodeID && id.equals(((NodeID) o).id);
+      return o instanceof NodeID && compareTo((NodeID) o) == 0;
     }
 
     @Override
@@ -997,6 +1109,48 @@ public class EpidemicServer implements RevisionServer {
 
     public String asString() {
       return id;
+    }
+  }
+
+  private static class NodeKey implements Comparable<NodeKey>, Stringable {
+    public final NodeID id;
+    public final UUID instance;
+
+    public NodeKey(NodeID id, UUID instance) {
+      this.id = id;
+      this.instance = instance;
+    }
+
+    public NodeKey(String string) {
+      int index = string.indexOf(':');
+      this.id = new NodeID(string.substring(index + 1));
+      this.instance = UUID.fromString(string.substring(0, index));
+    }
+
+    public int hashCode() {
+      return id.hashCode() ^ instance.hashCode();
+    }
+
+    public boolean equals(Object o) {
+      return o instanceof NodeKey && compareTo((NodeKey) o) == 0;
+    }
+
+    @Override
+    public int compareTo(NodeKey o) {
+      int d = id.compareTo(o.id);
+      if (d != 0) {
+        return d;
+      }
+
+      return instance.compareTo(o.instance);
+    }
+
+    public String toString() {
+      return "nodeKey[" + id + " " + instance + "]";
+    }
+
+    public String asString() {
+      return instance + ":" + id.asString();
     }
   }
 
