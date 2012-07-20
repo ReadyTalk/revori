@@ -419,8 +419,10 @@ public class EpidemicServer implements RevisionServer {
     
     if (! state.connectionState.gotSync) {
       state.connectionState.gotSync = true;
-      for(Runnable r : state.syncListeners) {
-        r.run();
+      if(state.syncListeners != null) {
+        for(Runnable r : state.syncListeners) {
+          r.run();
+        }
       }
       state.syncListeners = null;
       
