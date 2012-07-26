@@ -30,7 +30,7 @@
     </jar>
   </target>
 
-  <uptodate property="compile.grammer.not.required"
+  <uptodate property="client-not-required"
             srcfile="${basedir}/src/client.cpp"
             targetfile="${basedir}/build/client" />
 
