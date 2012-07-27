@@ -160,17 +160,17 @@ writeBytes(Context* context, const char* src, int count)
 bool
 writeByte(Context* context, int v)
 {
-  char src[] = { v };
+  char src[] = { static_cast<char>(v) };
   return writeBytes(context, src, 1) == 1;
 }
 
 bool
 writeInteger(Context* context, int v)
 {
-  char src[] = { (v >> 24) & 0xFF,
-                 (v >> 16) & 0xFF,
-                 (v >>  8) & 0xFF,
-                 (v      ) & 0xFF };
+  char src[] = { static_cast<char>((v >> 24) & 0xFF),
+                 static_cast<char>((v >> 16) & 0xFF),
+                 static_cast<char>((v >>  8) & 0xFF),
+                 static_cast<char>((v      ) & 0xFF) };
   return writeBytes(context, src, 4) == 4;
 }
 
