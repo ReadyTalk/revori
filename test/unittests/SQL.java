@@ -1,6 +1,6 @@
 package unittests;
 
-import static com.readytalk.oss.dbms.server.SQLServer.readString;
+import static com.readytalk.revori.server.SQLServer.readString;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,10 +8,10 @@ import java.io.InputStream;
 import org.junit.Test;
 import junit.framework.TestCase;
 
-import com.readytalk.oss.dbms.server.SQLServer;
-import com.readytalk.oss.dbms.server.SQLServer.Connection;
-import com.readytalk.oss.dbms.server.SQLServer.Response;
-import com.readytalk.oss.dbms.server.SQLServer.RowSetFlag;
+import com.readytalk.revori.server.SQLServer;
+import com.readytalk.revori.server.SQLServer.Connection;
+import com.readytalk.revori.server.SQLServer.Response;
+import com.readytalk.revori.server.SQLServer.RowSetFlag;
 
 public class SQL extends TestCase {
   @Test

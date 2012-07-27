@@ -1,15 +1,15 @@
 package unittests;
 
-import static com.readytalk.oss.dbms.util.Util.cols;
-import static com.readytalk.oss.dbms.DuplicateKeyResolution.Throw;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.DuplicateKeyResolution.Throw;
 
-import com.readytalk.oss.dbms.Table;
-import com.readytalk.oss.dbms.Column;
-import com.readytalk.oss.dbms.Revision;
-import com.readytalk.oss.dbms.RevisionBuilder;
-import com.readytalk.oss.dbms.server.RevisionServer;
-import com.readytalk.oss.dbms.server.SimpleRevisionServer;
-import com.readytalk.oss.dbms.server.Bridge;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.Column;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.server.RevisionServer;
+import com.readytalk.revori.server.SimpleRevisionServer;
+import com.readytalk.revori.server.Bridge;
 
 import org.junit.Test;
 import junit.framework.TestCase;

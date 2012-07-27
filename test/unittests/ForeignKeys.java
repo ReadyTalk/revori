@@ -1,30 +1,30 @@
 package unittests;
 
-import static com.readytalk.oss.dbms.util.Util.list;
-import static com.readytalk.oss.dbms.util.Util.cols;
-import static com.readytalk.oss.dbms.DuplicateKeyResolution.Throw;
-import static com.readytalk.oss.dbms.DuplicateKeyResolution.Overwrite;
-import static com.readytalk.oss.dbms.ExpressionFactory.parameter;
-import static com.readytalk.oss.dbms.ExpressionFactory.equal;
-import static com.readytalk.oss.dbms.ExpressionFactory.reference;
+import static com.readytalk.revori.util.Util.list;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.DuplicateKeyResolution.Throw;
+import static com.readytalk.revori.DuplicateKeyResolution.Overwrite;
+import static com.readytalk.revori.ExpressionFactory.parameter;
+import static com.readytalk.revori.ExpressionFactory.equal;
+import static com.readytalk.revori.ExpressionFactory.reference;
 
 import org.junit.Test;
 
 import junit.framework.TestCase;
 
-import com.readytalk.oss.dbms.Column;
-import com.readytalk.oss.dbms.Table;
-import com.readytalk.oss.dbms.TableReference;
-import com.readytalk.oss.dbms.PatchTemplate;
-import com.readytalk.oss.dbms.InsertTemplate;
-import com.readytalk.oss.dbms.DeleteTemplate;
-import com.readytalk.oss.dbms.Revision;
-import com.readytalk.oss.dbms.Revisions;
-import com.readytalk.oss.dbms.RevisionBuilder;
-import com.readytalk.oss.dbms.DiffResult;
-import com.readytalk.oss.dbms.ForeignKey;
-import com.readytalk.oss.dbms.ForeignKeyResolvers;
-import com.readytalk.oss.dbms.ForeignKeyException;
+import com.readytalk.revori.Column;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.TableReference;
+import com.readytalk.revori.PatchTemplate;
+import com.readytalk.revori.InsertTemplate;
+import com.readytalk.revori.DeleteTemplate;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.DiffResult;
+import com.readytalk.revori.ForeignKey;
+import com.readytalk.revori.ForeignKeyResolvers;
+import com.readytalk.revori.ForeignKeyException;
 
 public class ForeignKeys extends TestCase {
   private static void testDelete(boolean restrict) {

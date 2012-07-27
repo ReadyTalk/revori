@@ -22,7 +22,7 @@
   </target>
 
   <target name="jar" depends="compile">
-    <jar destfile="${basedir}/build/dbms.jar">
+    <jar destfile="${basedir}/build/revori.jar">
       <fileset dir="${basedir}/build/classes"
                includes="**/*.class"/>
       <fileset dir="${basedir}/build/classes"
@@ -55,7 +55,7 @@
   <target name="javadoc">
     <javadoc destdir="${basedir}/build/api" nodeprecated="true">
       <packageset dir="${basedir}/src">
-        <include name="com/readytalk/oss/dbms"/>
+        <include name="com/readytalk/revori"/>
       </packageset>
     </javadoc>
   </target>

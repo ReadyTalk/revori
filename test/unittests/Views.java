@@ -1,32 +1,32 @@
 package unittests;
 
-import static com.readytalk.oss.dbms.util.Util.list;
-import static com.readytalk.oss.dbms.util.Util.cols;
-import static com.readytalk.oss.dbms.util.Util.set;
-import static com.readytalk.oss.dbms.DuplicateKeyResolution.Throw;
-import static com.readytalk.oss.dbms.ExpressionFactory.equal;
-import static com.readytalk.oss.dbms.ExpressionFactory.reference;
-import static com.readytalk.oss.dbms.ExpressionFactory.aggregate;
-import static com.readytalk.oss.dbms.ExpressionFactory.constant;
+import static com.readytalk.revori.util.Util.list;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.util.Util.set;
+import static com.readytalk.revori.DuplicateKeyResolution.Throw;
+import static com.readytalk.revori.ExpressionFactory.equal;
+import static com.readytalk.revori.ExpressionFactory.reference;
+import static com.readytalk.revori.ExpressionFactory.aggregate;
+import static com.readytalk.revori.ExpressionFactory.constant;
 
 import org.junit.Test;
 
 import junit.framework.TestCase;
 
-import com.readytalk.oss.dbms.Column;
-import com.readytalk.oss.dbms.Table;
-import com.readytalk.oss.dbms.TableReference;
-import com.readytalk.oss.dbms.Revision;
-import com.readytalk.oss.dbms.Revisions;
-import com.readytalk.oss.dbms.RevisionBuilder;
-import com.readytalk.oss.dbms.QueryResult;
-import com.readytalk.oss.dbms.QueryTemplate;
-import com.readytalk.oss.dbms.Foldables;
-import com.readytalk.oss.dbms.View;
-import com.readytalk.oss.dbms.Expression;
-import com.readytalk.oss.dbms.Comparators;
-import com.readytalk.oss.dbms.ConflictResolver;
-import com.readytalk.oss.dbms.ForeignKeyResolvers;
+import com.readytalk.revori.Column;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.TableReference;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.QueryResult;
+import com.readytalk.revori.QueryTemplate;
+import com.readytalk.revori.Foldables;
+import com.readytalk.revori.View;
+import com.readytalk.revori.Expression;
+import com.readytalk.revori.Comparators;
+import com.readytalk.revori.ConflictResolver;
+import com.readytalk.revori.ForeignKeyResolvers;
 
 import java.util.Collections;
 import java.util.Set;

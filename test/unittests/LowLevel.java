@@ -3,16 +3,16 @@ package unittests;
 import junit.framework.TestCase;
 
 import org.junit.Test;
-import static com.readytalk.oss.dbms.util.Util.cols;
-import static com.readytalk.oss.dbms.DuplicateKeyResolution.Throw;
-import static com.readytalk.oss.dbms.DuplicateKeyResolution.Overwrite;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.DuplicateKeyResolution.Throw;
+import static com.readytalk.revori.DuplicateKeyResolution.Overwrite;
 
-import com.readytalk.oss.dbms.Column;
-import com.readytalk.oss.dbms.Revisions;
-import com.readytalk.oss.dbms.Table;
-import com.readytalk.oss.dbms.Revision;
-import com.readytalk.oss.dbms.RevisionBuilder;
-import com.readytalk.oss.dbms.DiffResult;
+import com.readytalk.revori.Column;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.DiffResult;
 
 public class LowLevel extends TestCase{
   private static void expectEqual(Object actual, Object expected) {
