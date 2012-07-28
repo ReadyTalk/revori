@@ -11,7 +11,7 @@ The design is a hybrid of a relational database management system and
 a version control system.  A database is represented as an immutable
 revision from which new revisions may be derived with data added,
 subtracted, or replaced.  These revisions may be compared with each
-other and/or combined using three-way merge algorithm.
+other and/or combined using a three-way merge algorithm.
 
 
 Status
