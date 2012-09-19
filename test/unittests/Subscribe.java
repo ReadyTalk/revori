@@ -121,6 +121,8 @@ public class Subscribe extends TestCase {
 
     builder.insert(Throw, numbers, 2, name, "two");
 
+    server.merge(base, builder.commit());
+
     listener.expect(Kind.Update, 2, "two");
     listener.expectNothing();
   }
