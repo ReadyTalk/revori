@@ -579,10 +579,10 @@ main(int argumentCount, const char** arguments)
   }
 
   if (interactive) {
-    fprintf(stdout, "\nWelcome to the DBMS SQL client interface.  "
+    fprintf(stdout, "\nWelcome to the Revori SQL client interface.  "
             "Type \"help\" to get started.\n");
 
-    rl_readline_name = "DBMSClient";
+    rl_readline_name = "RevoriClient";
 
     rl_completion_entry_function = completionGenerator;
 
