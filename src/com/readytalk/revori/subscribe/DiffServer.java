@@ -10,12 +10,12 @@ import java.util.HashSet;
 
 import com.readytalk.revori.Revision;
 import com.readytalk.revori.Revisions;
-import com.readytalk.revori.server.BufferServer;
+import com.readytalk.revori.server.RevisionServer;
 
 public class DiffServer {
   private static final Object Head = new Object();
 
-  private final BufferServer server;
+  private final RevisionServer server;
   private final Set<Runnable> listeners = new HashSet<Runnable>();
   private final Map<Object, LinearRevision> tags = new HashMap<Object, LinearRevision>();
   private final TreeMap<Long, LinearRevision> revisions = new TreeMap<Long, LinearRevision>();
@@ -23,17 +23,17 @@ public class DiffServer {
   private final LinearRevision tail = new LinearRevision
     (Revisions.Empty, nextSequenceNumber++);
 
-  public DiffServer(final BufferServer server) {
+  public DiffServer(final RevisionServer server) {
     this.server = server;
 
-    server.server().registerListener(new Runnable() {
+    server.registerListener(new Runnable() {
       public void run() {
         decrement(
           tags.put(
             Head,
             increment(
               new LinearRevision(
-                server.server().head(),
+                server.head(),
                 nextSequenceNumber++))));
         
         for (Runnable listener: listeners) {
@@ -61,10 +61,6 @@ public class DiffServer {
     return r;
   }
   
-  public BufferServer server() {
-    return server;
-  }
-
   public void setTag(Object key) {
     decrement(tags.put(key, increment(tags.get(Head))));
   }

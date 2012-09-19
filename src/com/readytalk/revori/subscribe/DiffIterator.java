@@ -72,7 +72,7 @@ public class DiffIterator {
           matcher = matchIterator.next();
           if (visited == null || ! visited.contains(matcher)) {
             if (visited == null) {
-              visited = new HashSet();
+              visited = new HashSet<Matcher>();
             }
             visited.add(matcher);
             queryResult = base.diff(head, matcher.query, matcher.params);

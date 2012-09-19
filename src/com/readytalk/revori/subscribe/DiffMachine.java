@@ -30,6 +30,10 @@ public class DiffMachine {
 
   private enum State { Start, New, Cached, Uncached; };
 
+  public DiffMachine(DiffServer server) {
+    this.server = server;
+  }
+
   private static void register(final Matcher matcher, final SetMultimap<Table, Matcher> matchersForTable) {
     matcher.query.source.visit(new SourceVisitor() {
       public void visit(Source s) {
