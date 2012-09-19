@@ -91,9 +91,9 @@ public class Subscribe extends TestCase {
     DiffServer diffServer = new DiffServer(server);
     DiffMachine machine = new DiffMachine(diffServer);
 
-    Column<Integer> number = new Column<Integer>(Integer.class);
-    Column<String> name = new Column<String>(String.class);
-    Table numbers = new Table(cols(number));
+    Column<Integer> number = new Column<Integer>(Integer.class, "number");
+    Column<String> name = new Column<String>(String.class, "name");
+    Table numbers = new Table(cols(number), "numbers");
 
     Revision base = server.head();
     RevisionBuilder builder = base.builder();
@@ -105,13 +105,19 @@ public class Subscribe extends TestCase {
     TableReference numbersReference = new TableReference(numbers);
 
     QueryTemplate query = new QueryTemplate
-      (list((Expression) reference(numbersReference, name)),
+      (list((Expression) reference(numbersReference, number), reference(numbersReference, name)),
        numbersReference,
        new Constant(true));
 
     MyRowListener listener = new MyRowListener();
 
+    while(machine.next()) {}
+
+    listener.expectNothing();
+
     machine.register(listener, query);
+
+    while(machine.next()) {}
 
     listener.expect(Kind.Update, 1, "one");
     listener.expectNothing();
@@ -122,6 +128,8 @@ public class Subscribe extends TestCase {
     builder.insert(Throw, numbers, 2, name, "two");
 
     server.merge(base, builder.commit());
+
+    while(machine.next()) {}
 
     listener.expect(Kind.Update, 2, "two");
     listener.expectNothing();

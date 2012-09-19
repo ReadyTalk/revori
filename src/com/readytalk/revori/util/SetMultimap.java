@@ -155,11 +155,49 @@ public class SetMultimap<K, V> {
         throw new UnsupportedOperationException(); // TODO
       }
 
+      public String toString() {
+        resolveLazy();
+        if(set != null) {
+          return set.toString();
+        } else {
+          return "[]";
+        }
+      }
+
     };
   }
 
   public int size() {
     return size;
+  }
+
+  public void putAll(SetMultimap<K, V> m) {
+    for(Map.Entry<K, Set<V>> e : m.map.entrySet()) {
+      Set<V> values = get(e.getKey());
+      values.addAll(e.getValue());
+    }
+  }
+
+  public void clear() {
+    map.clear();
+    size = 0;
+  }
+
+  public String toString() {
+    StringBuilder b = new StringBuilder();
+    b.append("[");
+    boolean start = true;
+    for(Map.Entry<K, Set<V>> e : map.entrySet()) {
+      if(!start) {
+        b.append(", ");
+      } else {
+        start = false;
+      }
+      b.append(e.getKey()).append("->");
+      b.append(e.getValue());
+    }
+    b.append("]");
+    return b.toString();
   }
 
 }

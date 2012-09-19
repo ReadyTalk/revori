@@ -12,6 +12,8 @@ import com.readytalk.revori.Revision;
 import com.readytalk.revori.util.SetMultimap;
 
 public class DiffIterator {
+  private enum State { Diff, Matchers, Result, End; };
+
   private final Revision base;
   private final Revision head;
   private final DiffResult diffResult;
@@ -34,9 +36,6 @@ public class DiffIterator {
     this.state = State.Diff;
   }
 
-
-  private enum State { Diff, Matchers, Result, End; };
-
   public boolean next() {
     while (true) {
       switch (state) {
@@ -52,7 +51,6 @@ public class DiffIterator {
             ((Table) (base == null ? fork : base));
           
           if (set != null) {
-            //log.info("looking at matchers for table " + ((Table) (base == null ? fork : base)).id);
             matchIterator = set.iterator();
             state = State.Matchers;
           }
