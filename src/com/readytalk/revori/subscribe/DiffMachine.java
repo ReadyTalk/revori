@@ -27,11 +27,27 @@ public class DiffMachine {
 
   private State state = State.Start;
 
+  private final boolean autoDeliver;
+
   private enum State { Start, New, Cached, Uncached; };
 
   public DiffMachine(DiffServer server) {
+    this(server, true);
+  }
+
+  public DiffMachine(DiffServer server, boolean autoDeliver) {
     this.server = server;
     this.base = server.tail();
+
+    // TODO: perhaps move this autoDeliver into a wrapper object?
+    this.autoDeliver = autoDeliver;
+    if(autoDeliver) {
+      server.register(new Runnable() {
+        public void run() {
+          while(next()) {}
+        }
+      });
+    }
   }
 
   private static void register(final Matcher matcher, final SetMultimap<Table, Matcher> matchers) {
@@ -59,6 +75,10 @@ public class DiffMachine {
   public Subscription subscribe(RowListener listener, QueryTemplate query, Object... params) {
     final Matcher matcher = new Matcher(listener, query, params);
     register(matcher, newMatchers);
+
+    if(autoDeliver) {
+      while(next()) {}
+    }
 
     return new Subscription() {
       boolean subscribed = true;

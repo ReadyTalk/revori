@@ -69,12 +69,14 @@ public class DiffServer {
     decrement(tags.remove(key));
   }
 
-  public void register(Runnable listener) {
+  public Subscription register(final Runnable listener) {
     listeners.add(listener);
-  }
 
-  public void unregister(Runnable listener) {
-    listeners.remove(listener);
+    return new Subscription() {
+      public void cancel() {
+        listeners.remove(listener);
+      }
+    };
   }
 
   public LinearRevision next(LinearRevision base) {

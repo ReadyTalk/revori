@@ -111,14 +111,9 @@ public class Subscribe extends TestCase {
        new Constant(true));
 
     MyRowListener listener = new MyRowListener();
-
-    while(machine.next()) {}
-
     listener.expectNothing();
 
     Subscription subs = machine.subscribe(listener, query);
-
-    while(machine.next()) {}
 
     listener.expect(Kind.Update, 1, "one");
     listener.expectNothing();
@@ -129,8 +124,6 @@ public class Subscribe extends TestCase {
     builder.insert(Throw, numbers, 2, name, "two");
 
     server.merge(base, builder.commit());
-
-    while(machine.next()) {}
 
     listener.expect(Kind.Update, 2, "two");
     listener.expectNothing();
@@ -143,8 +136,6 @@ public class Subscribe extends TestCase {
     builder.insert(Throw, numbers, 3, name, "three");
 
     server.merge(base, builder.commit());
-
-    while(machine.next()) {}
 
     listener.expectNothing();
 
