@@ -41,6 +41,7 @@ import com.readytalk.revori.DeleteTemplate;
 import com.readytalk.revori.UpdateTemplate;
 import com.readytalk.revori.ForeignKeyResolvers;
 import com.readytalk.revori.Comparators;
+import com.readytalk.revori.subscribe.Subscription;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -2755,12 +2756,8 @@ public class SQLServer implements RevisionServer {
     server.server.merge(dbHead, builder.commit());
   }
 
-  public void registerListener(Runnable listener) {
-    server.server.registerListener(listener);
-  }
-
-  public void unregisterListener(Runnable listener) {
-    server.server.unregisterListener(listener);
+  public Subscription registerListener(Runnable listener) {
+    return server.server.registerListener(listener);
   }
 
   public void add(Table table, List<Column<?>> columns) {

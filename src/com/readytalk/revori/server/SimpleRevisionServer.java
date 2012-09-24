@@ -11,6 +11,7 @@ import com.readytalk.revori.Revision;
 import com.readytalk.revori.Revisions;
 import com.readytalk.revori.ConflictResolver;
 import com.readytalk.revori.ForeignKeyResolver;
+import com.readytalk.revori.subscribe.Subscription;
 
 import java.util.Set;
 import java.util.HashSet;
@@ -50,7 +51,7 @@ public class SimpleRevisionServer implements RevisionServer {
     }
   }
 
-  public void registerListener(Runnable listener) {
+  public Subscription registerListener(final Runnable listener) {
     while (true) {
       Set<Runnable> oldListeners = listeners.get();
       Set<Runnable> newListeners = new HashSet(oldListeners);
@@ -60,16 +61,19 @@ public class SimpleRevisionServer implements RevisionServer {
       }
     }
     listener.run();
+
+    return new Subscription() {
+      public void cancel() {
+        while (true) {
+          Set<Runnable> oldListeners = listeners.get();
+          Set<Runnable> newListeners = new HashSet(oldListeners);
+          newListeners.remove(listener);
+          if (listeners.compareAndSet(oldListeners, newListeners)) {
+            break;
+          }
+        }
+      }
+    };
   }
 
-  public void unregisterListener(Runnable listener) {
-    while (true) {
-      Set<Runnable> oldListeners = listeners.get();
-      Set<Runnable> newListeners = new HashSet(oldListeners);
-      newListeners.remove(listener);
-      if (listeners.compareAndSet(oldListeners, newListeners)) {
-        break;
-      }
-    }
-  }
 }

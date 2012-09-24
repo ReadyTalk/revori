@@ -14,9 +14,6 @@ import com.readytalk.revori.util.SetMultimap;
 
 public class DiffMachine {
 
-  // used only for registering / unregistering matchers
-  private final Map<RowListener, Matcher> matchers = new HashMap<RowListener, Matcher>();
-
   private final SetMultimap<Table, Matcher> newMatchers = new SetMultimap<Table, Matcher>();
   
   private final SetMultimap<Table, Matcher> matchersForTable = new SetMultimap<Table, Matcher>();
@@ -47,34 +44,35 @@ public class DiffMachine {
     });
   }
 
-  public void register(RowListener listener, QueryTemplate query, Object... params) {
-    final Matcher matcher = new Matcher(listener, query, params);
-    matchers.put(listener, matcher);
-    register(matcher, newMatchers);
-  }
-
   public static void unregister(final Matcher matcher,
                                 final SetMultimap<Table, Matcher> matchers)
   {
     matcher.query.source.visit(new SourceVisitor() {
       public void visit(Source s) {
         if (s instanceof TableReference) {
-          matchers.get(((TableReference) s).table).remove(matcher);
+          matchers.remove(((TableReference) s).table, matcher);
         }
       }
     });
   }
 
-  public void unregister(RowListener listener) {
-    final Matcher matcher = matchers.remove(listener);
+  public Subscription subscribe(RowListener listener, QueryTemplate query, Object... params) {
+    final Matcher matcher = new Matcher(listener, query, params);
+    register(matcher, newMatchers);
 
-    if (matcher != null) {
-      unregister(matcher, newMatchers);
-      unregister(matcher, matchersForTable);
-    }
+    return new Subscription() {
+      boolean subscribed = true;
+      public void cancel() {
+        if(subscribed) {
+          subscribed = false;
+          unregister(matcher, newMatchers);
+          unregister(matcher, matchersForTable);
+        }
+      }
+    };
   }
 
-  public void promoteMatchers() {
+  private void promoteMatchers() {
     matchersForTable.putAll(newMatchers);
     newMatchers.clear();
   }

@@ -5,6 +5,7 @@ import java.util.Set;
 import com.readytalk.revori.Revision;
 import com.readytalk.revori.ConflictResolver;
 import com.readytalk.revori.ForeignKeyResolver;
+import com.readytalk.revori.subscribe.Subscription;
 
 public class BufferServer implements RevisionServer {
   private final Set<BufferServer> dirtySet;
@@ -70,11 +71,8 @@ public class BufferServer implements RevisionServer {
     flush(true);
   }
 
-  public void registerListener(Runnable listener) {
+  public Subscription registerListener(Runnable listener) {
     throw new UnsupportedOperationException();
   }
 
-  public void unregisterListener(Runnable listener) {
-    throw new UnsupportedOperationException();
-  }
 }

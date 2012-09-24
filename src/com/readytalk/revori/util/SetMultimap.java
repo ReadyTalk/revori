@@ -22,7 +22,7 @@ public class SetMultimap<K, V> {
     }
 
     public void remove() {
-      throw new UnsupportedOperationException();
+      throw new IllegalStateException();
     }
   };
 
@@ -42,6 +42,18 @@ public class SetMultimap<K, V> {
     if(_get(key).add(value)) {
       size++;
     }
+  }
+
+  public boolean remove(K key, V value) {
+    Set<V> s = map.get(key);
+    if(s != null) {
+      boolean r = s.remove(value);
+      if(r) {
+        size--;
+      }
+      return r;
+    }
+    return false;
   }
 
   public Set<V> get(final K key) {

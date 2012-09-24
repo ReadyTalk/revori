@@ -27,6 +27,7 @@ import com.readytalk.revori.TableReference;
 import com.readytalk.revori.server.SimpleRevisionServer;
 import com.readytalk.revori.subscribe.DiffServer;
 import com.readytalk.revori.subscribe.DiffMachine;
+import com.readytalk.revori.subscribe.Subscription;
 import com.readytalk.revori.subscribe.RowListener;
 
 import static com.readytalk.revori.util.Util.cols;
@@ -115,7 +116,7 @@ public class Subscribe extends TestCase {
 
     listener.expectNothing();
 
-    machine.register(listener, query);
+    Subscription subs = machine.subscribe(listener, query);
 
     while(machine.next()) {}
 
@@ -133,5 +134,19 @@ public class Subscribe extends TestCase {
 
     listener.expect(Kind.Update, 2, "two");
     listener.expectNothing();
+
+    subs.cancel();
+
+    base = server.head();
+    builder = base.builder();
+
+    builder.insert(Throw, numbers, 3, name, "three");
+
+    server.merge(base, builder.commit());
+
+    while(machine.next()) {}
+
+    listener.expectNothing();
+
   }
 }

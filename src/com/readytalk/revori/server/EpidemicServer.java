@@ -23,6 +23,7 @@ import com.readytalk.revori.server.protocol.Writable;
 import com.readytalk.revori.server.protocol.WriteContext;
 import com.readytalk.revori.server.protocol.Stringable;
 import com.readytalk.revori.util.BufferOutputStream;
+import com.readytalk.revori.subscribe.Subscription;
 
 import java.lang.ref.WeakReference;
 import java.io.InputStream;
@@ -121,13 +122,14 @@ public class EpidemicServer implements RevisionServer {
     }
   }
 
-  public synchronized void registerListener(Runnable listener) {
+  public synchronized Subscription registerListener(final Runnable listener) {
     listeners.add(listener);
     listener.run();
-  }
-
-  public synchronized void unregisterListener(Runnable listener) {
-    listeners.remove(listener);
+    return new Subscription() {
+      public void cancel() {
+        listeners.remove(listener);
+      }
+    };
   }
   
   // listeners are removed after being run

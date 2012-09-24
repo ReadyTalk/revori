@@ -15,6 +15,7 @@ import com.readytalk.revori.Revisions;
 import com.readytalk.revori.RevisionBuilder;
 import com.readytalk.revori.DuplicateKeyResolution;
 import com.readytalk.revori.DiffResult;
+import com.readytalk.revori.subscribe.Subscription;
 
 import java.util.Map;
 import java.util.HashMap;
@@ -39,27 +40,27 @@ public class Bridge {
     this(DirectTaskHandler);
   }
 
-  public Token register(RevisionServer leftServer,
+  public Subscription register(RevisionServer leftServer,
                         Path leftPath,
                         RevisionServer rightServer,
                         Path rightPath)
   {
-    Mapping left = new Mapping
+    final Mapping left = new Mapping
       (listener(leftServer), leftPath.body, rightServer, rightPath.body);
     
     register(left);
 
-    Mapping right = new Mapping
+    final Mapping right = new Mapping
       (listener(rightServer), rightPath.body, leftServer, leftPath.body);
 
     register(right);
 
-    return new Token(left, right);
-  }
-
-  public void unregister(Token token) {
-    unregister(token.left);
-    unregister(token.right);
+    return new Subscription() {
+      public void cancel() {
+        unregister(left);
+        unregister(right);
+      }
+    };
   }
 
   private void register(Mapping mapping) {
@@ -75,8 +76,8 @@ public class Bridge {
       delete(mapping.leftListener.tree, mapping.leftPath);
 
       if (mapping.leftListener.tree.isEmpty()) {
-        mapping.leftListener.server.unregisterListener
-          (listeners.remove(mapping.leftListener));
+        mapping.leftListener.subscription.cancel();
+        listeners.remove(mapping.leftListener);
       }
     }
   }
@@ -85,7 +86,7 @@ public class Bridge {
     Listener listener = listeners.get(server);
     if (listener == null) {
       listeners.put(server, listener = new Listener(taskHandler, server));
-      server.registerListener(listener);
+      listener.subscription = server.registerListener(listener);
     }
     return listener;
   }
@@ -149,18 +150,6 @@ public class Bridge {
     map(set, task, null);
   }
 
-  public static final class Token {
-    private final Mapping left;
-    private final Mapping right;
-
-    private Token(Mapping left,
-                  Mapping right)
-    {
-      this.left = left;
-      this.right = right;
-    }
-  }
-
   public static class Path {
     private final Comparable[] body;
 
@@ -209,6 +198,7 @@ public class Bridge {
     public final Map<Comparable, Node> tree = new HashMap();
     public Revision base = Revisions.Empty;
     public boolean active;
+    public Subscription subscription;
 
     public static final Task start = new Task() {
         public void run(Mapping mapping, Object argument) {
