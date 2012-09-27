@@ -34,16 +34,18 @@ class BooleanUnaryAdapter implements ExpressionAdapter {
     Object value = operand.evaluate(convertDummyToNull);
 
     if (value == null) {
-      return false;
+      return type == UnaryOperation.Type.IsNull;
     } else if (value == Compare.Undefined) {
       return Compare.Undefined;
     } else {
       switch (type) {
       case Not:
         return value != Boolean.TRUE;
+      case IsNull:
+        return false; // the true case is handled above
 
       default: throw new RuntimeException
-          ("unexpected comparison type: " + type);
+          ("unexpected UnaryOperation type: " + type);
       }
     }
   }

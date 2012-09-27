@@ -27,6 +27,10 @@ public class Database {
     return server.head();
   }
 
+  public RevisionServer server() {
+    return server;
+  }
+
   public void update(Transaction trans) {
     Revision head = head();
     RevisionBuilder b = head.builder();
@@ -37,6 +41,14 @@ public class Database {
 
   public QueryResult query(QueryTemplate template, Object... arguments) {
     return Revisions.Empty.diff(head(), template, arguments);
+  }
+
+  public void update(PatchTemplate template, Object... arguments) {
+    Revision head = head();
+    RevisionBuilder b = head.builder();
+    b.apply(template, arguments);
+    merge(head, b.commit());
+
   }
 
   public void merge(Revision base, Revision fork) {
