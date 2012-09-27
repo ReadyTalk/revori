@@ -8,6 +8,8 @@
 package unittests;
 
 import static com.readytalk.revori.ExpressionFactory.reference;
+import static com.readytalk.revori.ExpressionFactory.not;
+import static com.readytalk.revori.ExpressionFactory.isNull;
 import static com.readytalk.revori.util.Util.cols;
 import static com.readytalk.revori.util.Util.list;
 import static org.junit.Assert.*;
@@ -89,6 +91,60 @@ public class Diffs {
     result = first.diff(second, query);
 
     // we didn't change any of the queried columns, so we shouldn't see any difference.
+    assertEquals(QueryResult.Type.End, result.nextRow());
+    
+  }
+
+  @Test
+  public void testRemoveQueriedColumns() {
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Column<String> origin = new Column<String>(String.class);
+    Table numbers = new Table(cols(number));
+  
+    Revision tail = Revisions.Empty;
+  
+    PatchTemplate insert = new InsertTemplate
+      (numbers,
+       cols(number, name, origin),
+       list((Expression) new Parameter(), new Parameter(), new Parameter()),
+       DuplicateKeyResolution.Throw);
+  
+    RevisionBuilder builder = tail.builder();
+  
+    builder.apply(insert, 0, "zero", "far too recently");
+    builder.apply(insert, 1, "one", "long ago");
+    builder.apply(insert, 2, "two", "long ago");
+    builder.apply(insert, 3, "three", "a little less long ago");
+
+    Revision first = builder.commit();
+    
+    TableReference numbersReference = new TableReference(numbers);
+    
+    QueryTemplate query = new QueryTemplate
+    (list((Expression)
+      reference(numbersReference, number),
+      reference(numbersReference, name),
+      reference(numbersReference, origin)),
+     numbersReference,
+     not(isNull(reference(numbersReference, origin))));
+    
+    builder = first.builder();
+  
+    builder.table(numbers)
+      .row(0)
+      .delete(origin)
+      .up().up();
+
+    Revision second = builder.commit();
+
+    QueryResult result = first.diff(second, query);
+
+    assertEquals(QueryResult.Type.Deleted, result.nextRow());
+    assertEquals(false, result.rowUpdated());
+    assertEquals(0, result.nextItem());
+    assertEquals("zero", result.nextItem());
+    assertEquals("far too recently", result.nextItem());
     assertEquals(QueryResult.Type.End, result.nextRow());
     
   }
