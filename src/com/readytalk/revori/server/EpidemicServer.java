@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-public class EpidemicServer implements RevisionServer {
+public class EpidemicServer implements NetworkServer {
   private static final boolean Debug = false;
 
   private static final UUID DefaultInstance = UUID.fromString
@@ -73,6 +73,7 @@ public class EpidemicServer implements RevisionServer {
     this.foreignKeyResolver = foreignKeyResolver;
     this.network = network;
     this.localNode = state(new NodeKey(self, instance));
+    this.id = self.asString();
   }
 
   public EpidemicServer(NodeConflictResolver conflictResolver,
@@ -1090,39 +1091,6 @@ public class EpidemicServer implements RevisionServer {
     }
   }
 
-  public static interface Network {
-    public void send(NodeID source, NodeID destination, Writable message);
-  }
-
-  public static class NodeID implements Comparable<NodeID>, Stringable {
-    public final String id;
-
-    public NodeID(String id) {
-      this.id = id;
-    }
-
-    public int hashCode() {
-      return id.hashCode();
-    }
-
-    public boolean equals(Object o) {
-      return o instanceof NodeID && compareTo((NodeID) o) == 0;
-    }
-
-    @Override
-    public int compareTo(NodeID o) {
-      return id.compareTo(o.id);
-    }
-
-    public String toString() {
-      return "nodeID[" + id + "]";
-    }
-
-    public String asString() {
-      return id;
-    }
-  }
-
   private static class NodeKey implements Comparable<NodeKey>, Stringable {
     public final NodeID id;
     public final UUID instance;
@@ -1163,17 +1131,6 @@ public class EpidemicServer implements RevisionServer {
     public String asString() {
       return instance + ":" + id.asString();
     }
-  }
-
-  public static interface NodeConflictResolver {
-    public Object resolveConflict(NodeID leftNode,
-                                  NodeID rightNode,
-                                  Table table,
-                                  Column column,
-                                  Object[] primaryKeyValues,
-                                  Object baseValue,
-                                  Object leftValue,
-                                  Object rightValue);
   }
 
   private static class MyConflictResolver implements ConflictResolver {

@@ -24,7 +24,7 @@ import com.readytalk.revori.ForeignKey;
 import com.readytalk.revori.Index;
 import com.readytalk.revori.Table;
 import com.readytalk.revori.server.EpidemicServer;
-import com.readytalk.revori.server.EpidemicServer.NodeID;
+import com.readytalk.revori.server.NetworkServer.NodeID;
 import com.readytalk.revori.server.StreamUtil;
 
 public class Protocol {

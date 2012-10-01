@@ -23,9 +23,9 @@ import com.readytalk.revori.ForeignKeyResolver;
 import com.readytalk.revori.ForeignKeyResolvers;
 import com.readytalk.revori.util.BufferOutputStream;
 import com.readytalk.revori.server.EpidemicServer;
-import com.readytalk.revori.server.EpidemicServer.NodeID;
-import com.readytalk.revori.server.EpidemicServer.Network;
-import com.readytalk.revori.server.EpidemicServer.NodeConflictResolver;
+import com.readytalk.revori.server.NetworkServer.NodeID;
+import com.readytalk.revori.server.NetworkServer.Network;
+import com.readytalk.revori.server.NetworkServer.NodeConflictResolver;
 import com.readytalk.revori.server.protocol.ReadContext;
 import com.readytalk.revori.server.protocol.Writable;
 import com.readytalk.revori.server.protocol.Readable;
@@ -544,7 +544,7 @@ public class Epidemic extends TestCase{
       } else {
         return rightValue;
       }
-    }    
+    }
   }
 
   private static class NoConflictResolver implements NodeConflictResolver {
