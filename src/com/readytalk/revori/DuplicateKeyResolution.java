@@ -14,20 +14,20 @@ package com.readytalk.revori;
  */
 public enum DuplicateKeyResolution {
   /**
-   * Instructs the MyDBMS to silently skip the insert or update,
-   * leaving the old row(s) intact.
+   * Instructs the RevisionBuilder to silently skip the insert or
+   * update, leaving the old row(s) intact.
    */
   Skip,
       
     /**
-     * Instructs the MyDBMS to silently overwrite the old row with the
-     * new one.
+     * Instructs the RevisionBuilder to silently overwrite the old row
+     * with the new one.
      */
     Overwrite,
 
     /**
-     * Instructs the MyDBMS to throw a DuplicateKeyException when a
-     * conflict is detected.
+     * Instructs the RevisionBuilder to throw a DuplicateKeyException
+     * when a conflict is detected.
      */
     Throw;
 }
