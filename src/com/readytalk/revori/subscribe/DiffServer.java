@@ -12,6 +12,16 @@ import com.readytalk.revori.Revision;
 import com.readytalk.revori.Revisions;
 import com.readytalk.revori.server.RevisionServer;
 
+/**
+ * An instance of this class may be used to keep track of
+ * "significant" revisions in the stream of revisions produced by a
+ * RevisionServer.  Such revisions will be returned in sequence by
+ * succesive calls to next(LinearRevision).  This is useful for
+ * implementing streams where some revisions may have only partial
+ * data, whereas others have complete data, and thus the latter are
+ * sent preferentially to clients, with partial updates sent only when
+ * after the latest complete update has been sent.
+ */
 public class DiffServer {
   private static final Object Head = new Object();
 
