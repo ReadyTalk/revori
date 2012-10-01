@@ -32,6 +32,7 @@ import com.readytalk.revori.QueryTemplate;
 import com.readytalk.revori.QueryResult;
 import com.readytalk.revori.DuplicateKeyResolution;
 
+import java.util.Iterator;
 
 public class GeneralTest extends TestCase{
     @Test
@@ -641,4 +642,79 @@ public class GeneralTest extends TestCase{
 
         assertEquals(result.nextRow(), QueryResult.Type.End);
     }
+
+  @Test
+  public void testQueryIterator() {
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Table numbers = new Table(cols(number));
+
+    Revision tail = Revisions.Empty;
+
+    PatchTemplate insert = new InsertTemplate
+      (numbers,
+       cols(number, name),
+       list((Expression) new Parameter(), new Parameter()),
+       DuplicateKeyResolution.Throw);
+
+    RevisionBuilder builder = tail.builder();
+
+    builder.apply(insert,  1, "one");
+    builder.apply(insert,  2, "two");
+    builder.apply(insert,  3, "three");
+    builder.apply(insert,  4, "four");
+    builder.apply(insert,  5, "five");
+    builder.apply(insert,  6, "six");
+    builder.apply(insert,  7, "seven");
+    builder.apply(insert,  8, "eight");
+    builder.apply(insert,  9, "nine");
+    builder.apply(insert, 10, "ten");
+    builder.apply(insert, 11, "eleven");
+    builder.apply(insert, 12, "twelve");
+    builder.apply(insert, 13, "thirteen");
+
+    Revision head = builder.commit();
+
+    { Iterator<Integer> it = head.queryAll(numbers.primaryKey, number);
+
+      assertTrue(it.hasNext());
+
+      assertEquals( 1, (int) it.next());
+      assertEquals( 2, (int) it.next());
+      assertEquals( 3, (int) it.next());
+      assertEquals( 4, (int) it.next());
+      assertEquals( 5, (int) it.next());
+      assertEquals( 6, (int) it.next());
+      assertEquals( 7, (int) it.next());
+      assertEquals( 8, (int) it.next());
+      assertEquals( 9, (int) it.next());
+      assertEquals(10, (int) it.next());
+      assertEquals(11, (int) it.next());
+      assertEquals(12, (int) it.next());
+      assertEquals(13, (int) it.next());
+
+      assertTrue(! it.hasNext());
+    }
+
+    { Iterator<String> it = head.queryAll(numbers.primaryKey, name);
+
+      assertTrue(it.hasNext());
+
+      assertEquals("one",      it.next());
+      assertEquals("two",      it.next());
+      assertEquals("three",    it.next());
+      assertEquals("four",     it.next());
+      assertEquals("five",     it.next());
+      assertEquals("six",      it.next());
+      assertEquals("seven",    it.next());
+      assertEquals("eight",    it.next());
+      assertEquals("nine",     it.next());
+      assertEquals("ten",      it.next());
+      assertEquals("eleven",   it.next());
+      assertEquals("twelve",   it.next());
+      assertEquals("thirteen", it.next());
+
+      assertTrue(! it.hasNext());
+    }
+  }
 }

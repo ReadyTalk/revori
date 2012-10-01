@@ -8,11 +8,13 @@
 package com.readytalk.revori.imp;
 
 import static com.readytalk.revori.util.Util.copy;
+import static com.readytalk.revori.util.Util.list;
 
 import com.readytalk.revori.Index;
 import com.readytalk.revori.View;
 import com.readytalk.revori.Column;
 import com.readytalk.revori.Revision;
+import com.readytalk.revori.Revisions;
 import com.readytalk.revori.RevisionBuilder;
 import com.readytalk.revori.QueryTemplate;
 import com.readytalk.revori.QueryResult;
@@ -27,6 +29,8 @@ import com.readytalk.revori.Comparators;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 public class MyRevision implements Revision {
   public static final MyRevision Empty = new MyRevision
@@ -42,6 +46,66 @@ public class MyRevision implements Revision {
   public MyRevision(Object token, Node root) {
     this.token = token;
     this.root = root;
+  }
+
+  public <T> T query(Column<T> column, Index index, Object ... indexValues) {
+    Object[] path = new Object[indexValues.length + 2];
+    path[0] = index;
+    System.arraycopy(indexValues, 0, path, 1, indexValues.length);
+    path[indexValues.length + 1] = column;
+    return (T) query(path);
+  }
+
+  public <T> Iterator<T> queryAll(final Index index, final Column<T> column) {
+    TableReference reference = new TableReference(index.table);
+
+    final ColumnReferenceAdapter adapter = new ColumnReferenceAdapter
+      (reference, column);
+
+    Plan plan = new Plan(index);
+    for (int i = 0; i < plan.scans.length; ++i) {
+      plan.scans[i] = IntervalScan.Unbounded;
+    }
+
+    ExpressionContext context = new ExpressionContext
+      (new Object[0], list((ExpressionAdapter) adapter));
+
+    context.columnReferences.add(adapter);
+
+    final TableIterator it = new TableIterator
+      (reference,
+       MyRevision.Empty, NodeStack.Null,
+       this, new NodeStack(),
+       ConstantAdapter.True,
+       context,
+       plan,
+       false);
+
+    return new Iterator<T>() {
+      QueryResult.Type type;
+
+      public boolean hasNext() {
+        if (type == null) {
+          type = it.nextRow();
+        }
+
+        return type != QueryResult.Type.End;
+      }
+
+      public T next() {
+        if (hasNext()) {
+          T v = (T) adapter.evaluate(true);
+          type = null;
+          return v;
+        } else {
+          throw new NoSuchElementException();
+        }
+      }
+
+      public void remove() {
+        throw new UnsupportedOperationException();
+      }
+    };
   }
 
   public Object query(Object[] path,

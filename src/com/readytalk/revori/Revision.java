@@ -7,6 +7,8 @@
 
 package com.readytalk.revori;
 
+import java.util.Iterator;
+
 /**
  * Type representing an immutable database revision.<p>
  *
@@ -53,6 +55,18 @@ package com.readytalk.revori;
  *   revision to be queried as the second</li></ul></li></ul>
  */
 public interface Revision {
+  /**
+   * Retrieves the value, if any, associated with the specified column
+   * in this revision.
+   */
+  public <T> T query(Column<T> column, Index index, Object ... indexValues);
+
+  /**
+   * Retrieves any values associated with the specified column in this
+   * revision, ordered by the specified index.
+   */
+  public <T> Iterator<T> queryAll(Index index, Column<T> column);
+
   /**
    * Retrieves the value, if any, associated with the specified path
    * in this revision.  This is equivalent to query(path, 0,
