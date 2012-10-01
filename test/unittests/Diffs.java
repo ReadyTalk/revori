@@ -83,8 +83,7 @@ public class Diffs {
     // rewrite history
     builder.table(numbers)
       .row(0)
-      .column(origin, "not long after <one>")
-      .up().up();
+      .update(origin, "not long after <one>");
 
     Revision second = builder.commit();
 
@@ -133,8 +132,7 @@ public class Diffs {
   
     builder.table(numbers)
       .row(0)
-      .delete(origin)
-      .up().up();
+      .delete(origin);
 
     Revision second = builder.commit();
 
@@ -147,5 +145,42 @@ public class Diffs {
     assertEquals("far too recently", result.nextItem());
     assertEquals(QueryResult.Type.End, result.nextRow());
     
+  }
+
+  @Test
+  public void testUpdate() {
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Table numbers = new Table(cols(number));
+  
+    Revision tail = Revisions.Empty;
+  
+    RevisionBuilder builder = tail.builder();
+  
+    builder.insert(DuplicateKeyResolution.Throw, numbers, 0, name, "zero");
+
+    Revision first = builder.commit();
+    
+    builder = tail.builder();
+  
+    builder.insert(DuplicateKeyResolution.Overwrite, numbers, 0, name, "none");
+
+    Revision second = builder.commit();
+    
+    TableReference numbersReference = new TableReference(numbers);
+
+    QueryTemplate query = new QueryTemplate
+      (list((Expression) reference(numbersReference, name)),
+       numbersReference,
+       new Constant(true));
+
+    QueryResult result = first.diff(second, query);
+
+    assertEquals(QueryResult.Type.Deleted, result.nextRow());
+    assertTrue(result.rowUpdated());
+    assertEquals("zero", result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("none", result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
   }
 }

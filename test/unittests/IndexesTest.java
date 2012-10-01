@@ -380,7 +380,7 @@ public class IndexesTest extends TestCase{
     builder = first.builder();
     builder.table(places)
       .row("China", "N/A", "Shanghai")
-      .column(color, "maroon");
+      .update(color, "maroon");
     Revision right = builder.commit();
     
     Revision merge = first.merge(left, right, ConflictResolvers.Restrict, ForeignKeyResolvers.Restrict);

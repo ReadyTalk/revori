@@ -30,15 +30,15 @@ public class TableBuilder extends TestCase {
     RevisionBuilder builder = Revisions.Empty.builder();
 
     builder.table(numbers)
-      .row(1).column(name, "one").up()
-      .row(2).column(name, "two").up()
-      .row(3).column(name, "three").up()
-      .row(4).column(name, "four").up()
-      .row(5).column(name, "five").up()
-      .row(6).column(name, "six").up()
-      .row(7).column(name, "seven").up()
-      .row(8).column(name, "eight").up()
-      .row(9).column(name, "nine").up().up();
+      .row(1).update(name, "one")
+      .row(2).update(name, "two")
+      .row(3).update(name, "three")
+      .row(4).update(name, "four")
+      .row(5).update(name, "five")
+      .row(6).update(name, "six")
+      .row(7).update(name, "seven")
+      .row(8).update(name, "eight")
+      .row(9).update(name, "nine");
 
     Revision first = builder.commit();
 
@@ -101,10 +101,10 @@ public class TableBuilder extends TestCase {
     builder = first.builder();
     // sorry, 7!
     builder.table(awesomeNumbers)
-      .delete(7.0).up();
+      .delete(7.0);
     //sorry, e!
     builder.table(awesomeNumbers)
-      .delete(Math.E).up();
+      .delete(Math.E);
     
     Revision second = builder.commit();
 
@@ -127,14 +127,14 @@ public class TableBuilder extends TestCase {
     RevisionBuilder builder = Revisions.Empty.builder();
 
     builder.table(numbers)
-      .row(1).column(name, "one").up()
-      .row(2).column(name, "two").up().up();
+      .row(1).update(name, "one")
+      .row(2).update(name, "two");
 
     Revision first = builder.commit();
     
     builder = first.builder();
     builder.table(numbers)
-      .row(2).delete(name).up().up();
+      .row(2).delete(name);
     Revision second = builder.commit();
 
     assertEquals("one", second.query(numbers.primaryKey, 1, name));
@@ -158,15 +158,15 @@ public class TableBuilder extends TestCase {
 
     builder
       .table(numbers)
-      .row(1).column(numberName, "one").up()
-      .row(2).column(numberName, "two").up().up()
+      .row(1).update(numberName, "one")
+      .row(2).update(numberName, "two")
       .table(points)
-      .row(0, 0).column(pointName, "origin").up()
-      .row(1, 0).column(pointName, "x").up()
-      .row(0, 1).column(pointName, "y").up().up()
+      .row(0, 0).update(pointName, "origin")
+      .row(1, 0).update(pointName, "x")
+      .row(0, 1).update(pointName, "y")
       .table(numbers)
-      .row(3).column(numberName, "three").up()
-      .row(4).column(numberName, "four").up().up();
+      .row(3).update(numberName, "three")
+      .row(4).update(numberName, "four");
 
     Revision first = builder.commit();
 

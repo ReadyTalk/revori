@@ -17,17 +17,16 @@ public interface TableBuilder {
   public RowBuilder row(Object ... key);
 
   /**
+   * Prepares a TableBuilder to update the given table.
+   * @return said table builder
+   */
+  public TableBuilder table(Table table);
+  
+  /**
    * Deletes the row with the specified primary key.
    * @return self
    */
   public TableBuilder delete(Object ... key);
-
-  /**
-   * Indicate that no further updates will
-   * be performed on this TableBuilder.
-   * @return the parent RevisionBuilder
-   */
-  public RevisionBuilder up();
 
   /**
    * Inserts the row with specified primary key,
@@ -35,4 +34,21 @@ public interface TableBuilder {
    * @return self
    */
   public TableBuilder key(Object... key);
+
+  /**
+   * Identical to commit(ForeignKeyResolvers.Restrict). 
+   */
+  public Revision commit();
+
+  /**
+   * Commits the changes accumulated in this builder, producing a
+   * revision which reflects the base revision with which was created
+   * plus any modifications applied thereafter.  This call invalidates
+   * the builder; any further attempts to apply modifications to it
+   * will result in IllegalStateExceptions.
+   *
+   * Any foreign key violations present at the time of this call will
+   * trigger calls to foreignKeyResolver.handleBrokenReference.
+   */
+  public Revision commit(ForeignKeyResolver foreignKeyResolver);
 }

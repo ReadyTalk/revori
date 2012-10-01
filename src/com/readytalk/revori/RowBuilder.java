@@ -14,15 +14,7 @@ public interface RowBuilder {
    * in the row this RowBuilder was constructed for. 
    * @return self
    */
-  public <T> RowBuilder column(Column<T> key,
-                           T value);
-
-  /**
-   * Inserts or updates multiple columns at once.
-   * @return self
-   */
-  public RowBuilder columns(ColumnList columns,
-                            Object ... values);
+  public <T> RowBuilder update(Column<T> key, T value);
 
   /**
    * Deletes the specified column from the row this
@@ -32,10 +24,32 @@ public interface RowBuilder {
   public RowBuilder delete(Column<?> key);
 
   /**
-   * Indicate that no further updates will
-   * be performed on this RowBuilder.
-   * @return the parent TableBuilder
+   * Prepares a TableBuilder to update the given table.
+   * @return said table builder
    */
-  public TableBuilder up();
+  public TableBuilder table(Table table);
   
+  /**
+   * Prepares a RowBuilder to insert or update a row given by the specified 
+   * primary key.
+   * @return said row builder
+   */
+  public RowBuilder row(Object ... key);
+
+  /**
+   * Identical to commit(ForeignKeyResolvers.Restrict). 
+   */
+  public Revision commit();
+
+  /**
+   * Commits the changes accumulated in this builder, producing a
+   * revision which reflects the base revision with which was created
+   * plus any modifications applied thereafter.  This call invalidates
+   * the builder; any further attempts to apply modifications to it
+   * will result in IllegalStateExceptions.
+   *
+   * Any foreign key violations present at the time of this call will
+   * trigger calls to foreignKeyResolver.handleBrokenReference.
+   */
+  public Revision commit(ForeignKeyResolver foreignKeyResolver);
 }

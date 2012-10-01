@@ -927,28 +927,12 @@ class MyRevisionBuilder implements RevisionBuilder {
         }
       }
       
-      public <T> RowBuilder column(Column<T> key,
+      public <T> RowBuilder update(Column<T> key,
                                T value)
       {
         path[path.length - 2] = key;
         path[path.length - 1] = value;
         insert(DuplicateKeyResolution.Overwrite, path);
-        return this;
-      }
-      
-      public RowBuilder columns(ColumnList columns,
-                                Object ... values)
-      {
-        // TODO: optimize
-        if(columns.columns.size() != values.length) {
-          throw new IllegalArgumentException
-            ("wrong number of parameters (expected "
-             + columns.columns.size() + "; got "
-             + values.length + ")");
-        }
-        for(int i = 0; i < values.length; i++) {
-          column((Column)columns.columns.get(i), values[i]);
-        }
         return this;
       }
 
@@ -958,7 +942,23 @@ class MyRevisionBuilder implements RevisionBuilder {
         return this;
       }
 
-      public TableBuilder up() {
+      public RowBuilder row(Object ... key) {
+        return up().row(key);
+      }
+
+      public TableBuilder table(Table table) {
+        return up().table(table);
+      }
+
+      public Revision commit() {
+        return commit(ForeignKeyResolvers.Restrict);
+      }
+
+      public Revision commit(ForeignKeyResolver foreignKeyResolver) {
+        return up().commit(foreignKeyResolver);
+      }
+
+      private TableBuilder up() {
         MyTableBuilder.this.rowBuilder = this;
         return MyTableBuilder.this;
       }
@@ -998,7 +998,19 @@ class MyRevisionBuilder implements RevisionBuilder {
       return this;
     }
 
-    public RevisionBuilder up() {
+    public TableBuilder table(Table table) {
+      return up().table(table);
+    }
+
+    public Revision commit() {
+      return commit(ForeignKeyResolvers.Restrict);
+    }
+
+    public Revision commit(ForeignKeyResolver foreignKeyResolver) {
+      return up().commit(foreignKeyResolver);
+    }
+
+    private RevisionBuilder up() {
       MyRevisionBuilder.this.tableBuilder = this;
       return MyRevisionBuilder.this;
     }
