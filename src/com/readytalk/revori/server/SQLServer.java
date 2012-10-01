@@ -1289,6 +1289,24 @@ public class SQLServer implements RevisionServer {
     return new String(array);
   }
 
+  public static String tokenize(String in) {
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < in.length(); ++i) {
+      char c = in.charAt(i);
+      boolean isParen = c == '(' || c == ')';
+      if (isParen && i > 0 && (! Character.isWhitespace(in.charAt(i - 1)))) {
+        sb.append(' ');
+      }
+      sb.append(c);
+      if (isParen && i + 1 < in.length()
+          && (! Character.isWhitespace(in.charAt(i + 1))))
+      {
+        sb.append(' ');
+      }
+    }
+    return sb.toString();
+  }
+
   public static String makeList(Client client,
                                 Tree tree)
   {
@@ -2583,7 +2601,7 @@ public class SQLServer implements RevisionServer {
                                      OutputStream out)
     throws IOException
   {
-    String s = readString(in);
+    String s = tokenize(readString(in));
     try {
       if (client.copyContext == null) {
         if (Verbose) {
@@ -2613,7 +2631,7 @@ public class SQLServer implements RevisionServer {
                                       OutputStream out)
     throws IOException
   {
-    String s = readString(in);
+    String s = tokenize(readString(in));
     if (Verbose) {
       log.info("complete \"" + s + "\"");
     }
