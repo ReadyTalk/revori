@@ -9,6 +9,7 @@ import com.readytalk.revori.TableReference;
 import com.readytalk.revori.Source;
 import com.readytalk.revori.QueryTemplate;
 import com.readytalk.revori.SourceVisitor;
+import com.readytalk.revori.server.RevisionServer;
 
 import com.readytalk.revori.util.SetMultimap;
 
@@ -48,6 +49,10 @@ public class DiffMachine {
         }
       });
     }
+  }
+
+  public DiffMachine(RevisionServer server, boolean autoDeliver) {
+    this(new DiffServer(server), autoDeliver);
   }
 
   private static void register(final Matcher matcher, final SetMultimap<Table, Matcher> matchers) {
