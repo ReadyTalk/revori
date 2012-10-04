@@ -96,6 +96,8 @@ public class DiffIterator {
             fillRow(matcher.query.expressions.size(), queryResult);
             matcher.listener.handleDelete(row);
             return true;
+          } else {
+            break;
           }
         }
 
