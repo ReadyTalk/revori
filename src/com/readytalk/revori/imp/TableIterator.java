@@ -164,11 +164,32 @@ class TableIterator implements SourceIterator {
   }
 
   public boolean rowUpdated() {
-    return depth == plan.size - 1
+    // TODO: this is a really ugly way to avoid affecting the expression evaluation results
+    // The real problem is that test(pair.fork) is side-affecting - it causes
+    //   column references to be set to the fork values, where they might have
+    //   been the base values (for example, if rowUpdated is called right after getting
+    //   a QueryResult.Type.Deleted).  The real fix should involve removing
+    //   the side-affecting nature of test().
+    Object[] values = new Object[columnReferences.size()];
+    { int i = 0;
+      for (ColumnReferenceAdapter r: columnReferences) {
+        values[i++] = r.value;
+      }
+    }
+
+    boolean v = depth == plan.size - 1
       && pair.base != null
       && pair.fork != null
       && testFork
       && test(pair.fork);
+
+    { int i = 0;
+      for (ColumnReferenceAdapter r: columnReferences) {
+        r.value = values[i++];
+      }
+    }
+
+    return v;
   }
 
   private static void setValue(ColumnReferenceAdapter r, Node tree) {
