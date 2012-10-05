@@ -1119,8 +1119,12 @@ class MyRevisionBuilder implements RevisionBuilder {
 
       insert(duplicateKeyResolution, table, column, value, myPath);
     } else {
+      Object[] myPath = new Object[pathLength];
+      System.arraycopy(path, pathOffset, myPath, 0, pathLength);
+
       throw new IllegalArgumentException
-        ("wrong number of parameters for primary key");
+        ("wrong number of parameters for primary key " + table.primaryKey
+         + " path " + java.util.Arrays.toString(myPath));
     }
 
   }
