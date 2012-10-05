@@ -37,7 +37,7 @@ public class SimpleRevisionServer implements RevisionServer {
   }
 
   public void merge(Revision base, Revision fork) {
-    if (base != fork) {
+    if (base != fork || base != head.get()) {
       while (! head.compareAndSet(base, fork)) {
         Revision h = head.get();
         fork = base.merge
