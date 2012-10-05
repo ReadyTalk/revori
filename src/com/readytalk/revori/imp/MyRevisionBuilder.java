@@ -1031,10 +1031,6 @@ class MyRevisionBuilder implements RevisionBuilder {
     return ret;
   }
 
-  public void drop(Table table) {
-    
-  }
-
   public int apply(PatchTemplate template,
                    Object ... parameters)
   {

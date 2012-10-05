@@ -100,8 +100,6 @@ public interface RevisionBuilder {
    */
   public TableBuilder table(Table table);
 
-  public void drop(Table table);
-
   /**
    * Adds the specified index to this builder.  This has no effect if
    * the index is already present.
