@@ -395,7 +395,7 @@ public class EpidemicServer implements NetworkServer {
         send(state, new Ack
              (record.node, record.sequenceNumber, record.merged.node,
               record.merged.sequenceNumber));
-      } else {
+      } else if (! target.node.equals(state.key)) {
         debugMessage("diff to " + state.key + ": " + target.node + " " + lastSent.sequenceNumber + " " + record.sequenceNumber);
         send(state, new Diff
              (target.node, lastSent.sequenceNumber, record.sequenceNumber,
@@ -918,18 +918,25 @@ public class EpidemicServer implements NetworkServer {
 
   private static class BufferDiffBody implements DiffBody, Readable {
     public BufferOutputStream buffer;
+    public InputStream input;
 
     public Revision apply(EpidemicServer server, Revision base) {
       RevisionBuilder builder = base.builder();
       final int MaxDepth = 16;
       Object[] path = new Object[MaxDepth];
       int depth = 0;
-      InputStream in = new ByteArrayInputStream
-        (buffer.getBuffer(), 0, buffer.size());
-      ReadContext readContext = new ReadContext(in);
       boolean visitedColumn = true;
 
       try {
+        InputStream in;
+        if (input == null) {
+          in = new ByteArrayInputStream(buffer.getBuffer(), 0, buffer.size());
+        } else {
+          in = input;
+          in.reset();
+        }
+        ReadContext readContext = new ReadContext(in);
+
         while (true) {
           int flag = in.read();
           switch (flag) {
@@ -980,7 +987,6 @@ public class EpidemicServer implements NetworkServer {
           }
         }
       } catch (IOException e) {
-        // shouldn't be possible, since we're reading from a byte array
         throw new RuntimeException(e);
       }
     }
@@ -988,32 +994,37 @@ public class EpidemicServer implements NetworkServer {
     public void readFrom(ReadContext context)
       throws IOException
     {
-      buffer = new BufferOutputStream();
-      WriteContext writeContext = new WriteContext(buffer);
-      while (true) {
-        int flag = context.in.read();
-        switch (flag) {
-        case -1:
-          throw new EOFException();
+      if (context.in.markSupported()) {
+        context.in.mark(Integer.MAX_VALUE);
+        input = context.in;
+      } else {
+        buffer = new BufferOutputStream();
+        WriteContext writeContext = new WriteContext(buffer);
+        while (true) {
+          int flag = context.in.read();
+          switch (flag) {
+          case -1:
+            throw new EOFException();
 
-        case End:
-          buffer.write(flag);
-          return;
+          case End:
+            buffer.write(flag);
+            return;
 
-        case Descend:          
-        case Ascend:
-          buffer.write(flag);
-          break;
+          case Descend:          
+          case Ascend:
+            buffer.write(flag);
+            break;
 
-        case Key:
-        case Delete:
-        case Insert:
-          buffer.write(flag);
-          Protocol.write(writeContext, Protocol.read(context));
-          break;
+          case Key:
+          case Delete:
+          case Insert:
+            buffer.write(flag);
+            Protocol.write(writeContext, Protocol.read(context));
+            break;
 
-        default:
-          throw new RuntimeException("unexpected flag: " + flag);
+          default:
+            throw new RuntimeException("unexpected flag: " + flag);
+          }
         }
       }
     }
@@ -1125,7 +1136,7 @@ public class EpidemicServer implements NetworkServer {
     }
 
     public String toString() {
-      return "nodeKey[" + id + " " + instance + "]";
+      return "nodeKey[" + id + " " + instance.toString().substring(0, 8) + "]";
     }
 
     public String asString() {
