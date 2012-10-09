@@ -171,7 +171,7 @@ public class LowLevel extends TestCase{
     builder.insert(Throw, numbers, 10, name, "ten");
     builder.delete(numbers, 2);
     builder.delete(numbers, 3);
-    builder.insert(Overwrite, numbers, 4, name, "quatro");
+    builder.insert(Overwrite, numbers, 4, name, "cuatro");
     builder.delete(numbers, 5);
     builder.delete(numbers, 35);
     builder.insert(Throw, numbers, 25, name, "twenty-five");
@@ -218,7 +218,7 @@ public class LowLevel extends TestCase{
     expectEqual(result.fork(), name);
     expectEqual(result.next(), DiffResult.Type.Value);
     expectEqual(result.base(), "four");
-    expectEqual(result.fork(), "quatro");
+    expectEqual(result.fork(), "cuatro");
 
     expectEqual(result.next(), DiffResult.Type.Ascend);
     expectEqual(result.next(), DiffResult.Type.Key);
@@ -368,7 +368,7 @@ public class LowLevel extends TestCase{
     builder.insert(Throw, numbers, 10, name, "ten");
     builder.delete(numbers, 2);
     builder.delete(numbers, 3);
-    builder.insert(Overwrite, numbers, 4, name, "quatro");
+    builder.insert(Overwrite, numbers, 4, name, "cuatro");
     builder.delete(numbers, 5);
     builder.delete(numbers, 35);
     builder.insert(Throw, numbers, 25, name, "twenty-five");

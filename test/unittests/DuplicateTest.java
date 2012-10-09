@@ -6,6 +6,10 @@
    in all copies. */
 
 package unittests;
+
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.fail;
+
 import junit.framework.TestCase;
 
 import org.junit.Test;
@@ -33,7 +37,11 @@ import com.readytalk.revori.Parameter;
 import com.readytalk.revori.Constant;
 import com.readytalk.revori.DuplicateKeyResolution;
 
-public class DuplicateTest extends TestCase{
+public class DuplicateTest {
+
+  private static void expectEqual(Object actual, Object expected) {
+    assertEquals(expected, actual);
+  }  
     
     @Test
     public void testDuplicateInsertsThrowAndOverwrite(){
@@ -74,7 +82,7 @@ public class DuplicateTest extends TestCase{
 
         builder = first.builder();
 
-        builder.apply(insert, 4, "quatro");
+        builder.apply(insert, 4, "cuatro");
 
         PatchTemplate insertOrUpdate = new InsertTemplate
           (numbers,
@@ -95,15 +103,15 @@ public class DuplicateTest extends TestCase{
 
         QueryResult result = tail.diff(second, any);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "uno");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "two");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "three");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "quatro");
-        assertEquals(result.nextRow(), QueryResult.Type.End);	
+        expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result.nextItem(), "uno");
+        expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result.nextItem(), "two");
+        expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result.nextItem(), "three");
+        expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result.nextItem(), "cuatro");
+        expectEqual(result.nextRow(), QueryResult.Type.End);	
     }
     
     @Test
@@ -137,23 +145,23 @@ public class DuplicateTest extends TestCase{
         
         QueryResult result1 = tail.diff(first, q1);
         
-        assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result1.nextItem(), 1);
-        assertEquals(result1.nextItem(), "one");
-        assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result1.nextItem(), 2);
-        assertEquals(result1.nextItem(), "two");
-        assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result1.nextItem(), 3);
-        assertEquals(result1.nextItem(), "three");
-        assertEquals(result1.nextRow(), QueryResult.Type.End);        
+        expectEqual(result1.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result1.nextItem(), 1);
+        expectEqual(result1.nextItem(), "one");
+        expectEqual(result1.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result1.nextItem(), 2);
+        expectEqual(result1.nextItem(), "two");
+        expectEqual(result1.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result1.nextItem(), 3);
+        expectEqual(result1.nextItem(), "three");
+        expectEqual(result1.nextRow(), QueryResult.Type.End);        
         
         builder = first.builder();
 
         builder.apply(insert, 1, "uno");
         builder.apply(insert, 2, "dos");
         builder.apply(insert, 3, "tres");
-        builder.apply(insert, 4, "quatro");
+        builder.apply(insert, 4, "cuatro");
 
         Revision second = builder.commit();
 
@@ -167,26 +175,26 @@ public class DuplicateTest extends TestCase{
 
         QueryResult result2 = tail.diff(second, any);
 
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 1);
-        assertEquals(result2.nextItem(), "one");
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 2);
-        assertEquals(result2.nextItem(), "two");
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 3);
-        assertEquals(result2.nextItem(), "three");
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 4);
-        assertEquals(result2.nextItem(), "quatro");
-        assertEquals(result2.nextRow(), QueryResult.Type.End);
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 1);
+        expectEqual(result2.nextItem(), "one");
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 2);
+        expectEqual(result2.nextItem(), "two");
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 3);
+        expectEqual(result2.nextItem(), "three");
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 4);
+        expectEqual(result2.nextItem(), "cuatro");
+        expectEqual(result2.nextRow(), QueryResult.Type.End);
         
         QueryResult result3 = first.diff(second, any);
         
-        assertEquals(result3.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result3.nextItem(), 4);
-        assertEquals(result3.nextItem(), "quatro");
-        assertEquals(result3.nextRow(), QueryResult.Type.End);
+        expectEqual(result3.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result3.nextItem(), 4);
+        expectEqual(result3.nextItem(), "cuatro");
+        expectEqual(result3.nextRow(), QueryResult.Type.End);
     }
     
     @Test
@@ -220,23 +228,23 @@ public class DuplicateTest extends TestCase{
         
         QueryResult result1 = tail.diff(first, q1);
         
-        assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result1.nextItem(), 1);
-        assertEquals(result1.nextItem(), "one");
-        assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result1.nextItem(), 2);
-        assertEquals(result1.nextItem(), "two");
-        assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result1.nextItem(), 3);
-        assertEquals(result1.nextItem(), "three");
-        assertEquals(result1.nextRow(), QueryResult.Type.End);        
+        expectEqual(result1.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result1.nextItem(), 1);
+        expectEqual(result1.nextItem(), "one");
+        expectEqual(result1.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result1.nextItem(), 2);
+        expectEqual(result1.nextItem(), "two");
+        expectEqual(result1.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result1.nextItem(), 3);
+        expectEqual(result1.nextItem(), "three");
+        expectEqual(result1.nextRow(), QueryResult.Type.End);        
         
         builder = first.builder();
 
         builder.apply(insert, 1, "uno");
         builder.apply(insert, 2, "dos");
         builder.apply(insert, 3, "tres");
-        builder.apply(insert, 4, "quatro");
+        builder.apply(insert, 4, "cuatro");
 
         Revision second = builder.commit();
 
@@ -250,44 +258,44 @@ public class DuplicateTest extends TestCase{
 
         QueryResult result2 = tail.diff(second, any);
 
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 1);
-        assertEquals(result2.nextItem(), "uno");
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 2);
-        assertEquals(result2.nextItem(), "dos");
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 3);
-        assertEquals(result2.nextItem(), "tres");
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 4);
-        assertEquals(result2.nextItem(), "quatro");
-        assertEquals(result2.nextRow(), QueryResult.Type.End);
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 1);
+        expectEqual(result2.nextItem(), "uno");
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 2);
+        expectEqual(result2.nextItem(), "dos");
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 3);
+        expectEqual(result2.nextItem(), "tres");
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 4);
+        expectEqual(result2.nextItem(), "cuatro");
+        expectEqual(result2.nextRow(), QueryResult.Type.End);
         
         QueryResult result3 = first.diff(second, any);
         
-        assertEquals(result3.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result3.nextItem(), 1);
-        assertEquals(result3.nextItem(), "one");
-        assertEquals(result3.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result3.nextItem(), 1);
-        assertEquals(result3.nextItem(), "uno");
-        assertEquals(result3.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result3.nextItem(), 2);
-        assertEquals(result3.nextItem(), "two");
-        assertEquals(result3.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result3.nextItem(), 2);
-        assertEquals(result3.nextItem(), "dos");
-        assertEquals(result3.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result3.nextItem(), 3);
-        assertEquals(result3.nextItem(), "three");
-        assertEquals(result3.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result3.nextItem(), 3);
-        assertEquals(result3.nextItem(), "tres");
-        assertEquals(result3.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result3.nextItem(), 4);
-        assertEquals(result3.nextItem(), "quatro");
-        assertEquals(result3.nextRow(), QueryResult.Type.End);
+        expectEqual(result3.nextRow(), QueryResult.Type.Deleted);
+        expectEqual(result3.nextItem(), 1);
+        expectEqual(result3.nextItem(), "one");
+        expectEqual(result3.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result3.nextItem(), 1);
+        expectEqual(result3.nextItem(), "uno");
+        expectEqual(result3.nextRow(), QueryResult.Type.Deleted);
+        expectEqual(result3.nextItem(), 2);
+        expectEqual(result3.nextItem(), "two");
+        expectEqual(result3.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result3.nextItem(), 2);
+        expectEqual(result3.nextItem(), "dos");
+        expectEqual(result3.nextRow(), QueryResult.Type.Deleted);
+        expectEqual(result3.nextItem(), 3);
+        expectEqual(result3.nextItem(), "three");
+        expectEqual(result3.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result3.nextItem(), 3);
+        expectEqual(result3.nextItem(), "tres");
+        expectEqual(result3.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result3.nextItem(), 4);
+        expectEqual(result3.nextItem(), "cuatro");
+        expectEqual(result3.nextRow(), QueryResult.Type.End);
     }
     
     @Test
@@ -323,19 +331,19 @@ public class DuplicateTest extends TestCase{
         
         QueryResult result1 = tail.diff(first, q1);
         
-        assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result1.nextItem(), 1);
-        assertEquals(result1.nextItem(), "one");
-        assertEquals(result1.nextItem(), 1);
-        assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result1.nextItem(), 2);
-        assertEquals(result1.nextItem(), "two");
-        assertEquals(result1.nextItem(), 2);
-        assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result1.nextItem(), 3);
-        assertEquals(result1.nextItem(), "three");
-        assertEquals(result1.nextItem(), 3);
-        assertEquals(result1.nextRow(), QueryResult.Type.End);        
+        expectEqual(result1.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result1.nextItem(), 1);
+        expectEqual(result1.nextItem(), "one");
+        expectEqual(result1.nextItem(), 1);
+        expectEqual(result1.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result1.nextItem(), 2);
+        expectEqual(result1.nextItem(), "two");
+        expectEqual(result1.nextItem(), 2);
+        expectEqual(result1.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result1.nextItem(), 3);
+        expectEqual(result1.nextItem(), "three");
+        expectEqual(result1.nextItem(), 3);
+        expectEqual(result1.nextRow(), QueryResult.Type.End);        
         
         builder = first.builder();
 
@@ -355,7 +363,7 @@ public class DuplicateTest extends TestCase{
         }catch(DuplicateKeyException expected){}
         builder = first.builder();
         
-        builder.apply(insert, 4, "quatro", 4);
+        builder.apply(insert, 4, "cuatro", 4);
 
         Revision second = builder.commit();
 
@@ -370,31 +378,31 @@ public class DuplicateTest extends TestCase{
 
         QueryResult result2 = tail.diff(second, any);
 
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 1);
-        assertEquals(result2.nextItem(), "one");
-        assertEquals(result2.nextItem(), 1);
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 2);
-        assertEquals(result2.nextItem(), "two");
-        assertEquals(result2.nextItem(), 2);
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 3);
-        assertEquals(result2.nextItem(), "three");
-        assertEquals(result2.nextItem(), 3);
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 4);
-        assertEquals(result2.nextItem(), "quatro");
-        assertEquals(result2.nextItem(), 4);
-        assertEquals(result2.nextRow(), QueryResult.Type.End);
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 1);
+        expectEqual(result2.nextItem(), "one");
+        expectEqual(result2.nextItem(), 1);
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 2);
+        expectEqual(result2.nextItem(), "two");
+        expectEqual(result2.nextItem(), 2);
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 3);
+        expectEqual(result2.nextItem(), "three");
+        expectEqual(result2.nextItem(), 3);
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 4);
+        expectEqual(result2.nextItem(), "cuatro");
+        expectEqual(result2.nextItem(), 4);
+        expectEqual(result2.nextRow(), QueryResult.Type.End);
         
         QueryResult result3 = first.diff(second, any);
         
-        assertEquals(result3.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result3.nextItem(), 4);
-        assertEquals(result3.nextItem(), "quatro");
-        assertEquals(result3.nextItem(), 4);
-        assertEquals(result3.nextRow(), QueryResult.Type.End);
+        expectEqual(result3.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result3.nextItem(), 4);
+        expectEqual(result3.nextItem(), "cuatro");
+        expectEqual(result3.nextItem(), 4);
+        expectEqual(result3.nextRow(), QueryResult.Type.End);
     }
     
     @Test
@@ -430,26 +438,26 @@ public class DuplicateTest extends TestCase{
         
         QueryResult result1 = tail.diff(first, q1);
         
-        assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result1.nextItem(), 1);
-        assertEquals(result1.nextItem(), "one");
-        assertEquals(result1.nextItem(), 1);
-        assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result1.nextItem(), 2);
-        assertEquals(result1.nextItem(), "two");
-        assertEquals(result1.nextItem(), 2);
-        assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result1.nextItem(), 3);
-        assertEquals(result1.nextItem(), "three");
-        assertEquals(result1.nextItem(), 3);
-        assertEquals(result1.nextRow(), QueryResult.Type.End);        
+        expectEqual(result1.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result1.nextItem(), 1);
+        expectEqual(result1.nextItem(), "one");
+        expectEqual(result1.nextItem(), 1);
+        expectEqual(result1.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result1.nextItem(), 2);
+        expectEqual(result1.nextItem(), "two");
+        expectEqual(result1.nextItem(), 2);
+        expectEqual(result1.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result1.nextItem(), 3);
+        expectEqual(result1.nextItem(), "three");
+        expectEqual(result1.nextItem(), 3);
+        expectEqual(result1.nextRow(), QueryResult.Type.End);        
         
         builder = first.builder();
 
         builder.apply(insert, 1, "uno", 1);
         builder.apply(insert, 2, "dos", 2);
         builder.apply(insert, 3, "tres", 3);
-        builder.apply(insert, 4, "quatro", 4);
+        builder.apply(insert, 4, "cuatro", 4);
 
         Revision second = builder.commit();
 
@@ -464,31 +472,31 @@ public class DuplicateTest extends TestCase{
 
         QueryResult result2 = tail.diff(second, any);
 
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 1);
-        assertEquals(result2.nextItem(), "one");
-        assertEquals(result2.nextItem(), 1);
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 2);
-        assertEquals(result2.nextItem(), "two");
-        assertEquals(result2.nextItem(), 2);
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 3);
-        assertEquals(result2.nextItem(), "three");
-        assertEquals(result2.nextItem(), 3);
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 4);
-        assertEquals(result2.nextItem(), "quatro");
-        assertEquals(result2.nextItem(), 4);
-        assertEquals(result2.nextRow(), QueryResult.Type.End);
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 1);
+        expectEqual(result2.nextItem(), "one");
+        expectEqual(result2.nextItem(), 1);
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 2);
+        expectEqual(result2.nextItem(), "two");
+        expectEqual(result2.nextItem(), 2);
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 3);
+        expectEqual(result2.nextItem(), "three");
+        expectEqual(result2.nextItem(), 3);
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 4);
+        expectEqual(result2.nextItem(), "cuatro");
+        expectEqual(result2.nextItem(), 4);
+        expectEqual(result2.nextRow(), QueryResult.Type.End);
         
         QueryResult result3 = first.diff(second, any);
         
-        assertEquals(result3.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result3.nextItem(), 4);
-        assertEquals(result3.nextItem(), "quatro");
-        assertEquals(result3.nextItem(), 4);
-        assertEquals(result3.nextRow(), QueryResult.Type.End);
+        expectEqual(result3.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result3.nextItem(), 4);
+        expectEqual(result3.nextItem(), "cuatro");
+        expectEqual(result3.nextItem(), 4);
+        expectEqual(result3.nextRow(), QueryResult.Type.End);
     }
     
     @Test
@@ -524,26 +532,26 @@ public class DuplicateTest extends TestCase{
         
         QueryResult result1 = tail.diff(first, q1);
         
-        assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result1.nextItem(), 1);
-        assertEquals(result1.nextItem(), "one");
-        assertEquals(result1.nextItem(), 1);
-        assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result1.nextItem(), 2);
-        assertEquals(result1.nextItem(), "two");
-        assertEquals(result1.nextItem(), 2);
-        assertEquals(result1.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result1.nextItem(), 3);
-        assertEquals(result1.nextItem(), "three");
-        assertEquals(result1.nextItem(), 3);
-        assertEquals(result1.nextRow(), QueryResult.Type.End);        
+        expectEqual(result1.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result1.nextItem(), 1);
+        expectEqual(result1.nextItem(), "one");
+        expectEqual(result1.nextItem(), 1);
+        expectEqual(result1.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result1.nextItem(), 2);
+        expectEqual(result1.nextItem(), "two");
+        expectEqual(result1.nextItem(), 2);
+        expectEqual(result1.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result1.nextItem(), 3);
+        expectEqual(result1.nextItem(), "three");
+        expectEqual(result1.nextItem(), 3);
+        expectEqual(result1.nextRow(), QueryResult.Type.End);        
         
         builder = first.builder();
 
         builder.apply(insert, 1, "uno", 1);
         builder.apply(insert, 2, "dos", 2);
         builder.apply(insert, 3, "tres", 3);
-        builder.apply(insert, 4, "quatro", 4);
+        builder.apply(insert, 4, "cuatro", 4);
 
         Revision second = builder.commit();
 
@@ -558,55 +566,55 @@ public class DuplicateTest extends TestCase{
 
         QueryResult result2 = tail.diff(second, any);
 
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 1);
-        assertEquals(result2.nextItem(), "uno");
-        assertEquals(result2.nextItem(), 1);
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 2);
-        assertEquals(result2.nextItem(), "dos");
-        assertEquals(result2.nextItem(), 2);
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 3);
-        assertEquals(result2.nextItem(), "tres");
-        assertEquals(result2.nextItem(), 3);
-        assertEquals(result2.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result2.nextItem(), 4);
-        assertEquals(result2.nextItem(), "quatro");
-        assertEquals(result2.nextItem(), 4);
-        assertEquals(result2.nextRow(), QueryResult.Type.End);
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 1);
+        expectEqual(result2.nextItem(), "uno");
+        expectEqual(result2.nextItem(), 1);
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 2);
+        expectEqual(result2.nextItem(), "dos");
+        expectEqual(result2.nextItem(), 2);
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 3);
+        expectEqual(result2.nextItem(), "tres");
+        expectEqual(result2.nextItem(), 3);
+        expectEqual(result2.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result2.nextItem(), 4);
+        expectEqual(result2.nextItem(), "cuatro");
+        expectEqual(result2.nextItem(), 4);
+        expectEqual(result2.nextRow(), QueryResult.Type.End);
         
         QueryResult result3 = first.diff(second, any);
         
-        assertEquals(result3.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result3.nextItem(), 1);
-        assertEquals(result3.nextItem(), "one");
-        assertEquals(result3.nextItem(), 1);
-        assertEquals(result3.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result3.nextItem(), 1);
-        assertEquals(result3.nextItem(), "uno");
-        assertEquals(result3.nextItem(), 1);
-        assertEquals(result3.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result3.nextItem(), 2);
-        assertEquals(result3.nextItem(), "two");
-        assertEquals(result3.nextItem(), 2);
-        assertEquals(result3.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result3.nextItem(), 2);
-        assertEquals(result3.nextItem(), "dos");
-        assertEquals(result3.nextItem(), 2);
-        assertEquals(result3.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result3.nextItem(), 3);
-        assertEquals(result3.nextItem(), "three");
-        assertEquals(result3.nextItem(), 3);
-        assertEquals(result3.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result3.nextItem(), 3);
-        assertEquals(result3.nextItem(), "tres");
-        assertEquals(result3.nextItem(), 3);
-        assertEquals(result3.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result3.nextItem(), 4);
-        assertEquals(result3.nextItem(), "quatro");
-        assertEquals(result3.nextItem(), 4);
-        assertEquals(result3.nextRow(), QueryResult.Type.End);
+        expectEqual(result3.nextRow(), QueryResult.Type.Deleted);
+        expectEqual(result3.nextItem(), 1);
+        expectEqual(result3.nextItem(), "one");
+        expectEqual(result3.nextItem(), 1);
+        expectEqual(result3.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result3.nextItem(), 1);
+        expectEqual(result3.nextItem(), "uno");
+        expectEqual(result3.nextItem(), 1);
+        expectEqual(result3.nextRow(), QueryResult.Type.Deleted);
+        expectEqual(result3.nextItem(), 2);
+        expectEqual(result3.nextItem(), "two");
+        expectEqual(result3.nextItem(), 2);
+        expectEqual(result3.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result3.nextItem(), 2);
+        expectEqual(result3.nextItem(), "dos");
+        expectEqual(result3.nextItem(), 2);
+        expectEqual(result3.nextRow(), QueryResult.Type.Deleted);
+        expectEqual(result3.nextItem(), 3);
+        expectEqual(result3.nextItem(), "three");
+        expectEqual(result3.nextItem(), 3);
+        expectEqual(result3.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result3.nextItem(), 3);
+        expectEqual(result3.nextItem(), "tres");
+        expectEqual(result3.nextItem(), 3);
+        expectEqual(result3.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result3.nextItem(), 4);
+        expectEqual(result3.nextItem(), "cuatro");
+        expectEqual(result3.nextItem(), 4);
+        expectEqual(result3.nextRow(), QueryResult.Type.End);
     }
     
 
@@ -669,16 +677,16 @@ public class DuplicateTest extends TestCase{
 
         QueryResult result = tail.diff(second, any);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 1);
-        assertEquals(result.nextItem(), "one");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 2);
-        assertEquals(result.nextItem(), "two");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 4);
-        assertEquals(result.nextItem(), "three");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result.nextItem(), 1);
+        expectEqual(result.nextItem(), "one");
+        expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result.nextItem(), 2);
+        expectEqual(result.nextItem(), "two");
+        expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+        expectEqual(result.nextItem(), 4);
+        expectEqual(result.nextItem(), "three");
+        expectEqual(result.nextRow(), QueryResult.Type.End);
     	
     }
 

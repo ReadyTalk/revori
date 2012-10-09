@@ -191,14 +191,14 @@ public class MergeTest extends TestCase{
               assertEquals(leftValue, "four");
               assertEquals(rightValue, "shi");
               
-              return "quatro";
+              return "cuatro";
             }
           }, null);
 
         result = base.diff(merge, any);
 
         assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "quatro");
+        assertEquals(result.nextItem(), "cuatro");
         assertEquals(result.nextRow(), QueryResult.Type.End);
 
         builder = base.builder();
