@@ -941,7 +941,7 @@ public class EpidemicServer implements NetworkServer {
           int flag = in.read();
           switch (flag) {
           case End:
-            return builder.commit();
+            return builder.commit(server.foreignKeyResolver);
 
           case Descend:
             visitedColumn = true;
