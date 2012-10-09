@@ -13,6 +13,8 @@ import static com.readytalk.revori.util.Util.list;
 import java.util.Comparator;
 
 class Node {
+  private static final boolean Debug = false;
+
   public static final Node Null = new Node(new Object(), null);
 
   static {
@@ -70,6 +72,7 @@ class Node {
   }
 
   private static Node leftRotate(Object token, Node n) {
+    if (Debug) expect(n.token == token);
     Node child = getNode(token, n.right);
     n.right = child.left;
     child.left = n;
@@ -77,6 +80,7 @@ class Node {
   }
 
   private static Node rightRotate(Object token, Node n) {
+    if (Debug) expect(n.token == token);
     Node child = getNode(token, n.left);
     n.left = child.right;
     child.right = n;
@@ -94,8 +98,15 @@ class Node {
                            Object key,
                            Comparator comparator)
   {
+    if (key == null) throw new NullPointerException();
+
     if (root == null) {
       root = Null;
+    }
+
+    if (Debug) {
+      token = new Object();
+      validate(null, root);
     }
 
     stack = new NodeStack(stack);
@@ -116,6 +127,9 @@ class Node {
       } else {
         result.node = new_;
         stack.popStack();
+        if (Debug) {
+          validate(root, newRoot);
+        }
         return newRoot;
       }
     }
@@ -202,6 +216,9 @@ class Node {
     newRoot.red = false;
 
     stack.popStack();
+    if (Debug) {
+      validate(root, newRoot);
+    }
     return newRoot;
   }
 
@@ -240,6 +257,11 @@ class Node {
                             Object key,
                             Comparator comparator)
   {
+    if (Debug) {
+      token = new Object();
+      validate(null, root);
+    }
+
     if (root == Null) {
       return root;
     } else if (root.left == Null && root.right == Null) {
@@ -256,6 +278,10 @@ class Node {
     Node old = root;
     Node new_ = newRoot;
     while (old != Null) {
+      if (key == null) throw new NullPointerException();
+      if (old.key == null) {
+        throw new NullPointerException();
+      }
       int difference = Compare.compare(key, old.key, comparator);
       if (difference < 0) {
         stack.push(new_);
@@ -301,6 +327,9 @@ class Node {
     if (stack.top == null) {
       child.red = false;
       stack.popStack();
+      if (Debug) {
+        validate(root, child);
+      }
       return child;
     } else if (dead == stack.top.left) {
       stack.top.left = child;
@@ -316,10 +345,11 @@ class Node {
     if (! dead.red) {
       // rebalance
       while (stack.top != null && ! child.red) {
+        if (Debug) expect(stack.top.token == token);
         if (child == stack.top.left) {
           Node sibling = stack.top.right = getNode(token, stack.top.right);
           if (sibling.red) {
-            expect(sibling.token == token);
+            if (Debug) expect(sibling.token == token);
             sibling.red = false;
             stack.top.red = true;
             
@@ -327,18 +357,21 @@ class Node {
             if (stack.index == stack.base) {
               newRoot = n;
             } else if (stack.peek().right == stack.top) {
+              if (Debug) expect(stack.peek().token == token);
               stack.peek().right = n;
             } else {
+              if (Debug) expect(stack.peek().token == token);
               stack.peek().left = n;
             }
             Node parent = stack.top;
             stack.top = n;
             stack.push(parent);
 
-            sibling = stack.top.right;
+            sibling = stack.top.right = getNode(token, stack.top.right);
           }
 
           if (! (sibling.left.red || sibling.right.red)) {
+            if (Debug) expect(sibling.token == token);
             sibling.red = true;
             child = stack.top;
             stack.pop();
@@ -347,10 +380,12 @@ class Node {
               sibling.left = getNode(token, sibling.left);
               sibling.left.red = false;
 
+              if (Debug) expect(sibling.token == token);
               sibling.red = true;
               sibling = stack.top.right = rightRotate(token, sibling);
             }
 
+            if (Debug) expect(sibling.token == token);
             sibling.red = stack.top.red;
             stack.top.red = false;
 
@@ -361,8 +396,10 @@ class Node {
             if (stack.index == stack.base) {
               newRoot = n;
             } else if (stack.peek().right == stack.top) {
+              if (Debug) expect(stack.peek().token == token);
               stack.peek().right = n;
             } else {
+              if (Debug) expect(stack.peek().token == token);
               stack.peek().left = n;
             }
 
@@ -373,7 +410,7 @@ class Node {
           // this is just the above code with left and right swapped:
           Node sibling = stack.top.left = getNode(token, stack.top.left);
           if (sibling.red) {
-            expect(sibling.token == token);
+            if (Debug) expect(sibling.token == token);
             sibling.red = false;
             stack.top.red = true;
             
@@ -381,18 +418,21 @@ class Node {
             if (stack.index == stack.base) {
               newRoot = n;
             } else if (stack.peek().left == stack.top) {
+              if (Debug) expect(stack.peek().token == token);
               stack.peek().left = n;
             } else {
+              if (Debug) expect(stack.peek().token == token);
               stack.peek().right = n;
             }
             Node parent = stack.top;
             stack.top = n;
             stack.push(parent);
 
-            sibling = stack.top.left;
+            sibling = stack.top.left = getNode(token, stack.top.left);
           }
 
           if (! (sibling.right.red || sibling.left.red)) {
+            if (Debug) expect(sibling.token == token);
             sibling.red = true;
             child = stack.top;
             stack.pop();
@@ -401,10 +441,12 @@ class Node {
               sibling.right = getNode(token, sibling.right);
               sibling.right.red = false;
 
+              if (Debug) expect(sibling.token == token);
               sibling.red = true;
               sibling = stack.top.left = leftRotate(token, sibling);
             }
 
+            if (Debug) expect(sibling.token == token);
             sibling.red = stack.top.red;
             stack.top.red = false;
 
@@ -415,8 +457,10 @@ class Node {
             if (stack.index == stack.base) {
               newRoot = n;
             } else if (stack.peek().left == stack.top) {
+              if (Debug) expect(stack.peek().token == token);
               stack.peek().left = n;
             } else {
+              if (Debug) expect(stack.peek().token == token);
               stack.peek().right = n;
             }
 
@@ -426,12 +470,88 @@ class Node {
         }
       }
 
-      expect(child.token == token);
+      if (Debug) expect(child.token == token);
       child.red = false;
     }
 
     stack.popStack();
+    if (Debug) {
+      validate(root, newRoot);
+    }
     return newRoot;
+  }
+
+  private static void trouble(Node original, Node n, RuntimeException e) {
+    System.err.println("before:");
+    if (original != null) dump(original, System.err, 0);
+    System.err.println("after:");
+    dump(n, System.err, 0);
+    throw e;
+  }
+
+  public static void validate(Node original, Node n) {
+    if (original != null) {
+      validate(null, original);
+    }
+
+    if (Null.red) {
+      trouble(original, n, new RuntimeException("red null!"));
+    }
+
+    if (Null.left != Null
+        || Null.right != Null
+        || Null.value != Null
+        || Null.key != null)
+    {
+      trouble(original, n, new RuntimeException("corrupted null!"));
+    }
+
+    if (n.red) {
+      trouble(original, n, new RuntimeException("red root!"));
+    }
+
+    NodeStack s = new NodeStack();
+    int blackCount = -1;
+    for (NodeIterator it = new NodeIterator(s, n); it.hasNext();) {
+      int index = it.stack.index;
+      Node x = it.next();
+
+      if (x.key instanceof Node) {
+        trouble(original, n, new RuntimeException("node key!"));
+      }
+
+      if (x.key == null) {
+        trouble(original, n, new RuntimeException("null key!"));
+      }
+
+      if (x.value instanceof Node) {
+        validate(original, (Node) x.value);
+      }
+
+      if (x.red && (x.left.red || x.right.red)) {
+        trouble(original, n, new RuntimeException
+                ("red node has red child(ren)!"));
+      }
+
+      if (x.left == Node.Null && x.right == Node.Null) {
+        int count = 0;
+        for (int i = 0; i < index; ++i) {
+          if (! s.array[i].red) {
+            ++ count;
+          }
+        }
+        if (! x.red) {
+          ++ count;
+        }
+
+        if (blackCount == -1) {
+          blackCount = count;
+        } else if (count != blackCount) {
+          trouble(original, n, new RuntimeException
+                  ("inconsistent number of black nodes per paths to leaves!"));
+        }
+      }
+    }
   }
 
   private static boolean valuesEqual(Node a, Node b, Comparator comparator) {
@@ -500,8 +620,11 @@ class Node {
       for (int i = 0; i < depth; ++i) {
         out.print("  ");
       }
-      out.print(subtreeDepth + " ");
+      out.print(subtreeDepth);
+      out.print(" ");
       out.print(node.red ? "(r) " : "(b) ");
+      // out.print(System.identityHashCode(node.token));
+      // out.print(" ");
       if (node.value instanceof Node) {
         out.println(node.key + ": subtree");
         dump((Node) node.value, out, depth + 2, subtreeDepth + 1);
