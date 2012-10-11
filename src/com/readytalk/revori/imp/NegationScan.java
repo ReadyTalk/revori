@@ -42,15 +42,15 @@ class NegationScan implements Scan {
             (new Interval
              (Compare.Undefined, BoundType.Inclusive,
               i.low, i.lowBoundType.opposite));
+          previous = i;
         }
       } else {
         result.add
           (new Interval
            (previous.high, previous.highBoundType.opposite,
             i.low, i.lowBoundType.opposite));
+        previous = i;
       }
-        
-      previous = i;
     }
 
     if (previous == null) {

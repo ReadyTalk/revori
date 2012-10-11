@@ -13,7 +13,12 @@ import org.junit.Test;
 
 import static com.readytalk.revori.util.Util.list;
 import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.SourceFactory.reference;
 import static com.readytalk.revori.ExpressionFactory.reference;
+import static com.readytalk.revori.ExpressionFactory.constant;
+import static com.readytalk.revori.ExpressionFactory.not;
+import static com.readytalk.revori.ExpressionFactory.equal;
+import static com.readytalk.revori.ExpressionFactory.and;
 import com.readytalk.revori.BinaryOperation;
 import com.readytalk.revori.Column;
 import com.readytalk.revori.Revisions;
@@ -716,5 +721,38 @@ public class GeneralTest extends TestCase{
 
       assertTrue(! it.hasNext());
     }
+  }
+
+  @Test
+  public void testDeleteNotEqual() {
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Table numbers = new Table(cols(number));
+
+    TableReference numbersReference = reference(numbers);
+
+    Revision head = Revisions.Empty.builder()
+      .table(numbers)
+      .row(1).update(name, "ichi")
+      .row(2).update(name, "ni")
+      .commit();
+
+    assertEquals("ichi", head.query(name, numbers.primaryKey, 1));
+    assertEquals("ni",   head.query(name, numbers.primaryKey, 2));
+
+    RevisionBuilder builder = head.builder();
+
+    builder.apply
+      (new DeleteTemplate
+       (numbersReference, and
+        (not(equal(reference(numbersReference, name), constant("ni"))),
+         equal(reference(numbersReference, number), constant(1)))));
+
+    Revision next = builder.commit();
+
+    assertEquals("ichi", head.query(name, numbers.primaryKey, 1));
+    assertEquals("ni",   head.query(name, numbers.primaryKey, 2));
+    assertEquals(null,   next.query(name, numbers.primaryKey, 1));
+    assertEquals("ni",   next.query(name, numbers.primaryKey, 2));
   }
 }
