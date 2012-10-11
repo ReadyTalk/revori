@@ -124,13 +124,19 @@ public class EpidemicServer implements NetworkServer {
   }
 
   public synchronized Subscription registerListener(final Runnable listener) {
-    listeners.add(listener);
-    listener.run();
-    return new Subscription() {
+    Subscription s = new Subscription() {
+      public void subscribe() {
+        listeners.add(listener);
+        listener.run();
+      }
+
       public void cancel() {
         listeners.remove(listener);
       }
     };
+
+    s.subscribe();
+    return s;
   }
   
   // listeners are removed after being run

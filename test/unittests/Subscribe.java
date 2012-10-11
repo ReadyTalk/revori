@@ -139,5 +139,11 @@ public class Subscribe extends TestCase {
 
     listener.expectNothing();
 
+    subs.subscribe();
+
+    listener.expect(Kind.Update, 1, "one");
+    listener.expect(Kind.Update, 2, "two");
+    listener.expect(Kind.Update, 3, "three");
+    listener.expectNothing();
   }
 }
