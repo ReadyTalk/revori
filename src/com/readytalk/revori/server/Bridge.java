@@ -48,23 +48,19 @@ public class Bridge {
     final Mapping left = new Mapping
       (listener(leftServer), leftPath.body, rightServer, rightPath.body);
     
+    register(left);
+
     final Mapping right = new Mapping
       (listener(rightServer), rightPath.body, leftServer, leftPath.body);
 
-    Subscription s = new Subscription() {
-      public void subscribe() {
-        register(left);
-        register(right);
-      }
+    register(right);
 
+    return new Subscription() {
       public void cancel() {
         unregister(left);
         unregister(right);
       }
     };
-
-    s.subscribe();
-    return s;
   }
 
   private void register(Mapping mapping) {

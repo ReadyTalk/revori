@@ -80,18 +80,13 @@ public class DiffServer {
   }
 
   public Subscription register(final Runnable listener) {
-    Subscription s = new Subscription() {
-      public void subscribe() {
-        listeners.add(listener);
-      }
+    listeners.add(listener);
 
+    return new Subscription() {
       public void cancel() {
         listeners.remove(listener);
       }
     };
-
-    s.subscribe();
-    return s;
   }
 
   public LinearRevision next(LinearRevision base) {

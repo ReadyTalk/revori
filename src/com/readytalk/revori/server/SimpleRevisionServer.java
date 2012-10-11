@@ -52,19 +52,17 @@ public class SimpleRevisionServer implements RevisionServer {
   }
 
   public Subscription registerListener(final Runnable listener) {
-    Subscription s = new Subscription() {
-      public void subscribe() {
-        while (true) {
-          Set<Runnable> oldListeners = listeners.get();
-          Set<Runnable> newListeners = new HashSet(oldListeners);
-          newListeners.add(listener);
-          if (listeners.compareAndSet(oldListeners, newListeners)) {
-            break;
-          }
-        }
-        listener.run();
+    while (true) {
+      Set<Runnable> oldListeners = listeners.get();
+      Set<Runnable> newListeners = new HashSet(oldListeners);
+      newListeners.add(listener);
+      if (listeners.compareAndSet(oldListeners, newListeners)) {
+        break;
       }
+    }
+    listener.run();
 
+    return new Subscription() {
       public void cancel() {
         while (true) {
           Set<Runnable> oldListeners = listeners.get();
@@ -76,9 +74,6 @@ public class SimpleRevisionServer implements RevisionServer {
         }
       }
     };
-
-    s.subscribe();
-    return s;
   }
 
 }

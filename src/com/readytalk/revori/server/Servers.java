@@ -14,7 +14,8 @@ import com.readytalk.revori.subscribe.Subscription;
 import com.readytalk.revori.server.protocol.Readable;
 
 import java.util.Set;
-import java.util.HashSet;
+import java.util.List;
+import java.util.ArrayList;
 
 public class Servers {
   public static RevisionServer asynchronousRevisionServer
@@ -41,7 +42,7 @@ public class Servers {
     protected final RevisionServer server;
     private final ConflictResolver conflictResolver;
     private final ForeignKeyResolver foreignKeyResolver;
-    private final Set<Runnable> listeners = new HashSet();
+    private final List<Runnable> listeners = new ArrayList();
     private Revision head;
     private Revision base;
 
@@ -93,18 +94,13 @@ public class Servers {
     }
 
     public Subscription registerListener(final Runnable listener) {
-      Subscription s = new Subscription() {
-          public void subscribe() {
-            listeners.add(listener);
-          }
+      listeners.add(listener);
 
-          public void cancel() {
-            listeners.remove(listener);
-          }
-        };
-
-      s.subscribe();
-      return s;
+      return new Subscription() {
+        public void cancel() {
+          listeners.remove(listener);
+        }
+      };
     }
   }
 

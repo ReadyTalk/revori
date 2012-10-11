@@ -79,21 +79,14 @@ public class DiffMachine {
 
   public Subscription subscribe(RowListener listener, QueryTemplate query, Object... params) {
     final Matcher matcher = new Matcher(listener, query, params);
+    register(matcher, newMatchers);
 
-    Subscription s = new Subscription() {
-      boolean subscribed;
+    if(autoDeliver) {
+      while(next()) {}
+    }
 
-      public void subscribe() {
-        if (! subscribed) {
-          subscribed = true;
-          register(matcher, newMatchers);
-
-          if(autoDeliver) {
-            while(next()) {}
-          }          
-        }
-      }
-
+    return new Subscription() {
+      boolean subscribed = true;
       public void cancel() {
         if(subscribed) {
           subscribed = false;
@@ -102,9 +95,6 @@ public class DiffMachine {
         }
       }
     };
-
-    s.subscribe();
-    return s;
   }
 
   private void promoteMatchers() {
