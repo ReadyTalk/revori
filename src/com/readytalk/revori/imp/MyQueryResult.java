@@ -61,7 +61,18 @@ class MyQueryResult implements QueryResult {
                        QueryTemplate template,
                        Object[] parameters)
   {
-    if (base == fork) {
+    this(base, baseStack, fork, forkStack, template, parameters, false);
+  }
+
+  public MyQueryResult(MyRevision base,
+                       NodeStack baseStack,
+                       MyRevision fork,
+                       NodeStack forkStack,
+                       QueryTemplate template,
+                       Object[] parameters,
+                       boolean force)
+  {
+    if (base == fork && (! force)) {
       source = null;
       expressions = null;
       expressionContext = null;
@@ -71,7 +82,7 @@ class MyQueryResult implements QueryResult {
       SourceAdapter source = SourceAdapterFactory.makeAdapter(template.source);
       source.visit(finder);
 
-      if (finder.foundChanged) {
+      if (finder.foundChanged || force) {
         expressions = new ArrayList<ExpressionAdapter>
           (template.expressions.size());
 

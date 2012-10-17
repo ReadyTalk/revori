@@ -313,12 +313,15 @@ class MyRevisionBuilder implements RevisionBuilder {
     for (int i = 0; i < columns.size(); ++i) {
       Column<?> c = columns.get(i);
       Object v = expressions.get(i).evaluate(true);
-      if (v != null && ! c.type.isInstance(v)) {
-        throw new ClassCastException
-          (v.getClass().getName() + " cannot be cast to " + c.type.getName());
+      if (! Compare.Undefined.equals(v)) {
+        if (v != null && ! c.type.isInstance(v)) {
+          throw new ClassCastException
+            (v.getClass().getName() + " cannot be cast to "
+             + c.type.getName());
+        }
+        n = Node.blaze(result, token, stack, n, c, Compare.ColumnComparator);
+        result.node.value = v;
       }
-      n = Node.blaze(result, token, stack, n, c, Compare.ColumnComparator);
-      result.node.value = v;
     }
     return n;
   }
@@ -330,7 +333,7 @@ class MyRevisionBuilder implements RevisionBuilder {
   {
     MyQueryResult qr = new MyQueryResult
       (base, baseStack, result, forkStack, view.query,
-       view.parameters.toArray(new Object[view.parameters.size()]));
+       view.parameters.toArray(new Object[view.parameters.size()]), true);
 
     setKey(Constants.TableDataDepth, view.table, Compare.TableComparator);
     setKey(Constants.IndexDataDepth, view.table.primaryKey,
@@ -363,9 +366,13 @@ class MyRevisionBuilder implements RevisionBuilder {
     Object[] values = new Object[maxValues];
     NodeStack stack = new NodeStack();
 
+    boolean sawSomething = false;
     boolean done = false;
     while (! done) {
       QueryResult.Type type = qr.nextRow();
+      if (! QueryResult.Type.End.equals(type)) {
+        sawSomething = true;
+      }
       switch (type) {
       case End:
         done = true;
@@ -395,10 +402,12 @@ class MyRevisionBuilder implements RevisionBuilder {
               values[j] = expressions.get(expressionOffset++).evaluate(true);
             }
 
-            a.add
-              (Node.find
+            Node old = Node.find
                ((Node) n.value, view.columns.get(columnOffset++),
-                Compare.ColumnComparator).value, values);
+                Compare.ColumnComparator);
+
+            a.add(old == Node.Null ? a.aggregate.function.base() : old.value,
+                  values);
           }
         } else {
           expect(n.value == Node.Null);
@@ -433,10 +442,13 @@ class MyRevisionBuilder implements RevisionBuilder {
             for (int j = 0; j < a.aggregate.expressions.size(); ++j) {
               values[j] = expressions.get(expressionOffset++).evaluate(true);
             }
+
+            Node old = Node.find
+              ((Node) n.value, view.columns.get(columnOffset++),
+               Compare.ColumnComparator);
+
             a.subtract
-              (Node.find
-               ((Node) n.value, view.columns.get(columnOffset++),
-                Compare.ColumnComparator).value,
+              (old == Node.Null ? a.aggregate.function.base() : old.value,
                values);
           }
         }
@@ -462,9 +474,40 @@ class MyRevisionBuilder implements RevisionBuilder {
       }
     }
 
-    // now, filter out rows which fail the query test if that test
-    // uses an aggregate function
     if (view.query.hasAggregates) {
+      if (! sawSomething) {
+        // if there's no difference between the base and the fork, we
+        // must synthesize a row containing the aggregates
+
+        int i = 0;
+        for (; i < keyColumns.size() - 1; ++i) {
+          setKey
+            (i + Constants.IndexDataBodyDepth,
+             expressions.get(view.primaryKeyOffset + i).evaluate(true),
+             keyColumns.get(i).comparator);
+        }
+
+        Node n = blaze
+          (i + Constants.IndexDataBodyDepth,
+           expressions.get(view.primaryKeyOffset + i).evaluate(true),
+           keyColumns.get(i).comparator);
+
+        int columnOffset = view.aggregateOffset;
+        int expressionOffset = view.aggregateExpressionOffset;
+        for (AggregateAdapter a: aggregates) {
+          a.value = a.aggregate.function.base();
+        }
+      
+        n.value = makeTree(stack, view.columns, expressions);
+
+        for (AggregateAdapter a: aggregates) {
+          a.value = Compare.Undefined;
+        }
+      }
+
+      // now, filter out rows which fail the query test if that test
+      // uses an aggregate function
+
       // todo: only do this if the query test has aggregates
 
       qr.reset();

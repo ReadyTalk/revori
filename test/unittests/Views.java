@@ -48,7 +48,42 @@ public class Views extends TestCase {
     Column<Integer> number = new Column<Integer>(Integer.class, "number");
     Column<String> name = new Column<String>(String.class, "name");
     Table things = new Table(cols(number), "things");
-    
+
+    TableReference thingsReference = new TableReference(things);
+
+    QueryResult result = Revisions.Empty.diff
+      (Revisions.Empty, new QueryTemplate
+       (list
+        (aggregate(Integer.class, Foldables.Count)),
+        thingsReference, constant(true)));
+
+    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+    expectEqual(result.nextItem(), 0);
+    expectEqual(result.nextRow(), QueryResult.Type.End);
+
+    result = Revisions.Empty.diff
+      (Revisions.Empty.builder().table(things).row(1).update(name, "pumpkin")
+       .table(things).delete(1).commit(), new QueryTemplate
+       (list
+        (aggregate(Integer.class, Foldables.Count)),
+        thingsReference, constant(true)));
+
+    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+    expectEqual(result.nextItem(), 0);
+    expectEqual(result.nextRow(), QueryResult.Type.End);
+
+    result = Revisions.Empty.diff
+      (Revisions.Empty.builder().table(things).row(1).update(name, "pumpkin")
+       .table(things).delete(1).commit(), new QueryTemplate
+       (list
+        (aggregate(Integer.class, Foldables.Count)),
+        thingsReference,
+        equal(reference(thingsReference, name), constant("pumpkin"))));
+
+    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+    expectEqual(result.nextItem(), 0);
+    expectEqual(result.nextRow(), QueryResult.Type.End);
+
     RevisionBuilder builder = Revisions.Empty.builder();
 
     builder.insert(Throw, things, 1, name, "tree");
@@ -60,9 +95,7 @@ public class Views extends TestCase {
 
     Revision head = builder.commit();
 
-    TableReference thingsReference = new TableReference(things);
-
-    QueryResult result = Revisions.Empty.diff
+    result = Revisions.Empty.diff
       (head, new QueryTemplate
        (list
         (aggregate(Integer.class, Foldables.Count)),
