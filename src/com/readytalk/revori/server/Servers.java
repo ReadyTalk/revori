@@ -85,11 +85,11 @@ public class Servers {
       if (base != fork || base != head) {
         head = base.merge(head, fork, conflictResolver, foreignKeyResolver);
 
-        server.merge(this.base, head);
-
         for (Runnable listener: listeners) {
           listener.run();
         }
+
+        server.merge(this.base, head);
       }
     }
 
