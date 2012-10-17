@@ -63,7 +63,7 @@ class Merge {
     //
     //  3. Build data trees for any new indexes and views added.
     //
-    //  4. Verify foreign keys constraints.
+    //  4. Verify foreign key constraints.
 
     MyRevisionBuilder builder = new MyRevisionBuilder
       (new Object(), left, new NodeStack());
@@ -146,12 +146,19 @@ class Merge {
               } else {
                 descend = true;
               }
+            } else if (depth != bottom) {
+              descend = true;
             } else {
               builder.deleteKey(depth, triple.left.key, comparator);
             }
+          } else if (depth != bottom) {
+            descend = true;
           } else {
             // do nothing -- left already has delete
           }
+
+          Object key = triple.left == null
+            ? triple.right.key : triple.left.key;
 
           if (conflict) {
             Object[] primaryKeyValues = new Object
@@ -164,7 +171,7 @@ class Merge {
 
             Object result = conflictResolver.resolveConflict
               (table,
-               (Column<?>) triple.left.key,
+               (Column<?>) key,
                primaryKeyValues,
                triple.base == null ? null : triple.base.value,
                triple.left.value,
@@ -173,15 +180,14 @@ class Merge {
             if (Compare.equal(result, triple.left.value)) {
               // do nothing -- left already has insert
             } else if (result == null) {
-              builder.deleteKey(depth, triple.left.key, comparator);
+              builder.deleteKey(depth, key, comparator);
             } else {
-              builder.insertOrUpdate
-                (depth, triple.left.key, comparator, result);
+              builder.insertOrUpdate(depth, key, comparator, result);
             }
           } else if (descend) {
             Comparator nextComparator;
             if (depth == Constants.TableDataDepth) {
-              table = (Table) triple.left.key;
+              table = (Table) key;
 
               if (Node.pathFind
                   (left.root, Constants.ViewTable, Compare.TableComparator,
@@ -272,7 +278,7 @@ class Merge {
                 leftStack = leftStack.popStack();
               }
             } else if (depth == Constants.IndexDataDepth) {
-              Index index = (Index) triple.left.key;
+              Index index = (Index) key;
 
               if (Compare.equal(index, table.primaryKey, comparator)) {
                 bottom = index.columns.size() + Constants.IndexDataBodyDepth;
@@ -290,16 +296,16 @@ class Merge {
                 (depth + 1 - Constants.IndexDataBodyDepth).comparator;
             }
 
-            builder.setKey(depth, triple.left.key, comparator);
+            builder.setKey(depth, key, comparator);
           
             ++ depth;
 
             iterators[depth] = new MergeIterator
               (triple.base == null ? Node.Null : (Node) triple.base.value,
                baseStack = new NodeStack(baseStack),
-               (Node) triple.left.value,
+               triple.left == null ? Node.Null : (Node) triple.left.value,
                leftStack = new NodeStack(leftStack),
-               (Node) triple.right.value,
+               triple.right == null ? Node.Null : (Node) triple.right.value,
                rightStack = new NodeStack(rightStack),
                nextComparator);
           }

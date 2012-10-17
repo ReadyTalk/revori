@@ -23,6 +23,7 @@ import com.readytalk.revori.ForeignKeyResolver;
 import com.readytalk.revori.ForeignKeyResolvers;
 import com.readytalk.revori.util.BufferOutputStream;
 import com.readytalk.revori.server.EpidemicServer;
+import com.readytalk.revori.server.NetworkServer;
 import com.readytalk.revori.server.NetworkServer.NodeID;
 import com.readytalk.revori.server.NetworkServer.Network;
 import com.readytalk.revori.server.NetworkServer.NodeConflictResolver;
@@ -527,6 +528,64 @@ public class Epidemic extends TestCase{
     }
     // System.out.println("-------done-------");
     network.messages.addAll(undelivered);
+  }
+
+  @Test
+  public void testDeleteAndInsert() {
+    NodeNetwork network = new NodeNetwork();
+    NodeConflictResolver conflictResolver = NetworkServer.NodeConflictRestrict;
+    ForeignKeyResolver foreignKeyResolver = ForeignKeyResolvers.Restrict;
+
+    Node n1 = new Node(conflictResolver, foreignKeyResolver, network, 1);
+    Node n2 = new Node(conflictResolver, foreignKeyResolver, network, 2);
+    Node observer = new Node(conflictResolver, foreignKeyResolver, network, 3);
+
+    n1.server.updateView(set(n2.id));
+    n2.server.updateView(set(n1.id));
+
+    Column<Integer> first = new Column<Integer>(Integer.class);
+    Column<Integer> second = new Column<Integer>(Integer.class);
+    Column<Integer> third = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Table table = new Table(cols(first, second, third));
+
+    Revision base = n1.server.head();
+
+    n1.server.merge
+      (base, base.builder().table(table).row(1, 2, 1).update(name, "foo")
+       .commit());
+
+    Index key = table.primaryKey;
+
+    expectEqual(n1.server.head().query(name, key, 1, 2, 1), "foo");
+    expectEqual(n2.server.head().query(name, key, 1, 2, 1), null);
+
+    flush(network);
+
+    expectEqual(n1.server.head().query(name, key, 1, 2, 1), "foo");
+    expectEqual(n2.server.head().query(name, key, 1, 2, 1), "foo");
+
+    base = n2.server.head();
+    n2.server.merge
+      (base, base.builder().table(table).delete(1, 2, 1).commit());
+
+    base = n1.server.head();
+
+    n1.server.merge
+      (base, base.builder().table(table).row(1, 2, 2).update(name, "bar")
+       .commit());
+
+    expectEqual(n1.server.head().query(name, key, 1, 2, 1), "foo");
+    expectEqual(n2.server.head().query(name, key, 1, 2, 1), null);
+    expectEqual(n1.server.head().query(name, key, 1, 2, 2), "bar");
+    expectEqual(n2.server.head().query(name, key, 1, 2, 2), null);
+
+    flush(network);
+
+    expectEqual(n1.server.head().query(name, key, 1, 2, 1), null);
+    expectEqual(n2.server.head().query(name, key, 1, 2, 1), null);
+    expectEqual(n1.server.head().query(name, key, 1, 2, 2), "bar");
+    expectEqual(n2.server.head().query(name, key, 1, 2, 2), "bar");
   }
 
   private static class MyConflictResolver implements NodeConflictResolver {

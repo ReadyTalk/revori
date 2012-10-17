@@ -7,7 +7,7 @@
 
 package unittests;
 
-import junit.framework.TestCase;
+import static junit.framework.Assert.assertEquals;
 
 import org.junit.Test;
 
@@ -17,6 +17,9 @@ import static com.readytalk.revori.util.Util.cols;
 import com.readytalk.revori.BinaryOperation;
 import com.readytalk.revori.Column;
 import com.readytalk.revori.ConflictResolver;
+import com.readytalk.revori.ConflictResolvers;
+import com.readytalk.revori.ForeignKeyResolvers;
+import com.readytalk.revori.Index;
 import com.readytalk.revori.Table;
 import com.readytalk.revori.Expression;
 import com.readytalk.revori.Revision;
@@ -34,7 +37,7 @@ import com.readytalk.revori.QueryTemplate;
 import com.readytalk.revori.QueryResult;
 import com.readytalk.revori.DuplicateKeyResolution;
 
-public class MergeTest extends TestCase{
+public class MergeTest {
     
     @Test
     public void testMerges(){
@@ -323,4 +326,60 @@ public class MergeTest extends TestCase{
         assertEquals(result.nextItem(), "tres");
         assertEquals(result.nextRow(), QueryResult.Type.End);
     }
+
+  private static void expectEqual(Object actual, Object expected) {
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testDeleteAndInsert() {
+    Column<Integer> first = new Column<Integer>(Integer.class, "first");
+    Column<Integer> second = new Column<Integer>(Integer.class, "second");
+    Column<Integer> third = new Column<Integer>(Integer.class, "third");
+    Column<String> name = new Column<String>(String.class, "name");
+    Column<String> value = new Column<String>(String.class, "value");
+    Table table = new Table(cols(first, second, third), "table");
+    Index key = table.primaryKey;
+
+    Revision base = Revisions.Empty.builder().table(table).row(1, 2, 1)
+      .update(name, "foo").commit();
+
+    Revision fork1 = base.builder().table(table).delete(1, 2, 1).commit();
+
+    Revision fork2 = base.builder().table(table).row(1, 2, 2).update
+      (name, "bar").commit();
+
+    Revision merged = base.merge
+      (fork1, fork2, ConflictResolvers.Restrict, ForeignKeyResolvers.Restrict);
+
+    expectEqual(merged.query(name, key, 1, 2, 1), null);
+    expectEqual(merged.query(name, key, 1, 2, 2), "bar");
+
+    merged = base.merge
+      (fork2, fork1, ConflictResolvers.Restrict, ForeignKeyResolvers.Restrict);
+
+    expectEqual(merged.query(name, key, 1, 2, 1), null);
+    expectEqual(merged.query(name, key, 1, 2, 2), "bar");
+
+    base = Revisions.Empty.builder().table(table).row(1, 2, 1)
+      .update(name, "foo").commit();
+
+    fork1 = base.builder().table(table).row(1, 2, 1)
+      .delete(name).commit();
+
+    fork2 = base.builder().table(table).row(1, 2, 1).update
+      (value, "bar").commit();
+
+    merged = base.merge
+      (fork1, fork2, ConflictResolvers.Restrict, ForeignKeyResolvers.Restrict);
+
+    expectEqual(merged.query(name, key, 1, 2, 1), null);
+    expectEqual(merged.query(value, key, 1, 2, 1), "bar");
+
+    merged = base.merge
+      (fork2, fork1, ConflictResolvers.Restrict, ForeignKeyResolvers.Restrict);
+
+    expectEqual(merged.query(name, key, 1, 2, 1), null);
+    expectEqual(merged.query(value, key, 1, 2, 1), "bar");
+  }
 }

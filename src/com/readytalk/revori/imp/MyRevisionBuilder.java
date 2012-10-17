@@ -191,12 +191,12 @@ class MyRevisionBuilder implements RevisionBuilder {
       (token, stack, blazedRoots[index], keys[index], comparators[index]);
     blazedRoots[index] = root;
     blazedLeaves[index] = null;
-    if (root == null) {
+    if (root == Node.Null) {
       if (index == 0) {
         result.root = Node.delete
           (token, stack, result.root, keys[0], comparators[0]);
       } else {
-        deleteBlazed(index - 1);
+        delete(index - 1);
       }
     } else {
       if (index == 0) {
