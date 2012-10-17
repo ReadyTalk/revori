@@ -63,9 +63,12 @@ public interface Revision {
 
   /**
    * Retrieves any values associated with the specified column in this
-   * revision, ordered by the specified index.
+   * revision, ordered by the specified index.  If indexPrefix is
+   * non-empty, only rows matching the specified value(s) are
+   * selected.
    */
-  public <T> Iterator<T> queryAll(Index index, Column<T> column);
+  public <T> Iterator<T> queryAll(Column<T> column, Index index,
+                                  Object ... indexPrefix);
 
   /**
    * Retrieves the value, if any, associated with the specified path

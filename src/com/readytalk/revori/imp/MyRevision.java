@@ -56,7 +56,10 @@ public class MyRevision implements Revision {
     return (T) query(path);
   }
 
-  public <T> Iterator<T> queryAll(final Index index, final Column<T> column) {
+  public <T> Iterator<T> queryAll(final Column<T> column,
+                                  final Index index,
+                                  Object ... indexValues)
+  {
     TableReference reference = new TableReference(index.table);
 
     final ColumnReferenceAdapter adapter = new ColumnReferenceAdapter
@@ -64,7 +67,12 @@ public class MyRevision implements Revision {
 
     Plan plan = new Plan(index);
     for (int i = 0; i < plan.scans.length; ++i) {
-      plan.scans[i] = IntervalScan.Unbounded;
+      if (i < indexValues.length) {
+        ExpressionAdapter ea = new ConstantAdapter(indexValues[i]);
+        plan.scans[i] = new IntervalScan(ea, ea);
+      } else {
+        plan.scans[i] = IntervalScan.Unbounded;
+      }
     }
 
     ExpressionContext context = new ExpressionContext

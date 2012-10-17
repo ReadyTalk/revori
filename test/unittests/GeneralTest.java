@@ -7,7 +7,8 @@
 
 package unittests;
 
-import junit.framework.TestCase;
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertTrue;
 
 import org.junit.Test;
 
@@ -39,8 +40,8 @@ import com.readytalk.revori.DuplicateKeyResolution;
 
 import java.util.Iterator;
 
-public class GeneralTest extends TestCase{
-    @Test
+public class GeneralTest {
+  @Test
     public void testSimpleInsertDiffs(){
         Column<Integer> number = new Column<Integer>(Integer.class);
         Column<String> name = new Column<String>(String.class);
@@ -96,7 +97,7 @@ public class GeneralTest extends TestCase{
         
         assertEquals(result.nextRow(), QueryResult.Type.End);
         }
-    @Test
+  @Test
     public void testLargerInsertDiffs(){
         Column<Integer> number = new Column<Integer>(Integer.class);
         Column<String> name = new Column<String>(String.class);
@@ -680,7 +681,7 @@ public class GeneralTest extends TestCase{
 
     Revision head = builder.commit();
 
-    { Iterator<Integer> it = head.queryAll(numbers.primaryKey, number);
+    { Iterator<Integer> it = head.queryAll(number, numbers.primaryKey);
 
       assertTrue(it.hasNext());
 
@@ -701,7 +702,7 @@ public class GeneralTest extends TestCase{
       assertTrue(! it.hasNext());
     }
 
-    { Iterator<String> it = head.queryAll(numbers.primaryKey, name);
+    { Iterator<String> it = head.queryAll(name, numbers.primaryKey);
 
       assertTrue(it.hasNext());
 
@@ -718,6 +719,65 @@ public class GeneralTest extends TestCase{
       assertEquals("eleven",   it.next());
       assertEquals("twelve",   it.next());
       assertEquals("thirteen", it.next());
+
+      assertTrue(! it.hasNext());
+    }
+  }
+
+  @Test
+  public void testQueryIteratorSubset() {
+    Column<Integer> numerator = new Column<Integer>(Integer.class);
+    Column<Integer> denominator = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Table fractions = new Table(cols(numerator, denominator));
+
+    Revision head = Revisions.Empty.builder().table(fractions)
+      .row(1, 2).update(name, "one half")
+      .row(1, 3).update(name, "one third")
+      .row(1, 4).update(name, "one quarter")
+      .row(2, 3).update(name, "two thirds")
+      .row(2, 5).update(name, "two fifths")
+      .commit();
+
+    { Iterator<String> it = head.queryAll(name, fractions.primaryKey);
+
+      assertTrue(it.hasNext());
+
+      assertEquals("one half",    it.next());
+      assertEquals("one third",   it.next());
+      assertEquals("one quarter", it.next());
+      assertEquals("two thirds",  it.next());
+      assertEquals("two fifths",  it.next());
+
+      assertTrue(! it.hasNext());
+    }
+
+    { Iterator<String> it = head.queryAll(name, fractions.primaryKey, 1);
+
+      assertTrue(it.hasNext());
+
+      assertEquals("one half",    it.next());
+      assertEquals("one third",   it.next());
+      assertEquals("one quarter", it.next());
+
+      assertTrue(! it.hasNext());
+    }
+
+    { Iterator<String> it = head.queryAll(name, fractions.primaryKey, 2);
+
+      assertTrue(it.hasNext());
+
+      assertEquals("two thirds",  it.next());
+      assertEquals("two fifths",  it.next());
+
+      assertTrue(! it.hasNext());
+    }
+
+    { Iterator<String> it = head.queryAll(name, fractions.primaryKey, 1, 3);
+
+      assertTrue(it.hasNext());
+
+      assertEquals("one third",   it.next());
 
       assertTrue(! it.hasNext());
     }
