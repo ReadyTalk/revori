@@ -7,6 +7,9 @@
 
 package unittests;
 
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.fail;
+
 import org.junit.Test;
 
 import static com.readytalk.revori.util.Util.cols;
@@ -43,22 +46,25 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
 
-import junit.framework.TestCase;
-
-public class Epidemic extends TestCase{
+public class Epidemic {
   private static void expectEqual(Object actual, Object expected) {
     assertEquals(expected, actual);
   }
 
   @Test
   public void testTwoNodeNetwork() {
-    NodeNetwork network = new NodeNetwork();
+    NodeConfig config = new NodeConfig
+      (new MyConflictResolver(),
+       ForeignKeyResolvers.Delete,
+       new NodeNetwork(),
+       EpidemicFactory);
+
     NodeConflictResolver conflictResolver = new MyConflictResolver();
     ForeignKeyResolver foreignKeyResolver = ForeignKeyResolvers.Delete;
 
-    Node n1 = new Node(conflictResolver, foreignKeyResolver, network, 1);
-    Node n2 = new Node(conflictResolver, foreignKeyResolver, network, 2);
-    Node observer = new Node(conflictResolver, foreignKeyResolver, network, 3);
+    Node n1 = new Node(config, 1);
+    Node n2 = new Node(config, 2);
+    Node observer = new Node(config, 3);
 
     n1.server.updateView(set(n2.id));
     n2.server.updateView(set(n1.id));
@@ -87,7 +93,7 @@ public class Epidemic extends TestCase{
 
     expectEqual(n2.server.head().query(numbersKey, 1, name), "uno");
 
-    flush(network);
+    flush(config.network);
 
     expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
     expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
@@ -105,7 +111,7 @@ public class Epidemic extends TestCase{
     n2.server.updateView(set(n1.id, observer.id));
     observer.server.updateView(set(n1.id, n2.id));
 
-    flush(network);
+    flush(config.network);
 
     expectEqual(n1.server.head().query(numbersKey, 1, name), "ichi");
     expectEqual(n2.server.head().query(numbersKey, 1, name), "ichi");
@@ -120,7 +126,7 @@ public class Epidemic extends TestCase{
 
     expectEqual(n2.server.head().query(numbersKey, 3, number), 3);
 
-    flush(network);
+    flush(config.network);
 
     expectEqual(n1.server.head().query(numbersKey, 3, number), 3);
     expectEqual(n2.server.head().query(numbersKey, 3, number), 3);
@@ -131,13 +137,14 @@ public class Epidemic extends TestCase{
   
   @Test
   public void testFrequentUpdates() {
+    NodeConfig config = new NodeConfig
+      (new MyConflictResolver(),
+       ForeignKeyResolvers.Delete,
+       new NodeNetwork(),
+       EpidemicFactory);
 
-    NodeNetwork network = new NodeNetwork();
-    NodeConflictResolver conflictResolver = new NoConflictResolver();
-    ForeignKeyResolver foreignKeyResolver = ForeignKeyResolvers.Delete;
-
-    Node n1 = new Node(conflictResolver, foreignKeyResolver, network, 1);
-    Node n2 = new Node(conflictResolver, foreignKeyResolver, network, 2);
+    Node n1 = new Node(config, 1);
+    Node n2 = new Node(config, 2);
 
     n1.server.updateView(set(n2.id));
     n2.server.updateView(set(n1.id));
@@ -146,7 +153,7 @@ public class Epidemic extends TestCase{
     Column<Integer> value = new Column<Integer>(Integer.class);
     Table valueTable = new Table(cols(id));
     
-    flush(network);
+    flush(config.network);
 
     Revision base = n1.server.head();
     RevisionBuilder builder = base.builder();
@@ -155,7 +162,7 @@ public class Epidemic extends TestCase{
 
     n1.server.merge(base, builder.commit());
     
-    flush(network, n1.id);
+    flush(config.network, n1.id);
 
     base = n1.server.head();
     builder = base.builder();
@@ -164,7 +171,7 @@ public class Epidemic extends TestCase{
 
     n1.server.merge(base, builder.commit());
     
-    flush(network, n1.id);
+    flush(config.network, n1.id);
     
     base = n1.server.head();
     builder = base.builder();
@@ -173,9 +180,9 @@ public class Epidemic extends TestCase{
 
     n1.server.merge(base, builder.commit());
     
-    flush(network, n2.id);
+    flush(config.network, n2.id);
     
-    flush(network);
+    flush(config.network);
 
     Index valueKey = valueTable.primaryKey;
     
@@ -185,12 +192,14 @@ public class Epidemic extends TestCase{
 
   @Test
   public void testAcks() {
-    NodeNetwork network = new NodeNetwork();
-    NodeConflictResolver conflictResolver = new NoConflictResolver();
-    ForeignKeyResolver foreignKeyResolver = ForeignKeyResolvers.Delete;
+    NodeConfig config = new NodeConfig
+      (new MyConflictResolver(),
+       ForeignKeyResolvers.Delete,
+       new NodeNetwork(),
+       EpidemicFactory);
 
-    Node n1 = new Node(conflictResolver, foreignKeyResolver, network, 1);
-    Node n2 = new Node(conflictResolver, foreignKeyResolver, network, 2);
+    Node n1 = new Node(config, 1);
+    Node n2 = new Node(config, 2);
 
     n1.server.updateView(set(n2.id));
     n2.server.updateView(set(n1.id));
@@ -219,7 +228,7 @@ public class Epidemic extends TestCase{
 
     expectEqual(n2.server.head().query(numbersKey, 2, value), 57);
 
-    flush(network);
+    flush(config.network);
 
     expectEqual(n1.server.head().query(numbersKey, 1, value), 42);
     expectEqual(n2.server.head().query(numbersKey, 1, value), 42);
@@ -240,7 +249,7 @@ public class Epidemic extends TestCase{
 
     n2.server.merge(base, builder.commit());
 
-    flush(network);
+    flush(config.network);
 
     expectEqual(n1.server.head().query(numbersKey, 1, value), 43);
     expectEqual(n2.server.head().query(numbersKey, 1, value), 43);
@@ -261,7 +270,7 @@ public class Epidemic extends TestCase{
 
     n2.server.merge(base, builder.commit());
 
-    flush(network);
+    flush(config.network);
 
     expectEqual(n1.server.head().query(numbersKey, 1, value), 44);
     expectEqual(n2.server.head().query(numbersKey, 1, value), 44);
@@ -271,12 +280,14 @@ public class Epidemic extends TestCase{
 
   @Test
   public void testTwoNodeRestart() {
-    NodeNetwork network = new NodeNetwork();
-    NodeConflictResolver conflictResolver = new MyConflictResolver();
-    ForeignKeyResolver foreignKeyResolver = ForeignKeyResolvers.Delete;
+    NodeConfig config = new NodeConfig
+      (new MyConflictResolver(),
+       ForeignKeyResolvers.Delete,
+       new NodeNetwork(),
+       EpidemicFactory);
 
-    Node n1 = new Node(conflictResolver, foreignKeyResolver, network, 1);
-    Node n2 = new Node(conflictResolver, foreignKeyResolver, network, 2);
+    Node n1 = new Node(config, 1);
+    Node n2 = new Node(config, 2);
 
     n1.server.updateView(set(n2.id));
     n2.server.updateView(set(n1.id));
@@ -294,7 +305,7 @@ public class Epidemic extends TestCase{
     
     Index numbersKey = numbers.primaryKey;
 
-    flush(network);
+    flush(config.network);
 
     expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
     expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
@@ -310,7 +321,7 @@ public class Epidemic extends TestCase{
     builder.insert(Throw, numbers, 2, name, "two");
     n1.server.merge(base, builder.commit());
     
-    flush(network);
+    flush(config.network);
 
     expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
     expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
@@ -320,12 +331,14 @@ public class Epidemic extends TestCase{
   
   @Test
   public void testTwoNodeRestartWithChanges() {
-    NodeNetwork network = new NodeNetwork();
-    NodeConflictResolver conflictResolver = new MyConflictResolver();
-    ForeignKeyResolver foreignKeyResolver = ForeignKeyResolvers.Delete;
+    NodeConfig config = new NodeConfig
+      (new MyConflictResolver(),
+       ForeignKeyResolvers.Delete,
+       new NodeNetwork(),
+       EpidemicFactory);
 
-    Node n1 = new Node(conflictResolver, foreignKeyResolver, network, 1);
-    Node n2 = new Node(conflictResolver, foreignKeyResolver, network, 2);
+    Node n1 = new Node(config, 1);
+    Node n2 = new Node(config, 2);
 
     n1.server.updateView(set(n2.id));
     n2.server.updateView(set(n1.id));
@@ -346,7 +359,7 @@ public class Epidemic extends TestCase{
     builder.insert(Throw, numbers, 2, name, "two");
     n2.server.merge(base, builder.commit());
     
-    flush(network);
+    flush(config.network);
 
     Index numbersKey = numbers.primaryKey;
 
@@ -366,7 +379,7 @@ public class Epidemic extends TestCase{
     builder.insert(Throw, numbers, 3, name, "three");
     n2.server.merge(base, builder.commit());
     
-    flush(network);
+    flush(config.network);
 
     expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
     expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
@@ -376,15 +389,16 @@ public class Epidemic extends TestCase{
     expectEqual(n2.server.head().query(numbersKey, 3, name), "three");
   }
   
-  @Test
-  public void testThreeNodeRestart() {
-    NodeNetwork network = new NodeNetwork();
-    NodeConflictResolver conflictResolver = new MyConflictResolver();
-    ForeignKeyResolver foreignKeyResolver = ForeignKeyResolvers.Delete;
+  public void testThreeNodeRestart(ServerFactory factory) {
+    NodeConfig config = new NodeConfig
+      (new MyConflictResolver(),
+       ForeignKeyResolvers.Delete,
+       new NodeNetwork(),
+       factory);
 
-    Node n1 = new Node(conflictResolver, foreignKeyResolver, network, 1);
-    Node n2 = new Node(conflictResolver, foreignKeyResolver, network, 2);
-    Node n3 = new Node(conflictResolver, foreignKeyResolver, network, 3);
+    Node n1 = new Node(config, 1);
+    Node n2 = new Node(config, 2);
+    Node n3 = new Node(config, 3);
 
     n1.server.updateView(set(n2.id));
     n2.server.updateView(set(n1.id, n3.id));
@@ -395,15 +409,14 @@ public class Epidemic extends TestCase{
     Table numbers = new Table(cols(number));
 
     Revision base = n1.server.head();
-    RevisionBuilder builder = base.builder();
-    
-    builder.insert(Throw, numbers, 1, name, "one");
 
-    n1.server.merge(base, builder.commit());
+    n1.server.merge
+      (base, base.builder().table(numbers).row(1)
+       .update(name, "one").commit());
     
     Index numbersKey = numbers.primaryKey;
 
-    flush(network);
+    flush(config.network);
 
     expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
     expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
@@ -414,13 +427,13 @@ public class Epidemic extends TestCase{
     n3.start();
     n2.server.updateView(set(n1.id, n3.id));
     n3.server.updateView(set(n2.id));
-    
+
     base = n1.server.head();
-    builder = base.builder();
-    builder.insert(Throw, numbers, 2, name, "two");
-    n1.server.merge(base, builder.commit());
+    n1.server.merge
+      (base, base.builder().table(numbers).row(2)
+       .update(name, "two").commit());
     
-    flush(network);
+    flush(config.network);
 
     expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
     expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
@@ -428,16 +441,44 @@ public class Epidemic extends TestCase{
     expectEqual(n1.server.head().query(numbersKey, 2, name), "two");
     expectEqual(n2.server.head().query(numbersKey, 2, name), "two");
     expectEqual(n3.server.head().query(numbersKey, 2, name), "two");
+
+    base = n2.server.head();
+    n2.server.merge
+      (base, base.builder().table(numbers).row(3)
+       .update(name, "three").commit());
+
+    base = n3.server.head();
+    n3.server.merge
+      (base, base.builder().table(numbers).delete(1).commit());
+
+    flush(config.network);
+
+    expectEqual(n1.server.head().query(numbersKey, 1, name), null);
+    expectEqual(n2.server.head().query(numbersKey, 1, name), null);
+    expectEqual(n3.server.head().query(numbersKey, 1, name), null);
+    expectEqual(n1.server.head().query(numbersKey, 2, name), "two");
+    expectEqual(n2.server.head().query(numbersKey, 2, name), "two");
+    expectEqual(n3.server.head().query(numbersKey, 2, name), "two");
+    expectEqual(n1.server.head().query(numbersKey, 3, name), "three");
+    expectEqual(n2.server.head().query(numbersKey, 3, name), "three");
+    expectEqual(n3.server.head().query(numbersKey, 3, name), "three");
   }
   
   @Test
-  public void testReconnect() {
-    NodeNetwork network = new NodeNetwork();
-    NodeConflictResolver conflictResolver = new MyConflictResolver();
-    ForeignKeyResolver foreignKeyResolver = ForeignKeyResolvers.Delete;
+  public void testThreeNodeRestart() {
+    testThreeNodeRestart(EpidemicFactory);
+  }
 
-    Node n1 = new Node(conflictResolver, foreignKeyResolver, network, 1);
-    Node n2 = new Node(conflictResolver, foreignKeyResolver, network, 2);
+  @Test
+  public void testReconnect() {
+    NodeConfig config = new NodeConfig
+      (new MyConflictResolver(),
+       ForeignKeyResolvers.Delete,
+       new NodeNetwork(),
+       EpidemicFactory);
+
+    Node n1 = new Node(config, 1);
+    Node n2 = new Node(config, 2);
 
     n1.server.updateView(set(n2.id));
     n2.server.updateView(set(n1.id));
@@ -455,7 +496,7 @@ public class Epidemic extends TestCase{
     
     Index numbersKey = numbers.primaryKey;
 
-    flush(network);
+    flush(config.network);
 
     expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
     expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
@@ -468,14 +509,14 @@ public class Epidemic extends TestCase{
     builder.insert(Throw, numbers, 2, name, "two");
     n1.server.merge(base, builder.commit());
 
-    if (! network.messages.isEmpty()) {
+    if (! config.network.messages.isEmpty()) {
       fail("network traffic exists despite disconnection");
     }
 
     n1.server.updateView(set(n2.id));
     n2.server.updateView(set(n1.id));
     
-    flush(network);
+    flush(config.network);
 
     // System.out.print("n1: "); n1.server.dump(System.out);
     // System.out.print("n2: "); n2.server.dump(System.out);
@@ -486,6 +527,66 @@ public class Epidemic extends TestCase{
     expectEqual(n2.server.head().query(numbersKey, 2, name), "two");
   }
 
+  @Test
+  public void testDeleteAndInsert() {
+    NodeConfig config = new NodeConfig
+      (new MyConflictResolver(),
+       ForeignKeyResolvers.Delete,
+       new NodeNetwork(),
+       EpidemicFactory);
+
+    Node n1 = new Node(config, 1);
+    Node n2 = new Node(config, 2);
+    Node observer = new Node(config, 3);
+
+    n1.server.updateView(set(n2.id));
+    n2.server.updateView(set(n1.id));
+
+    Column<Integer> first = new Column<Integer>(Integer.class);
+    Column<Integer> second = new Column<Integer>(Integer.class);
+    Column<Integer> third = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Table table = new Table(cols(first, second, third));
+
+    Revision base = n1.server.head();
+
+    n1.server.merge
+      (base, base.builder().table(table).row(1, 2, 1).update(name, "foo")
+       .commit());
+
+    Index key = table.primaryKey;
+
+    expectEqual(n1.server.head().query(name, key, 1, 2, 1), "foo");
+    expectEqual(n2.server.head().query(name, key, 1, 2, 1), null);
+
+    flush(config.network);
+
+    expectEqual(n1.server.head().query(name, key, 1, 2, 1), "foo");
+    expectEqual(n2.server.head().query(name, key, 1, 2, 1), "foo");
+
+    base = n2.server.head();
+    n2.server.merge
+      (base, base.builder().table(table).delete(1, 2, 1).commit());
+
+    base = n1.server.head();
+
+    n1.server.merge
+      (base, base.builder().table(table).row(1, 2, 2).update(name, "bar")
+       .commit());
+
+    expectEqual(n1.server.head().query(name, key, 1, 2, 1), "foo");
+    expectEqual(n2.server.head().query(name, key, 1, 2, 1), null);
+    expectEqual(n1.server.head().query(name, key, 1, 2, 2), "bar");
+    expectEqual(n2.server.head().query(name, key, 1, 2, 2), null);
+
+    flush(config.network);
+
+    expectEqual(n1.server.head().query(name, key, 1, 2, 1), null);
+    expectEqual(n2.server.head().query(name, key, 1, 2, 1), null);
+    expectEqual(n1.server.head().query(name, key, 1, 2, 2), "bar");
+    expectEqual(n2.server.head().query(name, key, 1, 2, 2), "bar");
+  }
+  
   private static void flush(NodeNetwork network, NodeID... dontDeliverTo) {
     final int MaxIterations = 100;
     final Set<NodeID> ddt = new HashSet<NodeID>(Arrays.asList(dontDeliverTo));
@@ -530,64 +631,6 @@ public class Epidemic extends TestCase{
     network.messages.addAll(undelivered);
   }
 
-  @Test
-  public void testDeleteAndInsert() {
-    NodeNetwork network = new NodeNetwork();
-    NodeConflictResolver conflictResolver = NetworkServer.NodeConflictRestrict;
-    ForeignKeyResolver foreignKeyResolver = ForeignKeyResolvers.Restrict;
-
-    Node n1 = new Node(conflictResolver, foreignKeyResolver, network, 1);
-    Node n2 = new Node(conflictResolver, foreignKeyResolver, network, 2);
-    Node observer = new Node(conflictResolver, foreignKeyResolver, network, 3);
-
-    n1.server.updateView(set(n2.id));
-    n2.server.updateView(set(n1.id));
-
-    Column<Integer> first = new Column<Integer>(Integer.class);
-    Column<Integer> second = new Column<Integer>(Integer.class);
-    Column<Integer> third = new Column<Integer>(Integer.class);
-    Column<String> name = new Column<String>(String.class);
-    Table table = new Table(cols(first, second, third));
-
-    Revision base = n1.server.head();
-
-    n1.server.merge
-      (base, base.builder().table(table).row(1, 2, 1).update(name, "foo")
-       .commit());
-
-    Index key = table.primaryKey;
-
-    expectEqual(n1.server.head().query(name, key, 1, 2, 1), "foo");
-    expectEqual(n2.server.head().query(name, key, 1, 2, 1), null);
-
-    flush(network);
-
-    expectEqual(n1.server.head().query(name, key, 1, 2, 1), "foo");
-    expectEqual(n2.server.head().query(name, key, 1, 2, 1), "foo");
-
-    base = n2.server.head();
-    n2.server.merge
-      (base, base.builder().table(table).delete(1, 2, 1).commit());
-
-    base = n1.server.head();
-
-    n1.server.merge
-      (base, base.builder().table(table).row(1, 2, 2).update(name, "bar")
-       .commit());
-
-    expectEqual(n1.server.head().query(name, key, 1, 2, 1), "foo");
-    expectEqual(n2.server.head().query(name, key, 1, 2, 1), null);
-    expectEqual(n1.server.head().query(name, key, 1, 2, 2), "bar");
-    expectEqual(n2.server.head().query(name, key, 1, 2, 2), null);
-
-    flush(network);
-
-    expectEqual(n1.server.head().query(name, key, 1, 2, 1), null);
-    expectEqual(n2.server.head().query(name, key, 1, 2, 1), null);
-    expectEqual(n1.server.head().query(name, key, 1, 2, 2), "bar");
-    expectEqual(n2.server.head().query(name, key, 1, 2, 2), "bar");
-  }
-
   private static class MyConflictResolver implements NodeConflictResolver {
     public Object resolveConflict(NodeID leftNode,
                                   NodeID rightNode,
@@ -621,31 +664,65 @@ public class Epidemic extends TestCase{
     }    
   }
 
-  private static class Node {
-    public final NodeID id;
-    public EpidemicServer server;
-    private final NodeConflictResolver conflictResolver;
-    private final ForeignKeyResolver foreignKeyResolver;
-    private final Network network;
+  private static class NodeConfig {
+    public final NodeConflictResolver conflictResolver;
+    public final ForeignKeyResolver foreignKeyResolver;
+    public final NodeNetwork network;
+    public final ServerFactory factory;
 
-    public Node(NodeConflictResolver conflictResolver,
-                ForeignKeyResolver foreignKeyResolver,
-                NodeNetwork network,
-                int id)
+    public NodeConfig(NodeConflictResolver conflictResolver,
+                      ForeignKeyResolver foreignKeyResolver,
+                      NodeNetwork network,
+                      ServerFactory factory)
     {
-      this.id = new NodeID(String.valueOf(id));
       this.conflictResolver = conflictResolver;
       this.foreignKeyResolver = foreignKeyResolver;
       this.network = network;
-      network.nodes.put(this.id, this);
+      this.factory = factory;
+    }
+
+    public NetworkServer make(NodeID id) {
+      return factory.make(conflictResolver, foreignKeyResolver, network, id);
+    }
+  }
+
+  private static class Node {
+    public final NodeID id;
+    private final NodeConfig config;
+    public NetworkServer server;
+
+    public Node(NodeConfig config,
+                int id)
+    {
+      this.id = new NodeID(String.valueOf(id));
+      this.config = config;
+
+      config.network.nodes.put(this.id, this);
       start();
     }
 
     public void start() {
-      this.server = new EpidemicServer
-        (conflictResolver, foreignKeyResolver, network, this.id);
+      this.server = config.make(id);
     }
   }
+
+  private interface ServerFactory {
+    public NetworkServer make(NodeConflictResolver conflictResolver,
+                              ForeignKeyResolver foreignKeyResolver,
+                              NodeNetwork network,
+                              NodeID id);
+  }
+
+  private static final ServerFactory EpidemicFactory = new ServerFactory() {
+      public NetworkServer make(NodeConflictResolver conflictResolver,
+                                ForeignKeyResolver foreignKeyResolver,
+                                NodeNetwork network,
+                                NodeID id)
+      {
+        return new EpidemicServer
+          (conflictResolver, foreignKeyResolver, network, id);
+      }
+    };
 
   private static class Message {
     public final NodeID source;
