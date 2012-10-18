@@ -25,6 +25,7 @@ import com.readytalk.revori.RevisionBuilder;
 import com.readytalk.revori.ForeignKeyResolver;
 import com.readytalk.revori.ForeignKeyResolvers;
 import com.readytalk.revori.util.BufferOutputStream;
+import com.readytalk.revori.server.TreeServer;
 import com.readytalk.revori.server.EpidemicServer;
 import com.readytalk.revori.server.NetworkServer;
 import com.readytalk.revori.server.NetworkServer.NodeID;
@@ -467,6 +468,7 @@ public class Epidemic {
   @Test
   public void testThreeNodeRestart() {
     testThreeNodeRestart(EpidemicFactory);
+    testThreeNodeRestart(TreeFactory);
   }
 
   @Test
@@ -720,6 +722,17 @@ public class Epidemic {
                                 NodeID id)
       {
         return new EpidemicServer
+          (conflictResolver, foreignKeyResolver, network, id);
+      }
+    };
+
+  private static final ServerFactory TreeFactory = new ServerFactory() {
+      public NetworkServer make(NodeConflictResolver conflictResolver,
+                                ForeignKeyResolver foreignKeyResolver,
+                                NodeNetwork network,
+                                NodeID id)
+      {
+        return new TreeServer
           (conflictResolver, foreignKeyResolver, network, id);
       }
     };
