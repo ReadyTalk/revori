@@ -382,4 +382,32 @@ public class MergeTest {
     expectEqual(merged.query(name, key, 1, 2, 1), null);
     expectEqual(merged.query(value, key, 1, 2, 1), "bar");
   }
+
+  @Test
+  public void testDeleteInBothForks() {
+    Column<Integer> first = new Column<Integer>(Integer.class, "first");
+    Column<String> name = new Column<String>(String.class, "name");
+    Table table = new Table(cols(first), "table");
+    Index key = table.primaryKey;
+
+    Revision base = Revisions.Empty.builder().table(table).row(1)
+      .update(name, "foo").commit();
+
+    Revision fork1 = base.builder().table(table).delete(1).commit();
+
+    Revision fork2 = fork1.builder().table(table).row(2).update
+      (name, "bar").commit();
+
+    Revision merged = base.merge
+      (fork1, fork2, ConflictResolvers.Restrict, ForeignKeyResolvers.Restrict);
+
+    expectEqual(merged.query(name, key, 1), null);
+    expectEqual(merged.query(name, key, 2), "bar");
+
+    merged = base.merge
+      (fork2, fork1, ConflictResolvers.Restrict, ForeignKeyResolvers.Restrict);
+
+    expectEqual(merged.query(name, key, 1), null);
+    expectEqual(merged.query(name, key, 2), "bar");
+  }
 }
