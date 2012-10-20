@@ -12,6 +12,8 @@ import com.readytalk.revori.Revision;
 import com.readytalk.revori.util.SetMultimap;
 
 public class DiffIterator {
+  private static boolean DebugThreads = true;
+
   private enum State { Diff, Matchers, Result, End; };
 
   private final Revision base;
@@ -24,6 +26,7 @@ public class DiffIterator {
   private State state;
   private QueryResult queryResult;
   private Object[] row;
+  private Thread thread;
 
   public DiffIterator(Revision base,
                       Revision head,
@@ -37,6 +40,15 @@ public class DiffIterator {
   }
 
   public boolean next() {
+    if (DebugThreads) {
+      if (thread == null) {
+        thread = Thread.currentThread();
+      } else if (thread != Thread.currentThread()) {
+        throw new IllegalStateException
+          ("expected " + thread + " got " + Thread.currentThread());
+      }
+    }
+
     while (true) {
       switch (state) {
       case Diff: {

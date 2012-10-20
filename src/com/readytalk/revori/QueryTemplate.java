@@ -23,9 +23,6 @@ import java.util.TreeSet;
  * specific parameters, analogous to a prepared statement in JDBC.
  */
 public final class QueryTemplate implements Comparable<QueryTemplate> {
-  private static final int AggregateFlag = 1 << 0;
-  private static final int ColumnReferenceFlag = 1 << 1;
-
   /**
    * The number of parameter expressions present in the the expression
    * list and test expression, including any parameters referenced
@@ -93,48 +90,29 @@ public final class QueryTemplate implements Comparable<QueryTemplate> {
       (union(append(this.expressions, test), groupingExpressions));
 
     groupingExpressions = new TreeSet(groupingExpressions);
-    int mask = 0;
-    final Set<Expression> basics = new TreeSet();
+
+    final boolean hasAggregates[] = new boolean[1];
+    ExpressionVisitor v = new ExpressionVisitor() {
+        public void visit(Expression e) {
+          if (e instanceof Aggregate) {
+            hasAggregates[0] = true;
+          }
+        }
+      };
+
     for (Expression e: this.expressions) {
-      mask |= addBasics(basics, e);
+      e.visit(v);
     }
 
-    mask |= addBasics(basics, test);
+    test.visit(v);
 
-    if (((mask & AggregateFlag) != 0) || (! groupingExpressions.isEmpty())) {
-      groupingExpressions.addAll(basics);
-    }
-
-    this.hasAggregates = (mask & AggregateFlag) != 0;
+    this.hasAggregates = hasAggregates[0];
 
     this.groupingExpressions = Collections.unmodifiableSet
       (groupingExpressions);
 
     this.orderByExpressions = Collections.unmodifiableList
       (orderByExpressions);
-  }
-
-  private static int addBasics(Set<Expression> basics,
-                               Expression expression)
-  {
-    int mask = 0;
-    for (Expression e: expression.children()) {
-      mask |= addBasics(basics, e);
-    }
-
-    if (expression instanceof Aggregate) {
-      mask |= AggregateFlag;
-    }
-
-    if (expression instanceof ColumnReference) {
-      mask |= ColumnReferenceFlag;
-    }
-
-    if ((mask & AggregateFlag) == 0 && (mask & ColumnReferenceFlag) != 0) {
-      basics.add(expression);
-    }
-
-    return mask;
   }
 
   public int compareTo(QueryTemplate o) {

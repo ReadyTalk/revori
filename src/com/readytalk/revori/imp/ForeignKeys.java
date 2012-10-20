@@ -23,16 +23,32 @@ class ForeignKeys {
   public static void checkForeignKeys(NodeStack baseStack,
                                       MyRevision base,
                                       NodeStack forkStack,
-                                      final MyRevisionBuilder builder,
+                                      MyRevisionBuilder builder,
                                       NodeStack scratchStack,
-                                      final ForeignKeyResolver resolver,
+                                      ForeignKeyResolver resolver,
                                       Table filter)
+  {
+    MyRevision r = null;
+    while (r != builder.result) {
+      r = builder.result;
+      check(baseStack, base, forkStack, builder, scratchStack, resolver,
+            filter);
+    }
+  }
+
+  private static void check(NodeStack baseStack,
+                            MyRevision base,
+                            NodeStack forkStack,
+                            final MyRevisionBuilder builder,
+                            NodeStack scratchStack,
+                            final ForeignKeyResolver resolver,
+                            Table filter)
   {
     MyRevision fork = builder.result;
 
     // ensure fork remains unmodified as we iterate over it:
     builder.setToken(new Object());
-
+        
     MyDiffResult result = new MyDiffResult
       (base, baseStack, fork, forkStack, false);
 
@@ -99,7 +115,7 @@ class ForeignKeys {
             refererKeyAdapters = Collections.emptyList();
           }
 
-          if ((filter != null && filter != table)
+          if ((filter != null && ! filter.equals(table))
               || (forkTable != Constants.ForeignKeyTable
                   && referentKeyAdapters.isEmpty()
                   && refererKeyAdapters.isEmpty()))

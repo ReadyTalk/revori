@@ -15,6 +15,8 @@ import com.readytalk.revori.util.SetMultimap;
 
 public class DiffMachine {
 
+  private static boolean DebugThreads = true;
+
   private final SetMultimap<Table, Matcher> newMatchers = new SetMultimap<Table, Matcher>();
   
   private final SetMultimap<Table, Matcher> matchersForTable = new SetMultimap<Table, Matcher>();
@@ -29,6 +31,8 @@ public class DiffMachine {
   private State state = State.Start;
 
   private final boolean autoDeliver;
+
+  private Thread thread;
 
   private enum State { Start, New, Cached, Uncached; };
 
@@ -103,6 +107,15 @@ public class DiffMachine {
   }
 
   public boolean next() {
+    if (DebugThreads) {
+      if (thread == null) {
+        thread = Thread.currentThread();
+      } else if (thread != Thread.currentThread()) {
+        throw new IllegalStateException
+          ("expected " + thread + " got " + Thread.currentThread());
+      }
+    }
+
     while (true) {
       switch (state) {
       case Start: {

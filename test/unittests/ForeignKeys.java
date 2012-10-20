@@ -39,27 +39,40 @@ public class ForeignKeys extends TestCase {
     Column<String> name = new Column<String>(String.class);
     Table englishNumbers = new Table(cols(number));
     Table spanishNumbers = new Table(cols(number));
+    Table japaneseNumbers = new Table(cols(number));
+    Table binaryNumbers = new Table(cols(number));
 
     RevisionBuilder builder = Revisions.Empty.builder();
 
     builder.add(new ForeignKey(spanishNumbers, cols(number),
                                englishNumbers, cols(number)));
 
+    builder.add(new ForeignKey(japaneseNumbers, cols(number),
+                               spanishNumbers, cols(number)));
+
     builder.insert(Throw, englishNumbers, 1, name, "one");
     builder.insert(Throw, spanishNumbers, 1, name, "uno");
+    builder.insert(Throw, japaneseNumbers, 1, name, "ichi");
     builder.insert(Throw, englishNumbers, 2, name, "two");
     builder.insert(Throw, spanishNumbers, 2, name, "dos");
+    builder.insert(Throw, japaneseNumbers, 2, name, "ni");
+    builder.insert(Throw, binaryNumbers, 5, name, "101");
 
     Revision head = builder.commit();
 
     assertEquals(head.query(englishNumbers.primaryKey, 1, name), "one");
     assertEquals(head.query(spanishNumbers.primaryKey, 1, name), "uno");
+    assertEquals(head.query(japaneseNumbers.primaryKey, 1, name), "ichi");
     assertEquals(head.query(englishNumbers.primaryKey, 2, name), "two");
     assertEquals(head.query(spanishNumbers.primaryKey, 2, name), "dos");
+    assertEquals(head.query(japaneseNumbers.primaryKey, 2, name), "ni");
+    assertEquals(head.query(binaryNumbers.primaryKey, 5, name), "101");
 
     builder = head.builder();
 
     builder.delete(englishNumbers, 1);
+
+    builder.delete(binaryNumbers, 5);
     
     if (restrict) {
       try {
@@ -71,8 +84,11 @@ public class ForeignKeys extends TestCase {
 
       assertEquals(head.query(englishNumbers.primaryKey, 1, name), null);
       assertEquals(head.query(spanishNumbers.primaryKey, 1, name), null);
+      assertEquals(head.query(japaneseNumbers.primaryKey, 1, name), null);
       assertEquals(head.query(englishNumbers.primaryKey, 2, name), "two");
       assertEquals(head.query(spanishNumbers.primaryKey, 2, name), "dos");
+      assertEquals(head.query(japaneseNumbers.primaryKey, 2, name), "ni");
+      assertEquals(head.query(binaryNumbers.primaryKey, 5, name), null);
     }
   }
 
@@ -80,6 +96,58 @@ public class ForeignKeys extends TestCase {
   public void testDelete() {
     testDelete(true);
     testDelete(false);
+  }
+
+  private static void testDeleteMulti(boolean restrict) {
+    Column<Integer> number = new Column<Integer>(Integer.class);
+    Column<String> name = new Column<String>(String.class);
+    Column<String> binary = new Column<String>(String.class);
+    Table firstNumbers = new Table(cols(number, name));
+    Table secondNumbers = new Table(cols(name, number, binary));
+
+    RevisionBuilder builder = Revisions.Empty.builder();
+
+    builder.add(new ForeignKey(secondNumbers, cols(number, name),
+                               firstNumbers, cols(number, name)));
+
+    builder.table(firstNumbers).row(1, "one").row(2, "two")
+      .table(secondNumbers).row("one", 1, "1").row("two", 2, "10");
+
+    Revision head = builder.commit();
+
+    assertEquals(head.query(name, firstNumbers.primaryKey, 1, "one"), "one");
+    assertEquals
+      (head.query(name, secondNumbers.primaryKey, "one", 1, "1"), "one");
+    assertEquals(head.query(name, firstNumbers.primaryKey, 2, "two"), "two");
+    assertEquals
+      (head.query(name, secondNumbers.primaryKey, "two", 2, "10"), "two");
+
+    builder = head.builder();
+
+    builder.delete(firstNumbers, 1);
+    
+    if (restrict) {
+      try {
+        builder.commit();
+        fail("expected ForeignKeyException");
+      } catch (ForeignKeyException e) { }
+    } else {
+      head = builder.commit(ForeignKeyResolvers.Delete);
+
+
+      assertEquals(head.query(name, firstNumbers.primaryKey, 1, "one"), null);
+      assertEquals
+        (head.query(name, secondNumbers.primaryKey, "one", 1, "1"), null);
+      assertEquals(head.query(name, firstNumbers.primaryKey, 2, "two"), "two");
+      assertEquals
+        (head.query(name, secondNumbers.primaryKey, "two", 2, "10"), "two");
+    }
+  }
+
+  @Test
+  public void testDeleteMulti() {
+    testDeleteMulti(true);
+    testDeleteMulti(false);
   }
 
   @Test

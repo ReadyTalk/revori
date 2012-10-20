@@ -64,9 +64,10 @@ public class RefererForeignKeyAdapter {
                             Revision revision, List<Column<?>> columns, Node tree)
   {
     Object[] params = parametersOrNull(columns, tree);
-    if(params == null) {
-      return false;
+    if (params == null) {
+      throw new NullPointerException();
     }
+
     return MyRevision.Empty.diff
       (revision, query, params).nextRow() == QueryResult.Type.End;
   }

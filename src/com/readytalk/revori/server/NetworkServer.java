@@ -14,6 +14,7 @@ import com.readytalk.revori.server.protocol.Writable;
 import com.readytalk.revori.server.protocol.Stringable;
 
 import java.util.Set;
+import java.util.Arrays;
 
 public interface NetworkServer extends RevisionServer {
   public void accept(NodeID source, Readable message);
@@ -71,7 +72,11 @@ public interface NetworkServer extends RevisionServer {
                                       Object leftValue,
                                       Object rightValue)
         {
-          throw new RuntimeException();
+          throw new RuntimeException
+            ("conflict in " + table + " " + column + " "
+             + Arrays.toString(primaryKeyValues) + ": base " + baseValue
+             + " left (" + leftNode + ") " + leftValue + " right ("
+             + rightNode + ") " + rightValue);
         }
       };
 

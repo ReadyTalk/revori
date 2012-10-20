@@ -98,6 +98,7 @@ class MyRevisionBuilder implements RevisionBuilder {
   }
 
   public void setKey(int index, Object key, Comparator comparator) {
+    if (key == Compare.Undefined) throw new RuntimeException();
     if (max < index || (! Compare.equal(key, keys[index], comparator))) {
       max = index;
       keys[index] = key;
@@ -193,14 +194,20 @@ class MyRevisionBuilder implements RevisionBuilder {
     blazedLeaves[index] = null;
     if (root == Node.Null) {
       if (index == 0) {
-        result.root = Node.delete
+        root = Node.delete
           (token, stack, result.root, keys[0], comparators[0]);
+
+        if (root != result.root) {
+          result = getRevision(token, result, root);
+        }
       } else {
         delete(index - 1);
       }
     } else {
       if (index == 0) {
-        result.root = root;
+        if (root != result.root) {
+          result = getRevision(token, result, root);
+        }
       } else {
         blazedLeaves[index - 1].value = root;
       }
@@ -475,7 +482,7 @@ class MyRevisionBuilder implements RevisionBuilder {
     }
 
     if (view.query.hasAggregates) {
-      if (! sawSomething) {
+      if (! sawSomething && view.query.groupingExpressions.isEmpty()) {
         // if there's no difference between the base and the fork, we
         // must synthesize a row containing the aggregates
 
@@ -576,6 +583,10 @@ class MyRevisionBuilder implements RevisionBuilder {
   }
 
   private void updateIndexes() {
+    updateIndexes(null);
+  }
+
+  private void updateIndexes(View viewToSkip) {
     if (dirtyIndexes && indexBase != result) {
       checkStacks();
 
@@ -608,7 +619,10 @@ class MyRevisionBuilder implements RevisionBuilder {
                    pair.fork.key, Constants.TableColumn.comparator));
                views.hasNext();)
           {
-            viewSet.add((View) views.next().key);
+            View view = (View) views.next().key;
+            if (! view.equals(viewToSkip)) {
+              viewSet.add(view);
+            }
           }
         }
       }
@@ -647,7 +661,9 @@ class MyRevisionBuilder implements RevisionBuilder {
     // freeze a copy of the last revision which contained up-to-date
     // indexes so we can do a diff later and use it to update them
 
-    if (Node.pathFind
+    if (Constants.IndexTable.equals(table)
+        || Constants.ViewTable.equals(table)
+        || Node.pathFind
         (result.root, Constants.IndexTable, Compare.TableComparator,
          Constants.IndexTable.primaryKey, Compare.IndexComparator,
          table, Constants.TableColumn.comparator) != Node.Null
@@ -749,6 +765,7 @@ class MyRevisionBuilder implements RevisionBuilder {
 
   void addView(final View view, MyRevision base)
   {
+    final boolean isNew[] = new boolean[1];
     view.query.source.visit(new SourceVisitor() {
         public void visit(Source source) {
           if (source instanceof TableReference) {
@@ -758,31 +775,32 @@ class MyRevisionBuilder implements RevisionBuilder {
                 (result.root, Constants.ViewTable, Compare.TableComparator,
                  Constants.ViewTable.primaryKey, Compare.IndexComparator,
                  table, Constants.TableColumn.comparator,
-                 view, Constants.ViewColumn.comparator) != Node.Null)
+                 view, Constants.ViewColumn.comparator) == Node.Null)
             {
-              // the specified view is already present -- ignore
-              return;
+              isNew[0] = true;
+              insert(DuplicateKeyResolution.Throw, Constants.ViewTable, table,
+                     view, Constants.ViewTableColumn, view.table);
+            } else if (isNew[0]) {
+              throw new RuntimeException
+                ("view not indexed with all referenced tables");
             }
-
-            insert(DuplicateKeyResolution.Throw, Constants.ViewTable, table,
-                   view, Constants.ViewTableColumn, view.table);
-
-            add(Constants.ViewTableIndex);
-
-            dirtyIndexes = true;
           }
         }
       });
 
-    // flush any changes out to the existing indexes, since we don't
-    // want to get confused later when some indexes are up-to-date and
-    // some aren't:
-    updateIndexes();
+    if (isNew[0]) {
+      // flush any changes out to the existing indexes, since we don't
+      // want to get confused later when some indexes are up-to-date and
+      // some aren't:
+      updateIndexes(view);
 
-    checkStacks();
+      checkStacks();
 
-    updateViewTree
-      (view, base, indexUpdateBaseStack, indexUpdateForkStack);
+      add(Constants.ViewTableIndex);
+
+      updateViewTree
+        (view, base, indexUpdateBaseStack, indexUpdateForkStack);
+    }
   }
 
   private void removeView(final View view)
@@ -968,6 +986,7 @@ class MyRevisionBuilder implements RevisionBuilder {
         for(int i = 0; i < keys.length; i++) {
           path[i + 1] = keys[i];
         }
+        insert(DuplicateKeyResolution.Overwrite, path, 0, path.length - 2);
       }
       
       public <T> RowBuilder update(Column<T> key,

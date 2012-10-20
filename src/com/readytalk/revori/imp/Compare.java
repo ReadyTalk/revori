@@ -43,7 +43,11 @@ public class Compare {
       }
 
       if (a.equals(Constants.IndexTable)) {
-        return -1;
+        if (b.equals(Constants.IndexTable)) {
+          return 0;
+        } else {
+          return -1;
+        }
       } else if (b.equals(Constants.IndexTable)) {
         return 1;
       } else {

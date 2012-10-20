@@ -16,9 +16,10 @@ import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.ExpressionFactory.aggregate;
 import static com.readytalk.revori.ExpressionFactory.constant;
 
-import org.junit.Test;
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.fail;
 
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import com.readytalk.revori.Column;
 import com.readytalk.revori.Table;
@@ -38,7 +39,7 @@ import com.readytalk.revori.ForeignKeyResolvers;
 import java.util.Collections;
 import java.util.Set;
 
-public class Views extends TestCase {
+public class Views {
   private static void expectEqual(Object actual, Object expected) {
     assertEquals(expected, actual);
   }
