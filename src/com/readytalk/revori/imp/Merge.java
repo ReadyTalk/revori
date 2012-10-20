@@ -157,8 +157,11 @@ class Merge {
             // do nothing -- left already has delete
           }
 
-          Object key = triple.left == null
-            ? triple.right.key : triple.left.key;
+          Object key = triple.base == null
+            ? (triple.left == null
+               ? triple.right.key
+               : triple.left.key)
+            : triple.base.key;
 
           if (conflict) {
             Object[] primaryKeyValues = new Object

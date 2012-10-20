@@ -8,6 +8,7 @@
 package com.readytalk.revori.server;
 
 import com.readytalk.revori.Revision;
+import com.readytalk.revori.Revisions;
 import com.readytalk.revori.ConflictResolver;
 import com.readytalk.revori.ForeignKeyResolver;
 import com.readytalk.revori.subscribe.Subscription;
@@ -36,6 +37,35 @@ public class Servers {
   {
     return new AsynchronousNetworkServer
       (server, conflictResolver, foreignKeyResolver, handler);
+  }
+
+  public static Subscription bridge(final RevisionServer a,
+                                    final RevisionServer b)
+  {
+    final Subscription sa = a.registerListener(new Runnable() {
+        Revision base = Revisions.Empty;
+
+        public void run() {
+          b.merge(base, a.head());
+          base = b.head();
+        }
+      });
+
+    final Subscription sb = b.registerListener(new Runnable() {
+        Revision base = Revisions.Empty;
+
+        public void run() {
+          a.merge(base, b.head());
+          base = a.head();
+        }
+      });
+
+    return new Subscription() {
+      public void cancel() {
+        sa.cancel();
+        sb.cancel();
+      }
+    };
   }
 
   private static class AsynchronousRevisionServer implements RevisionServer {
