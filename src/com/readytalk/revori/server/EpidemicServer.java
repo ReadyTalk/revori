@@ -45,6 +45,7 @@ public class EpidemicServer implements NetworkServer {
   private static final boolean DebugSend = false;
   private static final boolean DebugReceive = false;
   private static final boolean DebugState = false;
+  private static final boolean DebugUpdate = false;
 
   private static final UUID DefaultInstance = UUID.fromString
     ("1c8f9a38-aad4-0d8c-8d62-b52500a8dfa1");
@@ -122,7 +123,7 @@ public class EpidemicServer implements NetworkServer {
   }
 
   private void debugMessage(String message) {
-    System.out.println(id + ": " + (localNode != null ? localNode.key.toString() : "(null)") + ": " + message);
+    System.err.println(id + ": " + (localNode != null ? localNode.key.toString() : "(null)") + ": " + message);
   }
 
   public synchronized Subscription registerListener(final Runnable listener) {
@@ -218,7 +219,6 @@ public class EpidemicServer implements NetworkServer {
 
   public void accept(NodeID source, Readable message) {
     synchronized (lock) {
-      // debugMessage("accept " + message + " from " + source);
       ((Message) message).deliver(source, this);
     }
   }
@@ -232,8 +232,6 @@ public class EpidemicServer implements NetworkServer {
   private void send(NodeState state, Writable message) {
     expect(state.connectionState != null);
     expect(state.connectionState.readyToReceive);
-
-    // debugMessage("send " + message + " to " + state.id);
 
     network.send(localNode.key.id, state.key.id, message);
   }
@@ -345,7 +343,7 @@ public class EpidemicServer implements NetworkServer {
     }
 
     for (NodeState other: states.values()) {
-      if (DebugSend) {
+      if (DebugUpdate) {
         debugMessage("sendNext: other: " + other.key + ", state: " + state.key + ", nu: " + needsUpdate(state, other.head));
       }
       if (other != state && needsUpdate(state, other.head)) {
@@ -365,7 +363,7 @@ public class EpidemicServer implements NetworkServer {
 
   private boolean needsUpdate(NodeState state, Record target) {
     Record acknowledged = state.acknowledged.get(target.node);
-    if (DebugSend) {
+    if (DebugUpdate) {
       debugMessage("needsUpdate(asn: " + acknowledged.sequenceNumber + " "
                    + acknowledged.hashCode() + ", tsn: "
                    + target.sequenceNumber + " " + target.hashCode() + ")");
@@ -380,7 +378,7 @@ public class EpidemicServer implements NetworkServer {
         state.connectionState.lastSent.put(target.node, lastSent);
       }
 
-      if (DebugSend) {
+      if (DebugUpdate) {
         debugMessage("needsUpdate(lsn: " + lastSent.sequenceNumber + " "
                      + lastSent.hashCode() + ")");
       }
@@ -398,7 +396,7 @@ public class EpidemicServer implements NetworkServer {
       Record lastSent = state.connectionState.lastSent.get(target.node);
       Record record = lastSent.next;
 
-      if (DebugSend) {
+      if (DebugUpdate) {
         debugMessage("ls: " + lastSent.hashCode() + ", rec: "
                      + (record == null ? " null "
                         : String.valueOf(record.hashCode())));
@@ -411,7 +409,7 @@ public class EpidemicServer implements NetworkServer {
         }
 
         if (DebugSend) {
-          debugMessage("ack to " + state.key + ": " + record.node + " "
+          debugMessage("send ack to " + state.key + ": " + record.node + " "
                        + record.sequenceNumber + " merged "
                        + record.merged.node + " "
                        + record.merged.sequenceNumber);
@@ -422,9 +420,11 @@ public class EpidemicServer implements NetworkServer {
               record.merged.sequenceNumber));
       } else if (! target.node.equals(state.key)) {
         if (DebugSend) {
-          debugMessage("diff to " + state.key + ": " + target.node
+          debugMessage("send diff to " + state.key + ": " + target.node
                        + " " + lastSent.sequenceNumber + " "
-                       + record.sequenceNumber);
+                       + record.sequenceNumber + " body "
+                       + new RevisionDiffBody
+                       (lastSent.revision, record.revision));
         }
         send(state, new Diff
              (target.node, lastSent.sequenceNumber, record.sequenceNumber,
@@ -492,7 +492,7 @@ public class EpidemicServer implements NetworkServer {
 
     if (DebugReceive) {
       debugMessage("accept diff " + origin + " " + startSequenceNumber + " "
-                   + endSequenceNumber + " head " + head);
+                   + endSequenceNumber + " head " + head + " body " + body);
     }
 
     if (startSequenceNumber <= head.sequenceNumber) {
@@ -923,23 +923,23 @@ public class EpidemicServer implements NetworkServer {
         DiffResult.Type type = result.next();
         switch (type) {
         case End:
-          sb.append("end\n");
+          // sb.append("end\n");
           return sb.toString();
 
         case Descend: {
-          sb.append("descend\n");
+          // sb.append("descend\n");
           ++ depth;
         } break;
 
         case Ascend: {
-          sb.append("ascend\n");
+          // sb.append("ascend\n");
           path[depth--] = null;
         } break;
 
         case Key: {
           Object forkKey = result.fork();
           if (forkKey != null) {
-            sb.append("key ").append(forkKey).append("\n");
+            // sb.append("key ").append(forkKey).append("\n");
             path[depth] = forkKey;
           } else {
             path[depth] = result.base();
@@ -1095,12 +1095,18 @@ public class EpidemicServer implements NetworkServer {
       final int MaxDepth = 16;
       Object[] path = new Object[MaxDepth];
       int depth = 0;
-      InputStream in = new ByteArrayInputStream
-        (buffer.getBuffer(), 0, buffer.size());
-      ReadContext readContext = new ReadContext(in);
       boolean visitedColumn = true;
 
       try {
+        InputStream in;
+        if (input == null) {
+          in = new ByteArrayInputStream(buffer.getBuffer(), 0, buffer.size());
+        } else {
+          in = input;
+          in.reset();
+        }
+        ReadContext readContext = new ReadContext(in);
+
         while (true) {
           int flag = in.read();
           switch (flag) {
