@@ -90,17 +90,10 @@ public class Servers {
 
       server.registerListener(new Runnable() {
           public void run() {
+            //            new Exception().printStackTrace();
             handler.handleTask(new Runnable() {
                 public void run() {
-                  Revision fork = server.head();
-                  if (base != fork || base != head) {
-                    head = base = base.merge
-                      (head, fork, conflictResolver, foreignKeyResolver);
-
-                    for (Runnable listener: listeners) {
-                      listener.run();
-                    }
-                  }
+                  pull();
                 }
               });
           }
@@ -120,6 +113,20 @@ public class Servers {
         }
 
         server.merge(this.base, head);
+
+        pull();
+      }
+    }
+
+    private void pull() {
+      Revision fork = server.head();
+      if (base != fork || base != head) {
+        head = base = base.merge
+          (head, fork, conflictResolver, foreignKeyResolver);
+
+        for (Runnable listener: listeners) {
+          listener.run();
+        }
       }
     }
 

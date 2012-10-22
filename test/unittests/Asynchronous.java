@@ -62,6 +62,10 @@ public class Asynchronous extends TestCase {
 
     base = asyncServer.head();
     asyncServer.merge(base, base.builder().table(numbers).row(12)
+                      .update(name, "twelve").commit());
+
+    base = asyncServer.head();
+    asyncServer.merge(base, base.builder().table(numbers).row(12)
                       .update(name, "doce").commit());
 
     base = rawServer.head();
