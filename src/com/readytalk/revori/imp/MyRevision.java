@@ -262,7 +262,17 @@ public class MyRevision implements Revision {
   public String toString() {
     java.io.StringWriter sw = new java.io.StringWriter();
     java.io.PrintWriter pw = new java.io.PrintWriter(sw);
-    Node.dump(root, pw, 0);
+    for (NodeIterator it = new NodeIterator(new NodeStack(), root);
+         it.hasNext();)
+    {
+      Node n = it.next();
+      if (! (Constants.IndexTable.equals(n.key)
+             || Constants.ViewTable.equals(n.key)
+             || Constants.ForeignKeyTable.equals(n.key)))
+      {
+        Node.dump((Node) n.value, pw, 0);
+      }
+    }
     pw.flush();
     return sw.toString();
   }
