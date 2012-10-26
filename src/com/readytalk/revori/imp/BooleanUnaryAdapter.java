@@ -51,11 +51,12 @@ class BooleanUnaryAdapter implements ExpressionAdapter {
   }
 
   public Scan makeScan(ColumnReferenceAdapter reference) {
-    Scan scan = operand.makeScan(reference);
-
     switch (type) {
+    case IsNull:
+      return IntervalScan.Unbounded;
+
     case Not:
-      return new NegationScan(scan);
+      return new NegationScan(operand.makeScan(reference));
 
     default: throw new RuntimeException
         ("unexpected comparison type: " + type);
