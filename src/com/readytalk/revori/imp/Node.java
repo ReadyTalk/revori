@@ -554,9 +554,8 @@ class Node {
     }
   }
 
-  private static boolean valuesEqual(Node a, Node b, Comparator comparator) {
-    return a != null && b != null
-      && Compare.equal(a.value, b.value, comparator);
+  private static boolean valuesEqual(Node a, Node b) {
+    return a != null && b != null && Compare.equal(a.value, b.value);
   }
 
   public Object value() {
@@ -583,7 +582,7 @@ class Node {
       DiffIterator.DiffPair pair = new DiffIterator.DiffPair();
       boolean result = true;
       while (iterator.next(pair)) {
-        if (! Node.valuesEqual(pair.base, pair.fork, comparator)) {
+        if (! Node.valuesEqual(pair.base, pair.fork)) {
           result = false;
           break;
         }

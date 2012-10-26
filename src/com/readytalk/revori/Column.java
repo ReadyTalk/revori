@@ -33,6 +33,12 @@ public final class Column<T> implements Comparable<Column<?>> {
   public final Comparator comparator;
 
   /**
+   * True if the column of this table should be replicated to other
+   * servers.
+   */
+  public final boolean serializable;
+
+  /**
    * Defines a column which is associated with the specified type and
    * ID.  The type specified here will be used for dynamic type
    * checking whenever a value is inserted or updated in this column
@@ -44,9 +50,16 @@ public final class Column<T> implements Comparable<Column<?>> {
   }
 
   public Column(Class<T> type, String id, Comparator comparator) {
+    this(type, id, comparator, true);
+  }
+
+  public Column(Class<T> type, String id, Comparator comparator,
+                boolean serializable)
+  {
     this.type = type;
     this.id = id;
     this.comparator = comparator;
+    this.serializable = serializable;
 
     if (type == null) throw new NullPointerException();
     if (id == null) throw new NullPointerException();

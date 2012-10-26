@@ -89,7 +89,7 @@ public final class View implements Comparable<View> {
 
     myColumns.addAll(myPrimaryKey);
 
-    this.table = new Table(myPrimaryKey, id);
+    this.table = new Table(myPrimaryKey, id, 0, false);
     this.primaryKeyOffset = query.expressions.size();
     this.aggregateOffset = myExpressions.size();
 
@@ -139,7 +139,7 @@ public final class View implements Comparable<View> {
   }
 
   public View(QueryTemplate query,
-              Object[] parameters)
+              Object ... parameters)
   {
     this(query, list(parameters),
          makeColumnList(query.expressions),

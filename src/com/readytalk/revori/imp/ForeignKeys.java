@@ -234,6 +234,7 @@ class ForeignKeys {
       Object[] path = new Object[row.length + 1];
       path[0] = constraint.refererTable;
       System.arraycopy(row, 0, path, 1, row.length);
+      // System.err.println("delete " + java.util.Arrays.toString(path));
       builder.delete(path);
     } break;
 

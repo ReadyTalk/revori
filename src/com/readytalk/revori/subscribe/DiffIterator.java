@@ -61,7 +61,7 @@ public class DiffIterator {
 
           Set<Matcher> set = matchers.get
             ((Table) (base == null ? fork : base));
-          
+
           if (set != null) {
             matchIterator = set.iterator();
             state = State.Matchers;

@@ -7,6 +7,11 @@
 
 package com.readytalk.revori.util;
 
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.DiffResult;
+import com.readytalk.revori.imp.Constants;
+
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
@@ -105,5 +110,67 @@ public class Util {
     }
     sb.append("]");
     return sb.toString();
+  }
+
+  public static String toString(Revision base, Revision fork) {
+    StringBuilder sb = new StringBuilder();
+    // sb.append(" *** from\n").append(base).append(" *** to\n").append(fork)
+    //   .append("\n");
+
+    final int MaxDepth = 16;
+    Object[] path = new Object[MaxDepth];
+    int depth = 0;
+    DiffResult result = base.diff(fork, true);
+    while (true) {
+      DiffResult.Type type = result.next();
+      switch (type) {
+      case End:
+        // sb.append("end\n");
+        return sb.toString();
+
+      case Descend: {
+        // sb.append("descend\n");
+        ++ depth;
+      } break;
+
+      case Ascend: {
+        // sb.append("ascend\n");
+        path[depth--] = null;
+      } break;
+
+      case Key: {
+        Object forkKey = result.fork();
+        if (forkKey != null) {
+          path[depth] = forkKey;
+
+          if (Constants.serializable((Table) path[0], forkKey, depth)) {
+            // sb.append("key ").append(forkKey).append("\n");
+          } else {
+            result.skip();
+          }
+        } else {
+          Object baseKey = result.base();
+          path[depth] = baseKey;
+
+          if (Constants.serializable((Table) path[0], baseKey, depth)) {
+            sb.append("delete");
+            sb.append(toString(path, 0, depth + 1));
+            sb.append("\n");
+          }
+          result.skip();
+        }
+      } break;
+
+      case Value: {
+        path[depth] = result.fork();
+        sb.append("insert");
+        sb.append(toString(path, 0, depth + 1));
+        sb.append("\n");
+      } break;
+
+      default:
+        throw new RuntimeException("unexpected result type: " + type);
+      }
+    }
   }
 }

@@ -16,6 +16,7 @@ import com.readytalk.revori.ConflictResolver;
 import com.readytalk.revori.DiffResult;
 import com.readytalk.revori.DuplicateKeyResolution;
 import com.readytalk.revori.ForeignKeyResolver;
+import com.readytalk.revori.imp.Constants;
 import com.readytalk.revori.server.protocol.Protocol;
 import com.readytalk.revori.server.protocol.Readable;
 import com.readytalk.revori.server.protocol.ReadContext;
@@ -23,6 +24,7 @@ import com.readytalk.revori.server.protocol.Writable;
 import com.readytalk.revori.server.protocol.WriteContext;
 import com.readytalk.revori.server.protocol.Stringable;
 import com.readytalk.revori.util.BufferOutputStream;
+import com.readytalk.revori.util.Util;
 import com.readytalk.revori.subscribe.Subscription;
 
 import java.lang.ref.WeakReference;
@@ -870,6 +872,8 @@ public class EpidemicServer implements NetworkServer {
       throws IOException
     {
       DiffResult result = base.diff(fork, true);
+      Table table = null;
+      int depth = 0;
       while (true) {
         DiffResult.Type type = result.next();
         switch (type) {
@@ -878,21 +882,35 @@ public class EpidemicServer implements NetworkServer {
           return;
 
         case Descend: {
+          ++ depth;
           context.out.write(Descend);
         } break;
 
         case Ascend: {
+          -- depth;
           context.out.write(Ascend);
         } break;
 
         case Key: {
           Object forkKey = result.fork();
           if (forkKey != null) {
-            context.out.write(Key);
-            Protocol.write(context, forkKey);
+            if (depth == 0) table = (Table) forkKey;
+
+            if (Constants.serializable(table, forkKey, depth)) {
+              context.out.write(Key);
+              Protocol.write(context, forkKey);
+            } else {
+              result.skip();
+            }
           } else {
-            context.out.write(Delete);
-            Protocol.write(context, result.base());
+            Object baseKey = result.base();
+
+            if (depth == 0) table = (Table) baseKey;
+
+            if (Constants.serializable(table, baseKey, depth)) {
+              context.out.write(Delete);
+              Protocol.write(context, baseKey);
+            }
             result.skip();
           }
         } break;
@@ -910,70 +928,8 @@ public class EpidemicServer implements NetworkServer {
 
     public String toString() {
       // todo: reduce code duplication between this and the writeTo method
-
-      StringBuilder sb = new StringBuilder();
-      // sb.append(" *** from\n").append(base).append(" *** to\n").append(fork)
-      //   .append("\n");
-
-      final int MaxDepth = 16;
-      Object[] path = new Object[MaxDepth];
-      int depth = 0;
-      DiffResult result = base.diff(fork, true);
-      while (true) {
-        DiffResult.Type type = result.next();
-        switch (type) {
-        case End:
-          // sb.append("end\n");
-          return sb.toString();
-
-        case Descend: {
-          // sb.append("descend\n");
-          ++ depth;
-        } break;
-
-        case Ascend: {
-          // sb.append("ascend\n");
-          path[depth--] = null;
-        } break;
-
-        case Key: {
-          Object forkKey = result.fork();
-          if (forkKey != null) {
-            // sb.append("key ").append(forkKey).append("\n");
-            path[depth] = forkKey;
-          } else {
-            path[depth] = result.base();
-            sb.append("delete");
-            sb.append(EpidemicServer.toString(path, 0, depth + 1));
-            sb.append("\n");
-            result.skip();
-          }
-        } break;
-
-        case Value: {
-          path[depth] = result.fork();
-          sb.append("insert");
-          sb.append(EpidemicServer.toString(path, 0, depth + 1));
-          sb.append("\n");
-        } break;
-
-        default:
-          throw new RuntimeException("unexpected result type: " + type);
-        }
-      }
+      return Util.toString(base, fork);
     }
-  }
-
-  private static String toString(Object[] array, int offset, int length) {
-    StringBuilder sb = new StringBuilder();
-    sb.append("[");
-    for (int i = offset; i < offset + length; ++i) {
-      sb.append(array[i]);
-      if (i < offset + length - 1) {
-        sb.append(" ");
-      }
-    }
-    return sb.append("]").toString();
   }
 
   private static class BufferDiffBody implements DiffBody, Readable {
@@ -1122,7 +1078,7 @@ public class EpidemicServer implements NetworkServer {
             if (! visitedColumn) {
               visitedColumn = true;
               sb.append("insert");
-              sb.append(EpidemicServer.toString(path, 0, depth + 1));
+              sb.append(Util.toString(path, 0, depth + 1));
               sb.append("\n");
             }
 
@@ -1132,7 +1088,7 @@ public class EpidemicServer implements NetworkServer {
           case Key:
             if (! visitedColumn) {
               sb.append("insert");
-              sb.append(EpidemicServer.toString(path, 0, depth + 1));
+              sb.append(Util.toString(path, 0, depth + 1));
               sb.append("\n");
             } else {
               visitedColumn = false;
@@ -1145,7 +1101,7 @@ public class EpidemicServer implements NetworkServer {
             visitedColumn = true;
             path[depth] = Protocol.read(readContext);
             sb.append("delete");
-            sb.append(EpidemicServer.toString(path, 0, depth + 1));
+            sb.append(Util.toString(path, 0, depth + 1));
             sb.append("\n");
             break;
 
@@ -1153,7 +1109,7 @@ public class EpidemicServer implements NetworkServer {
             visitedColumn = true;
             path[depth + 1] = Protocol.read(readContext);
             sb.append("insert");
-            sb.append(EpidemicServer.toString(path, 0, depth + 2));
+            sb.append(Util.toString(path, 0, depth + 2));
             sb.append("\n");
             break;
 

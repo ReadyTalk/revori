@@ -35,6 +35,8 @@ import com.readytalk.revori.ForeignKeyResolvers;
 import com.readytalk.revori.SourceVisitor;
 import com.readytalk.revori.Source;
 import com.readytalk.revori.Comparators;
+import com.readytalk.revori.util.Util;
+
 import java.util.Comparator;
 import java.util.List;
 import java.util.ArrayList;
@@ -338,6 +340,13 @@ class MyRevisionBuilder implements RevisionBuilder {
                              NodeStack baseStack,
                              NodeStack forkStack)
   {
+    final boolean Verbose = false;
+
+    if (Verbose) {
+      System.err.println("update " + view + " diff "
+                         + Util.toString(base, result));
+    }
+
     MyQueryResult qr = new MyQueryResult
       (base, baseStack, result, forkStack, view.query,
        view.parameters.toArray(new Object[view.parameters.size()]), true);
@@ -399,7 +408,10 @@ class MyRevisionBuilder implements RevisionBuilder {
            expressions.get(view.primaryKeyOffset + i).evaluate(true),
            keyColumns.get(i).comparator);
 
-        // System.out.println("inserted " + com.readytalk.revori.util.Util.toString(keys, 0, Constants.IndexDataBodyDepth + i + 1));
+        if (Verbose) {
+          System.err.println("inserted " + Util.toString
+                             (keys, 0, Constants.IndexDataBodyDepth + i + 1));
+        }
 
         if (view.query.hasAggregates) {
           int columnOffset = view.aggregateOffset;
@@ -410,8 +422,8 @@ class MyRevisionBuilder implements RevisionBuilder {
             }
 
             Node old = Node.find
-               ((Node) n.value, view.columns.get(columnOffset++),
-                Compare.ColumnComparator);
+              ((Node) n.value, view.columns.get(columnOffset++),
+               Compare.ColumnComparator);
 
             a.add(old == Node.Null ? a.aggregate.function.base() : old.value,
                   values);
@@ -438,7 +450,9 @@ class MyRevisionBuilder implements RevisionBuilder {
         }
         int index = keyColumns.size() - 1 + Constants.IndexDataBodyDepth;
 
-        // System.out.println("deleted " + com.readytalk.revori.util.Util.toString(keys, 0, index + 1));
+        if (Verbose) {
+          System.err.println("deleted " + Util.toString(keys, 0, index + 1));
+        }
 
         if (view.query.hasAggregates) {
           Node n = find(index);
@@ -461,8 +475,9 @@ class MyRevisionBuilder implements RevisionBuilder {
         }
 
         if (view.query.hasAggregates
-            && ((Integer) expressions.get(view.aggregateOffset).evaluate(true))
-            != 0)
+            && (view.query.groupingExpressions.isEmpty()
+                || ((Integer) expressions.get(view.aggregateOffset)
+                    .evaluate(true)) != 0))
         {
           blaze(index).value = makeTree(stack, view.columns, expressions);
         } else {
@@ -484,7 +499,7 @@ class MyRevisionBuilder implements RevisionBuilder {
     if (view.query.hasAggregates) {
       if (! sawSomething && view.query.groupingExpressions.isEmpty()) {
         // if there's no difference between the base and the fork, we
-        // must synthesize a row containing the aggregates
+        // may need to synthesize a row containing the aggregates
 
         int i = 0;
         for (; i < keyColumns.size() - 1; ++i) {
@@ -499,16 +514,18 @@ class MyRevisionBuilder implements RevisionBuilder {
            expressions.get(view.primaryKeyOffset + i).evaluate(true),
            keyColumns.get(i).comparator);
 
-        int columnOffset = view.aggregateOffset;
-        int expressionOffset = view.aggregateExpressionOffset;
-        for (AggregateAdapter a: aggregates) {
-          a.value = a.aggregate.function.base();
-        }
-      
-        n.value = makeTree(stack, view.columns, expressions);
-
-        for (AggregateAdapter a: aggregates) {
-          a.value = Compare.Undefined;
+        if (n.value == Node.Null) {
+          int columnOffset = view.aggregateOffset;
+          int expressionOffset = view.aggregateExpressionOffset;
+          for (AggregateAdapter a: aggregates) {
+            a.value = a.aggregate.function.base();
+          }
+          
+          n.value = makeTree(stack, view.columns, expressions);
+          
+          for (AggregateAdapter a: aggregates) {
+            a.value = Compare.Undefined;
+          }
         }
       }
 
@@ -523,6 +540,7 @@ class MyRevisionBuilder implements RevisionBuilder {
         QueryResult.Type type = qr.nextRow();
         switch (type) {
         case End:
+          if (Verbose) System.err.println("updated " + view);
           return;
 
         case Inserted:
@@ -544,12 +562,12 @@ class MyRevisionBuilder implements RevisionBuilder {
                Compare.ColumnComparator).value;
           }
 
-          // System.out.print("filter: ");
+          // System.err.print("filter: ");
           // for (ColumnReferenceAdapter r: qr.expressionContext.columnReferences)
           // {
-          //   System.out.print(r.column + ":" + r.value + " ");
+          //   System.err.print(r.column + ":" + r.value + " ");
           // }
-          // System.out.println(": " + qr.test.evaluate(false));
+          // System.err.println(": " + qr.test.evaluate(false));
 
           if (qr.test.evaluate(false) == Boolean.FALSE) {
             // todo: rather than delete this row from the view we
@@ -624,6 +642,19 @@ class MyRevisionBuilder implements RevisionBuilder {
               viewSet.add(view);
             }
           }
+        } else {
+          for (NodeIterator views = new NodeIterator
+                 (indexUpdateIterateStack, Node.pathFind
+                  (result.root, Constants.ViewTable, Compare.TableComparator,
+                   Constants.ViewTable.primaryKey, Compare.IndexComparator,
+                   pair.base.key, Constants.TableColumn.comparator));
+               views.hasNext();)
+          {
+            View view = (View) views.next().key;
+            if (! view.equals(viewToSkip)) {
+              viewSet.add(view);
+            }
+          }          
         }
       }
 
@@ -883,12 +914,12 @@ class MyRevisionBuilder implements RevisionBuilder {
 
     Table table = (Table) keys[0];
 
+    prepareForUpdate(table);
+
     if (keys.length == 1) {
       deleteKey(Constants.TableDataDepth, table, Compare.TableComparator);
       return;
     }
-
-    prepareForUpdate(table);
 
     setKey(Constants.TableDataDepth, table, Compare.TableComparator);
     setKey(Constants.IndexDataDepth, table.primaryKey,
@@ -990,7 +1021,7 @@ class MyRevisionBuilder implements RevisionBuilder {
       }
       
       public <T> RowBuilder update(Column<T> key,
-                               T value)
+                                   T value)
       {
         path[path.length - 2] = key;
         path[path.length - 1] = value;
@@ -1116,25 +1147,27 @@ class MyRevisionBuilder implements RevisionBuilder {
     }
   }
 
-  public void delete(Object[] path,
-                     int pathOffset,
-                     int pathLength)
+  public RevisionBuilder delete(Object[] path,
+                                int pathOffset,
+                                int pathLength)
   {
     Object[] myPath = new Object[pathLength];
     System.arraycopy(path, pathOffset, myPath, 0, pathLength);
     
     doDelete(myPath);
+
+    return this;
   }
 
-  public void delete(Object ... path)
+  public RevisionBuilder delete(Object ... path)
   {
-    delete(path, 0, path.length);
+    return delete(path, 0, path.length);
   }
 
-  public void insert(DuplicateKeyResolution duplicateKeyResolution,
-                     Object[] path,
-                     int pathOffset,
-                     int pathLength)
+  public RevisionBuilder insert(DuplicateKeyResolution duplicateKeyResolution,
+                                Object[] path,
+                                int pathOffset,
+                                int pathLength)
   {
     Table table;
     try {
@@ -1185,15 +1218,16 @@ class MyRevisionBuilder implements RevisionBuilder {
          + " path " + java.util.Arrays.toString(myPath));
     }
 
+    return this;
   }
 
-  public void insert(DuplicateKeyResolution duplicateKeyResolution,
-                     Object ... path)
+  public RevisionBuilder insert(DuplicateKeyResolution duplicateKeyResolution,
+                                Object ... path)
   {
-    insert(duplicateKeyResolution, path, 0, path.length);
+    return insert(duplicateKeyResolution, path, 0, path.length);
   }
 
-  public void add(Index index)
+  public RevisionBuilder add(Index index)
   {
     if (token == null) {
       throw new IllegalStateException("builder already committed");
@@ -1205,9 +1239,11 @@ class MyRevisionBuilder implements RevisionBuilder {
       token = null;
       throw e;
     }
+
+    return this;
   }
 
-  public void remove(Index index)
+  public RevisionBuilder remove(Index index)
   {
     if (token == null) {
       throw new IllegalStateException("builder already committed");
@@ -1219,9 +1255,11 @@ class MyRevisionBuilder implements RevisionBuilder {
       token = null;
       throw e;
     }
+
+    return this;
   }
 
-  public void add(View view)
+  public RevisionBuilder add(View view)
   {
     if (token == null) {
       throw new IllegalStateException("builder already committed");
@@ -1233,9 +1271,11 @@ class MyRevisionBuilder implements RevisionBuilder {
       token = null;
       throw e;
     }
+
+    return this;
   }
 
-  public void remove(View view)
+  public RevisionBuilder remove(View view)
   {
     if (token == null) {
       throw new IllegalStateException("builder already committed");
@@ -1247,9 +1287,11 @@ class MyRevisionBuilder implements RevisionBuilder {
       token = null;
       throw e;
     }
+
+    return this;
   }
 
-  public void add(ForeignKey constraint)
+  public RevisionBuilder add(ForeignKey constraint)
   {
     if (token == null) {
       throw new IllegalStateException("builder already committed");
@@ -1261,9 +1303,11 @@ class MyRevisionBuilder implements RevisionBuilder {
       token = null;
       throw e;
     }
+
+    return this;
   }
 
-  public void remove(ForeignKey constraint)
+  public RevisionBuilder remove(ForeignKey constraint)
   {
     if (token == null) {
       throw new IllegalStateException("builder already committed");
@@ -1275,6 +1319,8 @@ class MyRevisionBuilder implements RevisionBuilder {
       token = null;
       throw e;
     }
+
+    return this;
   }
 
   public boolean committed() {
@@ -1293,6 +1339,8 @@ class MyRevisionBuilder implements RevisionBuilder {
     updateIndexes();
 
     checkForeignKeys(foreignKeyResolver);
+
+    updateIndexes();
 
     token = null;
 

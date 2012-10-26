@@ -16,7 +16,7 @@ import com.readytalk.revori.Index;
 import com.readytalk.revori.View;
 import com.readytalk.revori.ForeignKey;
 
-class Constants {
+public class Constants {
   public static final int TableDataDepth = 0;
   public static final int IndexDataDepth = 1;
   public static final int IndexDataBodyDepth = 2;
@@ -34,7 +34,7 @@ class Constants {
 
   public static final Table IndexTable
     = new Table(cols(TableColumn, IndexColumn),
-                "IndexTable.Constants.imp.dbms.oss.readytalk.com");
+                "IndexTable.Constants.imp.dbms.oss.readytalk.com", 0, false);
 
   public static final Column<View> ViewColumn
     = new Column<View>(View.class,
@@ -42,7 +42,7 @@ class Constants {
 
   public static final Table ViewTable
     = new Table(cols(TableColumn, ViewColumn),
-                "ViewTable.Constants.imp.dbms.oss.readytalk.com");
+                "ViewTable.Constants.imp.dbms.oss.readytalk.com", 0, false);
 
   public static final Column<Table> ViewTableColumn = new Column<Table>
     (Table.class, "ViewTableColumn.Constants.imp.dbms.oss.readytalk.com");
@@ -72,4 +72,13 @@ class Constants {
 
   public static final Index ForeignKeyReferentIndex
     = new Index(ForeignKeyTable, cols(ForeignKeyReferentColumn));
+
+  public static boolean serializable(Table table, Object key, int depth) {
+    if (depth == 0) {
+      return table.serializable;
+    } else {
+      return depth < table.primaryKey.columns.size() + IndexDataBodyDepth
+        || ((Column) key).serializable;
+    }
+  }
 }

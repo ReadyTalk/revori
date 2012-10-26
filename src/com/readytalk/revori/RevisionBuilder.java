@@ -43,7 +43,7 @@ public interface RevisionBuilder {
    * Deletes any rows matching the specified path.  This is equivalent
    * to delete(path, 0, path.length).
    */
-  public void delete(Object ... path);
+  public RevisionBuilder delete(Object ... path);
 
   /**
    * Deletes any rows matching the specified path.  If pathLength is
@@ -54,17 +54,17 @@ public interface RevisionBuilder {
    * pathLength primary key values are equal to the elements of the
    * path delimited by pathOffset+1 and pathLength-1.
    */
-  public void delete(Object[] path,
-                     int pathOffset,
-                     int pathLength);
+  public RevisionBuilder delete(Object[] path,
+                                int pathOffset,
+                                int pathLength);
 
   /**
    * Inserts or updates a row containing the specified values.  This
    * is equivalent to insert(duplicateKeyResolution, path, 0,
    * path.length).
    */
-  public void insert(DuplicateKeyResolution duplicateKeyResolution,
-                     Object ... path);
+  public RevisionBuilder insert(DuplicateKeyResolution duplicateKeyResolution,
+                                Object ... path);
 
   /**
    * Inserts or updates a row containing the specified values.  The
@@ -89,10 +89,10 @@ public interface RevisionBuilder {
    * this method will act according to the specified
    * DuplicateKeyResolution.
    */
-  public void insert(DuplicateKeyResolution duplicateKeyResolution,
-                     Object[] path,
-                     int pathOffset,
-                     int pathLength);
+  public RevisionBuilder insert(DuplicateKeyResolution duplicateKeyResolution,
+                                Object[] path,
+                                int pathOffset,
+                                int pathLength);
 
   /**
    * Prepares a TableBuilder to update the given table.
@@ -104,7 +104,7 @@ public interface RevisionBuilder {
    * Adds the specified index to this builder.  This has no effect if
    * the index is already present.
    */
-  public void add(Index index);
+  public RevisionBuilder add(Index index);
 
   /**
    * Removes the specified index from this builder.  This has no
@@ -113,23 +113,23 @@ public interface RevisionBuilder {
    * @throws IllegalArgumentException if the specified index is a
    * primary key.
    */
-  public void remove(Index index);
+  public RevisionBuilder remove(Index index);
 
-  public void add(View view);
+  public RevisionBuilder add(View view);
 
-  public void remove(View view);
+  public RevisionBuilder remove(View view);
 
   /**
    * Adds the specified foreign key constraint to this builder.  This
    * has no effect if the constraint is already present.
    */
-  public void add(ForeignKey constraint);
+  public RevisionBuilder add(ForeignKey constraint);
 
   /**
    * Removes the specified foreign key constraint from this builder.
    * This has no effect if the constraint is not found.
    */
-  public void remove(ForeignKey constraint);
+  public RevisionBuilder remove(ForeignKey constraint);
 
   /**
    * Identical to commit(ForeignKeyResolvers.Restrict). 

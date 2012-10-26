@@ -15,6 +15,8 @@ import static com.readytalk.revori.ExpressionFactory.equal;
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.ExpressionFactory.aggregate;
 import static com.readytalk.revori.ExpressionFactory.constant;
+import static com.readytalk.revori.ExpressionFactory.not;
+import static com.readytalk.revori.ExpressionFactory.isNull;
 
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.fail;
@@ -278,6 +280,57 @@ public class Views {
     expectEqual(result.nextRow(), QueryResult.Type.Inserted);
     expectEqual(result.nextItem(), "tree");
     expectEqual(result.nextItem(), 18);
+    expectEqual(result.nextRow(), QueryResult.Type.End);
+  }
+
+  @Test
+  public void testViewNotNull() {
+    Column<Integer> number = new Column<Integer>(Integer.class, "number");
+    Column<String> name = new Column<String>(String.class, "name");
+    Table things = new Table(cols(number), "things");
+    
+    RevisionBuilder builder = Revisions.Empty.builder();
+
+    builder.table(things).row(1).update(name, "tree");
+    builder.table(things).row(2).update(name, "truck");
+    builder.table(things).row(3).update(name, "planet");
+    builder.table(things).row(4).update(name, "planet");
+    builder.table(things).row(5).update(name, "tree");
+    builder.table(things).row(6).update(name, "tree");
+
+    TableReference thingsReference = new TableReference(things);
+
+    View view = new View
+      (new QueryTemplate
+       (list(aggregate(Integer.class, Foldables.Count)),
+        thingsReference, not(isNull(reference(thingsReference, name)))));
+
+    builder.add(view);
+
+    Revision head = builder.commit();
+    
+    TableReference viewReference = new TableReference(view.table);
+
+    QueryTemplate viewQuery = new QueryTemplate
+      (list(reference(viewReference, view.columns.get(0))),
+       viewReference, constant(true));
+
+    QueryResult result = Revisions.Empty.diff(head, viewQuery);
+
+    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+    expectEqual(result.nextItem(), 6);
+    expectEqual(result.nextRow(), QueryResult.Type.End);
+
+    builder = head.builder();
+
+    builder.table(things).row(6).delete(name);
+
+    head = builder.commit();
+    
+    result = Revisions.Empty.diff(head, viewQuery);
+
+    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
+    expectEqual(result.nextItem(), 5);
     expectEqual(result.nextRow(), QueryResult.Type.End);
   }
 

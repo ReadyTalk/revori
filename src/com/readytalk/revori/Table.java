@@ -37,6 +37,12 @@ public class Table implements Comparable<Table> {
   public final String id;
 
   /**
+   * True if the contents of this table should be replicated to other
+   * servers.
+   */
+  public final boolean serializable;
+
+  /**
    * Defines a table using the specified list of columns as the
    * primary key.<p>
    *
@@ -55,9 +61,16 @@ public class Table implements Comparable<Table> {
    * and primary keys are equal.
    */
   public Table(List<Column<?>> primaryKey, String id, int order) {
+    this(primaryKey, id, order, true);
+  }
+
+  public Table(List<Column<?>> primaryKey, String id, int order,
+               boolean serializable)
+  {
     this.primaryKey = new Index(this, primaryKey);
     this.order = order;
     this.id = id;
+    this.serializable = serializable;
 
     if (id == null) throw new NullPointerException();
   }
