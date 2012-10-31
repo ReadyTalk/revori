@@ -1086,8 +1086,12 @@ class MyRevisionBuilder implements RevisionBuilder {
     }
 
     public TableBuilder delete(Object ... key) {
-      MyRowBuilder row = (MyRowBuilder) row(key);
-      MyRevisionBuilder.this.delete(row.path, 0, key.length + 1);
+      Object[] path = new Object[1 + key.length];
+      path[0] = table;
+      for(int i = 0; i < key.length; i++) {
+        path[i + 1] = key[i];
+      }
+      MyRevisionBuilder.this.delete(path, 0, key.length + 1);
       return this;
     }
 
