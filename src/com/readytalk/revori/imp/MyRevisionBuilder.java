@@ -1131,10 +1131,6 @@ class MyRevisionBuilder implements RevisionBuilder {
   public int apply(PatchTemplate template,
                    Object ... parameters)
   {
-    if (token == null) {
-      throw new IllegalStateException("builder already committed");
-    }
-
     try {
       if (parameters.length != template.parameterCount()) {
         throw new IllegalArgumentException
@@ -1233,10 +1229,6 @@ class MyRevisionBuilder implements RevisionBuilder {
 
   public RevisionBuilder add(Index index)
   {
-    if (token == null) {
-      throw new IllegalStateException("builder already committed");
-    }
-
     try {
       addIndex(index);
     } catch (RuntimeException e) {
@@ -1249,10 +1241,6 @@ class MyRevisionBuilder implements RevisionBuilder {
 
   public RevisionBuilder remove(Index index)
   {
-    if (token == null) {
-      throw new IllegalStateException("builder already committed");
-    }
-
     try {
       removeIndex(index);
     } catch (RuntimeException e) {
@@ -1265,10 +1253,6 @@ class MyRevisionBuilder implements RevisionBuilder {
 
   public RevisionBuilder add(View view)
   {
-    if (token == null) {
-      throw new IllegalStateException("builder already committed");
-    }
-
     try {
       addView(view);
     } catch (RuntimeException e) {
@@ -1281,10 +1265,6 @@ class MyRevisionBuilder implements RevisionBuilder {
 
   public RevisionBuilder remove(View view)
   {
-    if (token == null) {
-      throw new IllegalStateException("builder already committed");
-    }
-
     try {
       removeView(view);
     } catch (RuntimeException e) {
@@ -1297,10 +1277,6 @@ class MyRevisionBuilder implements RevisionBuilder {
 
   public RevisionBuilder add(ForeignKey constraint)
   {
-    if (token == null) {
-      throw new IllegalStateException("builder already committed");
-    }
-
     try {
       addForeignKey(constraint);
     } catch (RuntimeException e) {
@@ -1313,10 +1289,6 @@ class MyRevisionBuilder implements RevisionBuilder {
 
   public RevisionBuilder remove(ForeignKey constraint)
   {
-    if (token == null) {
-      throw new IllegalStateException("builder already committed");
-    }
-
     try {
       removeForeignKey(constraint);
     } catch (RuntimeException e) {
@@ -1346,7 +1318,9 @@ class MyRevisionBuilder implements RevisionBuilder {
 
     updateIndexes();
 
-    token = null;
+    setToken(new Object());
+
+    base = indexBase = result;
 
     return result;
   }

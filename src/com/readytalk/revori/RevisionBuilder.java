@@ -24,9 +24,6 @@ public interface RevisionBuilder {
    *
    * @return the number of rows affected by the patch
    *
-   * @throws IllegalStateException if this builder has already been
-   * committed
-   *
    * @throws DuplicateKeyException if the specified patch introduces a
    * duplicate primary key
    *
@@ -35,8 +32,7 @@ public interface RevisionBuilder {
    */
   public int apply(PatchTemplate template,
                    Object ... parameters)
-    throws IllegalStateException,
-           DuplicateKeyException,
+    throws DuplicateKeyException,
            ClassCastException;
   
   /**
@@ -139,17 +135,10 @@ public interface RevisionBuilder {
   /**
    * Commits the changes accumulated in this builder, producing a
    * revision which reflects the base revision with which was created
-   * plus any modifications applied thereafter.  This call invalidates
-   * the builder; any further attempts to apply modifications to it
-   * will result in IllegalStateExceptions.
+   * plus any modifications applied thereafter.
    *
    * Any foreign key violations present at the time of this call will
    * trigger calls to foreignKeyResolver.handleBrokenReference.
    */
   public Revision commit(ForeignKeyResolver foreignKeyResolver);
-
-  /**
-   * Returns true if this builder has been committed, false otherwise.
-   */
-  public boolean committed();
 }
