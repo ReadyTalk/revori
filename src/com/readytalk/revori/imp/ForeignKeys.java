@@ -239,7 +239,12 @@ class ForeignKeys {
     } break;
 
     case Restrict:
-      throw new ForeignKeyException();
+      throw new ForeignKeyException
+        ("broken reference from " + constraint.refererTable
+         + " " + constraint.refererColumns
+         + " " + java.util.Arrays.toString(row)
+         + " to " + constraint.referentTable
+         + " " + constraint.referentColumns);
 
     default:
       throw new RuntimeException("unexpected action: " + action);
