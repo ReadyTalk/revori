@@ -1,5 +1,7 @@
 Revori - a revision-oriented DBMS
----------------------------------
+=================================
+
+[![Build Status](https://travis-ci.org/ReadyTalk/revori.png?branch=master)](https://travis-ci.org/ReadyTalk/revori)
 
 Revori is a database management system designed to handle
 rapidly-changing data efficiently.  In addition to traditional
@@ -13,7 +15,6 @@ revision from which new revisions may be derived with data added,
 subtracted, or replaced.  These revisions may be compared with each
 other and/or combined using a three-way merge algorithm.
 
-
 Status
 ------
 
@@ -24,10 +25,40 @@ with it anyway, you can build and browse the JavaDoc (run "ant
 javadoc") and consult the test/unittests directory for simple examples
 of how to use it.
 
-You can also try using the SQL front-end (you'll need to have the
-libreadline headers and library installed to build the client):
+Build
+-----
 
- $ ant
- $ java -cp build/revori.jar com.readytalk.revori.server.SQLServer \
-     localhost 8017 &
- $ ./build/client localhost 8017
+#### Client
+
+You'll need to have the libreadline headers and library installed to 
+build the client)
+
+	$ gradle client:build
+
+#### Server
+
+	$ gradle build
+
+
+#### All
+
+If you want to build it all, just execute:
+
+	$ gradle
+
+
+Runtime
+-------
+
+#### Server
+
+The following starts the Revori server, which listens to localhost:8017
+
+	$ gradle start
+
+#### Client
+
+You can use the SQL front-end client to test out Revori:
+
+
+	$ ./client/build/binaries/client localhost 8017
