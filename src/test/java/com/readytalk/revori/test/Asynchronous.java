@@ -8,11 +8,10 @@
 package com.readytalk.revori.test;
 
 import static com.readytalk.revori.util.Util.cols;
+import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import junit.framework.TestCase;
 
 import org.junit.Test;
 
@@ -26,7 +25,7 @@ import com.readytalk.revori.server.Servers;
 import com.readytalk.revori.server.Servers.TaskHandler;
 import com.readytalk.revori.server.SimpleRevisionServer;
 
-public class Asynchronous extends TestCase {
+public class Asynchronous {
   @Test
   public void test() {
     RevisionServer rawServer = new SimpleRevisionServer

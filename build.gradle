@@ -10,7 +10,7 @@ repositories {
 }
 
 dependencies {
-  testCompile 'junit:junit:4.10'
+  testCompile 'junit:junit:4.11'
 }
 
 ext {

@@ -11,12 +11,11 @@ import static com.readytalk.revori.DuplicateKeyResolution.Throw;
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
 import static com.readytalk.revori.util.Util.list;
+import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
-
-import junit.framework.TestCase;
 
 import org.junit.Test;
 
@@ -37,7 +36,7 @@ import com.readytalk.revori.subscribe.RowListener;
 import com.readytalk.revori.subscribe.Subscription;
 
 
-public class Subscribe extends TestCase {
+public class Subscribe {
 
   private enum Kind { Update, Delete }
 

@@ -8,7 +8,7 @@
 package com.readytalk.revori.test;
 
 import static com.readytalk.revori.util.Util.cols;
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
@@ -18,7 +18,7 @@ import com.readytalk.revori.RevisionBuilder;
 import com.readytalk.revori.Revisions;
 import com.readytalk.revori.Table;
 
-public class TableBuilder extends TestCase {
+public class TableBuilder {
   @Test
   public void testColumn() {
     Column<Integer> number = new Column<Integer>(Integer.class);

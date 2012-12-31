@@ -8,11 +8,10 @@
 package com.readytalk.revori.test;
 
 import static com.readytalk.revori.server.SQLServer.readString;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.io.InputStream;
-
-import junit.framework.TestCase;
 
 import org.junit.Test;
 
@@ -21,7 +20,7 @@ import com.readytalk.revori.server.SQLServer.Connection;
 import com.readytalk.revori.server.SQLServer.Response;
 import com.readytalk.revori.server.SQLServer.RowSetFlag;
 
-public class SQL extends TestCase {
+public class SQL {
   @Test
   public void testLiterals() throws IOException {
     Connection connection = new SQLServer("test").makeConnection();

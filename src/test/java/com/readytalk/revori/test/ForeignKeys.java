@@ -6,7 +6,6 @@
    in all copies. */
 
 package com.readytalk.revori.test;
-
 import static com.readytalk.revori.DuplicateKeyResolution.Overwrite;
 import static com.readytalk.revori.DuplicateKeyResolution.Throw;
 import static com.readytalk.revori.ExpressionFactory.equal;
@@ -14,7 +13,8 @@ import static com.readytalk.revori.ExpressionFactory.parameter;
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
 import static com.readytalk.revori.util.Util.list;
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
@@ -32,7 +32,7 @@ import com.readytalk.revori.Revisions;
 import com.readytalk.revori.Table;
 import com.readytalk.revori.TableReference;
 
-public class ForeignKeys extends TestCase {
+public class ForeignKeys {
   private static void testDelete(boolean restrict) {
     Column<Integer> number = new Column<Integer>(Integer.class);
     Column<String> name = new Column<String>(String.class);
@@ -149,7 +149,6 @@ public class ForeignKeys extends TestCase {
     testDeleteMulti(false);
   }
 
-  @Test
   public static void testDeleteTemplate(boolean restrict) {
     Column<Integer> number = new Column<Integer>(Integer.class);
     Column<String> name = new Column<String>(String.class);

@@ -20,7 +20,7 @@ import static com.readytalk.revori.ExpressionFactory.parameter;
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
 import static com.readytalk.revori.util.Util.list;
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
@@ -36,10 +36,10 @@ import com.readytalk.revori.Revisions;
 import com.readytalk.revori.Table;
 import com.readytalk.revori.TableReference;
 
-public class OperationTest extends TestCase{
+public class OperationTest {
     
     @Test
-    public void testComparisons(){
+    public void testComparisons() {
     	
         Column<Integer> number = new Column<Integer>(Integer.class);
         Column<String> name = new Column<String>(String.class);

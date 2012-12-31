@@ -6,10 +6,9 @@
    in all copies. */
 
 package com.readytalk.revori.test;
-
 import static com.readytalk.revori.DuplicateKeyResolution.Throw;
 import static com.readytalk.revori.util.Util.cols;
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
@@ -21,7 +20,7 @@ import com.readytalk.revori.server.Bridge;
 import com.readytalk.revori.server.RevisionServer;
 import com.readytalk.revori.server.SimpleRevisionServer;
 
-public class BridgeTest extends TestCase {
+public class BridgeTest {
   private static void expectEqual(Object actual, Object expected) {
     assertEquals(expected, actual);
   }

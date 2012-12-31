@@ -10,7 +10,7 @@ package com.readytalk.revori.test;
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
 import static com.readytalk.revori.util.Util.list;
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
@@ -32,7 +32,7 @@ import com.readytalk.revori.Revisions;
 import com.readytalk.revori.Table;
 import com.readytalk.revori.TableReference;
 
-public class IndexesTest extends TestCase{
+public class IndexesTest {
     
     @Test
     public void testMultiLevelIndexes(){

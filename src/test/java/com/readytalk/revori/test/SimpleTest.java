@@ -10,7 +10,8 @@ package com.readytalk.revori.test;
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
 import static com.readytalk.revori.util.Util.list;
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
@@ -29,7 +30,7 @@ import com.readytalk.revori.Revisions;
 import com.readytalk.revori.Table;
 import com.readytalk.revori.TableReference;
 
-public class SimpleTest extends TestCase{
+public class SimpleTest {
     
 	@Test
     public void testSimpleInsertQuery(){
