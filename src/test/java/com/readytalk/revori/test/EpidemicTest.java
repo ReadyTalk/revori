@@ -59,9 +59,6 @@ public class EpidemicTest {
        new NodeNetwork(),
        EpidemicFactory);
 
-    NodeConflictResolver conflictResolver = new MyConflictResolver();
-    ForeignKeyResolver foreignKeyResolver = ForeignKeyResolvers.Delete;
-
     Node n1 = new Node(config, 1);
     Node n2 = new Node(config, 2);
     Node observer = new Node(config, 3);
@@ -538,7 +535,6 @@ public class EpidemicTest {
 
     Node n1 = new Node(config, 1);
     Node n2 = new Node(config, 2);
-    Node observer = new Node(config, 3);
 
     n1.server.updateView(set(n2.id));
     n2.server.updateView(set(n1.id));
@@ -607,7 +603,6 @@ public class EpidemicTest {
           undelivered.add(m);
         } else {
           try {
-            Node source = network.nodes.get(m.source);
             Node destination = network.nodes.get(m.destination);
   
             BufferOutputStream buffer = new BufferOutputStream();
@@ -648,21 +643,6 @@ public class EpidemicTest {
         return rightValue;
       }
     }
-  }
-
-  private static class NoConflictResolver implements NodeConflictResolver {
-    public Object resolveConflict(NodeID leftNode,
-                                  NodeID rightNode,
-                                  Table table,
-                                  Column column,
-                                  Object[] primaryKeyValues,
-                                  Object baseValue,
-                                  Object leftValue,
-                                  Object rightValue)
-    {
-      fail("conflict encountered");
-      throw new UnsupportedOperationException();
-    }    
   }
 
   private static class NodeConfig {

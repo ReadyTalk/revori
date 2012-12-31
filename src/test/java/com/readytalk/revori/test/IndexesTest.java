@@ -379,7 +379,7 @@ public class IndexesTest {
       .update(color, "maroon");
     Revision right = builder.commit();
     
-    Revision merge = first.merge(left, right, ConflictResolvers.Restrict, ForeignKeyResolvers.Restrict);
+    first.merge(left, right, ConflictResolvers.Restrict, ForeignKeyResolvers.Restrict);
     
   }
 }
