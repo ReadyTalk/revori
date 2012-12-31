@@ -12,8 +12,9 @@ import static com.readytalk.revori.server.SQLServer.readString;
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.junit.Test;
 import junit.framework.TestCase;
+
+import org.junit.Test;
 
 import com.readytalk.revori.server.SQLServer;
 import com.readytalk.revori.server.SQLServer.Connection;

@@ -7,45 +7,44 @@
 
 package com.readytalk.revori.test;
 
+import static com.readytalk.revori.DuplicateKeyResolution.Overwrite;
+import static com.readytalk.revori.DuplicateKeyResolution.Throw;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.util.Util.set;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.fail;
 
-import org.junit.Test;
-
-import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.set;
-import static com.readytalk.revori.DuplicateKeyResolution.Throw;
-import static com.readytalk.revori.DuplicateKeyResolution.Overwrite;
-
-import com.readytalk.revori.Table;
-import com.readytalk.revori.Index;
-import com.readytalk.revori.Column;
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.RevisionBuilder;
-import com.readytalk.revori.ForeignKeyResolver;
-import com.readytalk.revori.ForeignKeyResolvers;
-import com.readytalk.revori.util.BufferOutputStream;
-import com.readytalk.revori.server.TreeServer;
-import com.readytalk.revori.server.EpidemicServer;
-import com.readytalk.revori.server.NetworkServer;
-import com.readytalk.revori.server.NetworkServer.NodeID;
-import com.readytalk.revori.server.NetworkServer.Network;
-import com.readytalk.revori.server.NetworkServer.NodeConflictResolver;
-import com.readytalk.revori.server.protocol.ReadContext;
-import com.readytalk.revori.server.protocol.Writable;
-import com.readytalk.revori.server.protocol.Readable;
-import com.readytalk.revori.server.protocol.WriteContext;
-
-import java.io.IOException;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.Set;
+
+import org.junit.Test;
+
+import com.readytalk.revori.Column;
+import com.readytalk.revori.ForeignKeyResolver;
+import com.readytalk.revori.ForeignKeyResolvers;
+import com.readytalk.revori.Index;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.server.EpidemicServer;
+import com.readytalk.revori.server.NetworkServer;
+import com.readytalk.revori.server.NetworkServer.Network;
+import com.readytalk.revori.server.NetworkServer.NodeConflictResolver;
+import com.readytalk.revori.server.NetworkServer.NodeID;
+import com.readytalk.revori.server.TreeServer;
+import com.readytalk.revori.server.protocol.ReadContext;
+import com.readytalk.revori.server.protocol.Readable;
+import com.readytalk.revori.server.protocol.Writable;
+import com.readytalk.revori.server.protocol.WriteContext;
+import com.readytalk.revori.util.BufferOutputStream;
 
 public class Epidemic {
   private static void expectEqual(Object actual, Object expected) {

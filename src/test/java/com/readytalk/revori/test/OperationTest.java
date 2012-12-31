@@ -7,34 +7,34 @@
 
 package com.readytalk.revori.test;
 
+import static com.readytalk.revori.ExpressionFactory.and;
+import static com.readytalk.revori.ExpressionFactory.equal;
+import static com.readytalk.revori.ExpressionFactory.greaterThan;
+import static com.readytalk.revori.ExpressionFactory.greaterThanOrEqual;
+import static com.readytalk.revori.ExpressionFactory.lessThan;
+import static com.readytalk.revori.ExpressionFactory.lessThanOrEqual;
+import static com.readytalk.revori.ExpressionFactory.not;
+import static com.readytalk.revori.ExpressionFactory.notEqual;
+import static com.readytalk.revori.ExpressionFactory.or;
+import static com.readytalk.revori.ExpressionFactory.parameter;
+import static com.readytalk.revori.ExpressionFactory.reference;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.util.Util.list;
 import junit.framework.TestCase;
 
 import org.junit.Test;
 
-import static com.readytalk.revori.util.Util.list;
-import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.ExpressionFactory.parameter;
-import static com.readytalk.revori.ExpressionFactory.reference;
-import static com.readytalk.revori.ExpressionFactory.and;
-import static com.readytalk.revori.ExpressionFactory.or;
-import static com.readytalk.revori.ExpressionFactory.equal;
-import static com.readytalk.revori.ExpressionFactory.notEqual;
-import static com.readytalk.revori.ExpressionFactory.lessThan;
-import static com.readytalk.revori.ExpressionFactory.lessThanOrEqual;
-import static com.readytalk.revori.ExpressionFactory.greaterThan;
-import static com.readytalk.revori.ExpressionFactory.greaterThanOrEqual;
-import static com.readytalk.revori.ExpressionFactory.not;
 import com.readytalk.revori.Column;
-import com.readytalk.revori.Revisions;
-import com.readytalk.revori.Table;
+import com.readytalk.revori.DuplicateKeyResolution;
+import com.readytalk.revori.InsertTemplate;
+import com.readytalk.revori.PatchTemplate;
+import com.readytalk.revori.QueryResult;
+import com.readytalk.revori.QueryTemplate;
 import com.readytalk.revori.Revision;
 import com.readytalk.revori.RevisionBuilder;
-import com.readytalk.revori.PatchTemplate;
-import com.readytalk.revori.InsertTemplate;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.Table;
 import com.readytalk.revori.TableReference;
-import com.readytalk.revori.QueryTemplate;
-import com.readytalk.revori.QueryResult;
-import com.readytalk.revori.DuplicateKeyResolution;
 
 public class OperationTest extends TestCase{
     

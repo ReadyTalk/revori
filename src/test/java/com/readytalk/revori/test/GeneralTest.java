@@ -7,38 +7,38 @@
 
 package com.readytalk.revori.test;
 
+import static com.readytalk.revori.ExpressionFactory.and;
+import static com.readytalk.revori.ExpressionFactory.constant;
+import static com.readytalk.revori.ExpressionFactory.equal;
+import static com.readytalk.revori.ExpressionFactory.not;
+import static com.readytalk.revori.ExpressionFactory.reference;
+import static com.readytalk.revori.SourceFactory.reference;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.util.Util.list;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
+import java.util.Iterator;
+
 import org.junit.Test;
 
-import static com.readytalk.revori.util.Util.list;
-import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.SourceFactory.reference;
-import static com.readytalk.revori.ExpressionFactory.reference;
-import static com.readytalk.revori.ExpressionFactory.constant;
-import static com.readytalk.revori.ExpressionFactory.not;
-import static com.readytalk.revori.ExpressionFactory.equal;
-import static com.readytalk.revori.ExpressionFactory.and;
 import com.readytalk.revori.BinaryOperation;
 import com.readytalk.revori.Column;
-import com.readytalk.revori.Revisions;
-import com.readytalk.revori.Table;
+import com.readytalk.revori.Constant;
+import com.readytalk.revori.DeleteTemplate;
+import com.readytalk.revori.DuplicateKeyResolution;
 import com.readytalk.revori.Expression;
+import com.readytalk.revori.InsertTemplate;
+import com.readytalk.revori.Parameter;
+import com.readytalk.revori.PatchTemplate;
+import com.readytalk.revori.QueryResult;
+import com.readytalk.revori.QueryTemplate;
 import com.readytalk.revori.Revision;
 import com.readytalk.revori.RevisionBuilder;
-import com.readytalk.revori.PatchTemplate;
-import com.readytalk.revori.InsertTemplate;
-import com.readytalk.revori.DeleteTemplate;
-import com.readytalk.revori.UpdateTemplate;
-import com.readytalk.revori.Parameter;
-import com.readytalk.revori.Constant;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.Table;
 import com.readytalk.revori.TableReference;
-import com.readytalk.revori.QueryTemplate;
-import com.readytalk.revori.QueryResult;
-import com.readytalk.revori.DuplicateKeyResolution;
-
-import java.util.Iterator;
+import com.readytalk.revori.UpdateTemplate;
 
 public class GeneralTest {
   @Test

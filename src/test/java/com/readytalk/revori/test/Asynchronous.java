@@ -9,22 +9,22 @@ package com.readytalk.revori.test;
 
 import static com.readytalk.revori.util.Util.cols;
 
-import org.junit.Test;
+import java.util.ArrayList;
+import java.util.List;
 
 import junit.framework.TestCase;
 
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.Table;
+import org.junit.Test;
+
 import com.readytalk.revori.Column;
 import com.readytalk.revori.ConflictResolvers;
 import com.readytalk.revori.ForeignKeyResolvers;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.Table;
 import com.readytalk.revori.server.RevisionServer;
-import com.readytalk.revori.server.SimpleRevisionServer;
 import com.readytalk.revori.server.Servers;
 import com.readytalk.revori.server.Servers.TaskHandler;
-
-import java.util.List;
-import java.util.ArrayList;
+import com.readytalk.revori.server.SimpleRevisionServer;
 
 public class Asynchronous extends TestCase {
   @Test

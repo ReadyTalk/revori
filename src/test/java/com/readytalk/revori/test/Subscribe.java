@@ -7,35 +7,34 @@
 
 package com.readytalk.revori.test;
 
-import org.junit.Test;
+import static com.readytalk.revori.DuplicateKeyResolution.Throw;
+import static com.readytalk.revori.ExpressionFactory.reference;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.util.Util.list;
+
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.Queue;
+
 import junit.framework.TestCase;
 
-import java.util.Queue;
-import java.util.LinkedList;
-import java.util.Arrays;
+import org.junit.Test;
 
-import com.readytalk.revori.Table;
 import com.readytalk.revori.Column;
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.RevisionBuilder;
-import com.readytalk.revori.ForeignKeyResolvers;
 import com.readytalk.revori.ConflictResolvers;
-import com.readytalk.revori.QueryTemplate;
 import com.readytalk.revori.Constant;
 import com.readytalk.revori.Expression;
+import com.readytalk.revori.ForeignKeyResolvers;
+import com.readytalk.revori.QueryTemplate;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.Table;
 import com.readytalk.revori.TableReference;
 import com.readytalk.revori.server.SimpleRevisionServer;
-import com.readytalk.revori.subscribe.DiffServer;
 import com.readytalk.revori.subscribe.DiffMachine;
-import com.readytalk.revori.subscribe.Subscription;
+import com.readytalk.revori.subscribe.DiffServer;
 import com.readytalk.revori.subscribe.RowListener;
-
-import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.set;
-import static com.readytalk.revori.util.Util.list;
-import static com.readytalk.revori.ExpressionFactory.reference;
-import static com.readytalk.revori.DuplicateKeyResolution.Throw;
-import static com.readytalk.revori.DuplicateKeyResolution.Overwrite;
+import com.readytalk.revori.subscribe.Subscription;
 
 
 public class Subscribe extends TestCase {

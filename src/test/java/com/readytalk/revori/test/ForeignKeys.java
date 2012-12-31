@@ -7,31 +7,30 @@
 
 package com.readytalk.revori.test;
 
-import static com.readytalk.revori.util.Util.list;
-import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.DuplicateKeyResolution.Throw;
 import static com.readytalk.revori.DuplicateKeyResolution.Overwrite;
-import static com.readytalk.revori.ExpressionFactory.parameter;
+import static com.readytalk.revori.DuplicateKeyResolution.Throw;
 import static com.readytalk.revori.ExpressionFactory.equal;
+import static com.readytalk.revori.ExpressionFactory.parameter;
 import static com.readytalk.revori.ExpressionFactory.reference;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.util.Util.list;
+import junit.framework.TestCase;
 
 import org.junit.Test;
 
-import junit.framework.TestCase;
-
 import com.readytalk.revori.Column;
-import com.readytalk.revori.Table;
-import com.readytalk.revori.TableReference;
-import com.readytalk.revori.PatchTemplate;
-import com.readytalk.revori.InsertTemplate;
 import com.readytalk.revori.DeleteTemplate;
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.Revisions;
-import com.readytalk.revori.RevisionBuilder;
 import com.readytalk.revori.DiffResult;
 import com.readytalk.revori.ForeignKey;
-import com.readytalk.revori.ForeignKeyResolvers;
 import com.readytalk.revori.ForeignKeyException;
+import com.readytalk.revori.ForeignKeyResolvers;
+import com.readytalk.revori.InsertTemplate;
+import com.readytalk.revori.PatchTemplate;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.TableReference;
 
 public class ForeignKeys extends TestCase {
   private static void testDelete(boolean restrict) {

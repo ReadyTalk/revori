@@ -7,19 +7,19 @@
 
 package com.readytalk.revori.test;
 
-import static com.readytalk.revori.util.Util.cols;
 import static com.readytalk.revori.DuplicateKeyResolution.Throw;
+import static com.readytalk.revori.util.Util.cols;
+import junit.framework.TestCase;
 
-import com.readytalk.revori.Table;
+import org.junit.Test;
+
 import com.readytalk.revori.Column;
 import com.readytalk.revori.Revision;
 import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.server.Bridge;
 import com.readytalk.revori.server.RevisionServer;
 import com.readytalk.revori.server.SimpleRevisionServer;
-import com.readytalk.revori.server.Bridge;
-
-import org.junit.Test;
-import junit.framework.TestCase;
 
 public class BridgeTest extends TestCase {
   private static void expectEqual(Object actual, Object expected) {

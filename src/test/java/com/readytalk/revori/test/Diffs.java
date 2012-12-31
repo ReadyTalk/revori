@@ -7,12 +7,13 @@
 
 package com.readytalk.revori.test;
 
-import static com.readytalk.revori.ExpressionFactory.reference;
-import static com.readytalk.revori.ExpressionFactory.not;
 import static com.readytalk.revori.ExpressionFactory.isNull;
+import static com.readytalk.revori.ExpressionFactory.not;
+import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
 import static com.readytalk.revori.util.Util.list;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
@@ -24,7 +25,6 @@ import com.readytalk.revori.InsertTemplate;
 import com.readytalk.revori.Parameter;
 import com.readytalk.revori.PatchTemplate;
 import com.readytalk.revori.QueryResult;
-import com.readytalk.revori.QueryResult.Type;
 import com.readytalk.revori.QueryTemplate;
 import com.readytalk.revori.Revision;
 import com.readytalk.revori.RevisionBuilder;

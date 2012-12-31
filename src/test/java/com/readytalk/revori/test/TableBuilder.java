@@ -7,18 +7,16 @@
 
 package com.readytalk.revori.test;
 
+import static com.readytalk.revori.util.Util.cols;
 import junit.framework.TestCase;
 
 import org.junit.Test;
-import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.DuplicateKeyResolution.Throw;
-import static com.readytalk.revori.DuplicateKeyResolution.Overwrite;
 
 import com.readytalk.revori.Column;
-import com.readytalk.revori.Revisions;
-import com.readytalk.revori.Table;
 import com.readytalk.revori.Revision;
 import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.Table;
 
 public class TableBuilder extends TestCase {
   @Test

@@ -7,39 +7,38 @@
 
 package com.readytalk.revori.test;
 
-import static com.readytalk.revori.util.Util.list;
-import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.set;
 import static com.readytalk.revori.DuplicateKeyResolution.Throw;
-import static com.readytalk.revori.ExpressionFactory.equal;
-import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.ExpressionFactory.aggregate;
 import static com.readytalk.revori.ExpressionFactory.constant;
-import static com.readytalk.revori.ExpressionFactory.not;
+import static com.readytalk.revori.ExpressionFactory.equal;
 import static com.readytalk.revori.ExpressionFactory.isNull;
-
+import static com.readytalk.revori.ExpressionFactory.not;
+import static com.readytalk.revori.ExpressionFactory.reference;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.util.Util.list;
+import static com.readytalk.revori.util.Util.set;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.fail;
+
+import java.util.Collections;
+import java.util.Set;
 
 import org.junit.Test;
 
 import com.readytalk.revori.Column;
-import com.readytalk.revori.Table;
-import com.readytalk.revori.TableReference;
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.Revisions;
-import com.readytalk.revori.RevisionBuilder;
-import com.readytalk.revori.QueryResult;
-import com.readytalk.revori.QueryTemplate;
-import com.readytalk.revori.Foldables;
-import com.readytalk.revori.View;
-import com.readytalk.revori.Expression;
 import com.readytalk.revori.Comparators;
 import com.readytalk.revori.ConflictResolver;
+import com.readytalk.revori.Expression;
+import com.readytalk.revori.Foldables;
 import com.readytalk.revori.ForeignKeyResolvers;
-
-import java.util.Collections;
-import java.util.Set;
+import com.readytalk.revori.QueryResult;
+import com.readytalk.revori.QueryTemplate;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.TableReference;
+import com.readytalk.revori.View;
 
 public class Views {
   private static void expectEqual(Object actual, Object expected) {
