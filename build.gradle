@@ -37,6 +37,11 @@ findbugs {
   ignoreFailures = true
 }
 
+test {
+  //Here due to an issue with jackson 1.9.10 and jre7.
+  jvmArgs "-XX:-UseSplitVerifier"
+}
+
 ext {
   mainClassName='com.readytalk.revori.server.SQLServer'
   serverPort='8017'
