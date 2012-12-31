@@ -9,7 +9,7 @@ package com.readytalk.revori.test;
 
 import static com.readytalk.revori.util.Util.cols;
 import static com.readytalk.revori.util.Util.list;
-import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 import org.junit.Test;
 
@@ -189,7 +189,7 @@ public class MergeTest {
               assertEquals(column, name);
               assertEquals(primaryKeyValues.length, 1);
               assertEquals(primaryKeyValues[0], 4);
-              assertEquals(baseValue, null);
+              assertNull(baseValue);
               assertEquals(leftValue, "four");
               assertEquals(rightValue, "shi");
               
@@ -267,7 +267,7 @@ public class MergeTest {
               assertEquals(column, name);
               assertEquals(primaryKeyValues.length, 1);
               assertEquals(primaryKeyValues[0], 1);
-              assertEquals(baseValue, null);
+              assertNull(baseValue);
               assertEquals(leftValue, "one");
               assertEquals(rightValue, "uno");
               
@@ -307,7 +307,7 @@ public class MergeTest {
               assertEquals(column, name);
               assertEquals(primaryKeyValues.length, 1);
               assertEquals(primaryKeyValues[0], 1);
-              assertEquals(baseValue, null);
+              assertNull(baseValue);
               assertEquals(leftValue, "one");
               assertEquals(rightValue, "uno");
               

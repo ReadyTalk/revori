@@ -17,8 +17,8 @@ import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
 import static com.readytalk.revori.util.Util.list;
 import static com.readytalk.revori.util.Util.set;
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.util.Collections;
 

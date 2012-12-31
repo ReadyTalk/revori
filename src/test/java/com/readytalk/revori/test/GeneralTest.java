@@ -15,8 +15,8 @@ import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.SourceFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
 import static com.readytalk.revori.util.Util.list;
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Iterator;
 
@@ -41,7 +41,7 @@ import com.readytalk.revori.TableReference;
 import com.readytalk.revori.UpdateTemplate;
 
 public class GeneralTest {
-  @Test
+	@Test
     public void testSimpleInsertDiffs(){
         Column<Integer> number = new Column<Integer>(Integer.class);
         Column<String> name = new Column<String>(String.class);
