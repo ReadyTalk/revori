@@ -1,4 +1,16 @@
 apply plugin: 'java'
+apply plugin: 'findbugs'
+
+buildscript {
+  repositories {
+    mavenCentral()
+  }
+  dependencies {
+    classpath 'com.mapvine:gradle-cobertura-plugin:1.0'
+  }
+}
+
+apply plugin: 'cobertura'
 
 group='com.readytalk.revori'
 version='0.1.0-SNAPSHOT'
@@ -10,7 +22,19 @@ repositories {
 }
 
 dependencies {
+  findbugs 'com.google.code.findbugs:findbugs:2.0.1'
+  cobertura 'com.mapvine:gradle-cobertura-plugin:1.0'
+  
   testCompile 'junit:junit:4.11'
+}
+
+cobertura {
+    format = 'html'
+    includes = ['**/*.java']
+}
+
+findbugs {
+  ignoreFailures = true
 }
 
 ext {
