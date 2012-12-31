@@ -18,7 +18,7 @@ import com.readytalk.revori.RevisionBuilder;
 import com.readytalk.revori.Revisions;
 import com.readytalk.revori.Table;
 
-public class TableBuilder {
+public class TableBuilderTest {
   @Test
   public void testColumn() {
     Column<Integer> number = new Column<Integer>(Integer.class);

@@ -34,7 +34,7 @@ import com.readytalk.revori.TableReference;
 import com.readytalk.revori.UpdateTemplate;
 
 
-public class MultipleIndex {
+public class MultipleIndexTest {
     @Test
     public void testMultipleIndexInserts(){
         Column<Integer> number = new Column<Integer>(Integer.class);

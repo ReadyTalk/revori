@@ -25,7 +25,7 @@ import com.readytalk.revori.server.Servers;
 import com.readytalk.revori.server.Servers.TaskHandler;
 import com.readytalk.revori.server.SimpleRevisionServer;
 
-public class Asynchronous {
+public class AsynchronousTest {
   @Test
   public void test() {
     RevisionServer rawServer = new SimpleRevisionServer
@@ -111,7 +111,7 @@ public class Asynchronous {
   }
 
   private static class MyTaskHandler implements TaskHandler {
-    public final List<Runnable> tasks = new ArrayList();
+    public final List<Runnable> tasks = new ArrayList<Runnable>();
 
     public void handleTask(Runnable task) {
       tasks.add(task);

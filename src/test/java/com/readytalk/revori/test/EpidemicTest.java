@@ -46,7 +46,7 @@ import com.readytalk.revori.server.protocol.Writable;
 import com.readytalk.revori.server.protocol.WriteContext;
 import com.readytalk.revori.util.BufferOutputStream;
 
-public class Epidemic {
+public class EpidemicTest {
   private static void expectEqual(Object actual, Object expected) {
     assertEquals(expected, actual);
   }

@@ -36,7 +36,7 @@ import com.readytalk.revori.subscribe.RowListener;
 import com.readytalk.revori.subscribe.Subscription;
 
 
-public class Subscribe {
+public class SubscribeTest {
 
   private enum Kind { Update, Delete }
 

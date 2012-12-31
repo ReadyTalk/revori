@@ -21,7 +21,6 @@ import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.fail;
 
 import java.util.Collections;
-import java.util.Set;
 
 import org.junit.Test;
 
@@ -40,7 +39,7 @@ import com.readytalk.revori.Table;
 import com.readytalk.revori.TableReference;
 import com.readytalk.revori.View;
 
-public class Views {
+public class ViewsTest {
   private static void expectEqual(Object actual, Object expected) {
     assertEquals(expected, actual);
   }
@@ -357,7 +356,7 @@ public class Views {
        (list
         (reference(thingsReference, number), reference(thingsReference, name)),
         thingsReference, constant(true),
-        (Set<Expression>) (Set) Collections.emptySet(),
+        Collections.<Expression>emptySet(),
         list(new QueryTemplate.OrderExpression
              (reference(thingsReference, name), Comparators.Ascending))));
 
@@ -386,7 +385,7 @@ public class Views {
        (list
         (reference(thingsReference, number), reference(thingsReference, name)),
         thingsReference, constant(true),
-        (Set<Expression>) (Set) Collections.emptySet(),
+        Collections.<Expression>emptySet(),
         list(new QueryTemplate.OrderExpression
              (reference(thingsReference, name), Comparators.Descending))));
 

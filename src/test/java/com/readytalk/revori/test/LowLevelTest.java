@@ -21,7 +21,7 @@ import com.readytalk.revori.RevisionBuilder;
 import com.readytalk.revori.Revisions;
 import com.readytalk.revori.Table;
 
-public class LowLevel {
+public class LowLevelTest {
   private static void expectEqual(Object actual, Object expected) {
     assertEquals(expected, actual);
   }

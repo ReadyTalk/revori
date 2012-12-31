@@ -32,7 +32,7 @@ import com.readytalk.revori.Revisions;
 import com.readytalk.revori.Table;
 import com.readytalk.revori.TableReference;
 
-public class Diffs {
+public class DiffsTest {
 
   @Test
   public void testUpdateNonQueriedColumns() {

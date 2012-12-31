@@ -32,7 +32,7 @@ import com.readytalk.revori.Table;
 import com.readytalk.revori.TableReference;
 import com.readytalk.revori.UpdateTemplate;
 
-public class GeneralTests {
+public class MoreGeneralTest {
     @Test
     public void testSimpleInsertDiffs(){
         Column<Integer> number = new Column<Integer>(Integer.class);

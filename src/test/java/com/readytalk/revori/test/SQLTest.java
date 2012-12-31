@@ -20,7 +20,7 @@ import com.readytalk.revori.server.SQLServer.Connection;
 import com.readytalk.revori.server.SQLServer.Response;
 import com.readytalk.revori.server.SQLServer.RowSetFlag;
 
-public class SQL {
+public class SQLTest {
   @Test
   public void testLiterals() throws IOException {
     Connection connection = new SQLServer("test").makeConnection();

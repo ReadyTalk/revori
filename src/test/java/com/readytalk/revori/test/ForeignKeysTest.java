@@ -32,7 +32,7 @@ import com.readytalk.revori.Revisions;
 import com.readytalk.revori.Table;
 import com.readytalk.revori.TableReference;
 
-public class ForeignKeys {
+public class ForeignKeysTest {
   private static void testDelete(boolean restrict) {
     Column<Integer> number = new Column<Integer>(Integer.class);
     Column<String> name = new Column<String>(String.class);
