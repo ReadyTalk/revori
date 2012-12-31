@@ -11,7 +11,7 @@ import com.readytalk.revori.Revision;
 
 import com.readytalk.revori.util.SetMultimap;
 
-public class DiffIterator {
+public class DiffIterator<Context> {
   private static boolean DebugThreads = true;
 
   private enum State { Diff, Matchers, Result, End; };
@@ -19,9 +19,9 @@ public class DiffIterator {
   private final Revision base;
   private final Revision head;
   private final DiffResult diffResult;
-  private final SetMultimap<Table, Matcher> matchers;
-  private Set<Matcher> visited;
-  private Iterator<Matcher> matchIterator;
+  private final SetMultimap<Table, Matcher<Context>> matchers;
+  private Set<Matcher<Context>> visited;
+  private Iterator<Matcher<Context>> matchIterator;
   private Matcher matcher;
   private State state;
   private QueryResult queryResult;
@@ -30,7 +30,7 @@ public class DiffIterator {
 
   public DiffIterator(Revision base,
                       Revision head,
-                      SetMultimap<Table, Matcher> matchers)
+                      SetMultimap<Table, Matcher<Context>> matchers)
   {
     this.base = base;
     this.head = head;
@@ -39,7 +39,7 @@ public class DiffIterator {
     this.state = State.Diff;
   }
 
-  public boolean next() {
+  public boolean next(Context context) {
     if (DebugThreads) {
       if (thread == null) {
         thread = Thread.currentThread();
@@ -59,7 +59,7 @@ public class DiffIterator {
           Object fork = diffResult.fork();
           diffResult.skip();
 
-          Set<Matcher> set = matchers.get
+          Set<Matcher<Context>> set = matchers.get
             ((Table) (base == null ? fork : base));
 
           if (set != null) {
@@ -82,7 +82,7 @@ public class DiffIterator {
           matcher = matchIterator.next();
           if (visited == null || ! visited.contains(matcher)) {
             if (visited == null) {
-              visited = new HashSet<Matcher>();
+              visited = new HashSet<Matcher<Context>>();
             }
             visited.add(matcher);
             queryResult = base.diff(head, matcher.query, matcher.params);
@@ -99,14 +99,14 @@ public class DiffIterator {
         switch (type) {
         case Inserted: {
           fillRow(matcher.query.expressions.size(), queryResult);
-          matcher.listener.handleUpdate(row);
+          matcher.listener.handleUpdate(context, row);
           return true;
         }
 
         case Deleted: {
           if (! queryResult.rowUpdated()) {
             fillRow(matcher.query.expressions.size(), queryResult);
-            matcher.listener.handleDelete(row);
+            matcher.listener.handleDelete(context, row);
             return true;
           } else {
             break;

@@ -13,13 +13,13 @@ import com.readytalk.revori.server.RevisionServer;
 
 import com.readytalk.revori.util.SetMultimap;
 
-public class DiffMachine {
+public class DiffMachine<Context> {
 
   private static boolean DebugThreads = true;
 
-  private final SetMultimap<Table, Matcher> newMatchers = new SetMultimap<Table, Matcher>();
+  private final SetMultimap<Table, Matcher<Context>> newMatchers = new SetMultimap<Table, Matcher<Context>>();
   
-  private final SetMultimap<Table, Matcher> matchersForTable = new SetMultimap<Table, Matcher>();
+  private final SetMultimap<Table, Matcher<Context>> matchersForTable = new SetMultimap<Table, Matcher<Context>>();
 
   private LinearRevision base;
   private LinearRevision head;
@@ -59,7 +59,10 @@ public class DiffMachine {
     this(new DiffServer(server), autoDeliver);
   }
 
-  private static void register(final Matcher matcher, final SetMultimap<Table, Matcher> matchers) {
+  private static <Context> void register
+    (final Matcher<Context> matcher,
+     final SetMultimap<Table, Matcher<Context>> matchers)
+  {
     matcher.query.source.visit(new SourceVisitor() {
       public void visit(Source s) {
         if(s instanceof TableReference) {
@@ -69,8 +72,9 @@ public class DiffMachine {
     });
   }
 
-  public static void unregister(final Matcher matcher,
-                                final SetMultimap<Table, Matcher> matchers)
+  private static <Context> void unregister
+    (final Matcher<Context> matcher,
+     final SetMultimap<Table, Matcher<Context>> matchers)
   {
     matcher.query.source.visit(new SourceVisitor() {
       public void visit(Source s) {
@@ -81,7 +85,10 @@ public class DiffMachine {
     });
   }
 
-  public Subscription subscribe(RowListener listener, QueryTemplate query, Object... params) {
+  public Subscription subscribe(ContextRowListener<Context> listener,
+                                QueryTemplate query,
+                                Object... params)
+  {
     final Matcher matcher = new Matcher(listener, query, params);
     register(matcher, newMatchers);
 
@@ -101,12 +108,23 @@ public class DiffMachine {
     };
   }
 
+  public Subscription subscribe(RowListener listener,
+                                QueryTemplate query,
+                                Object... params)
+  {
+    return subscribe(new ContextRowAdapter(listener), query, params);
+  }
+
   private void promoteMatchers() {
     matchersForTable.putAll(newMatchers);
     newMatchers.clear();
   }
 
   public boolean next() {
+    return next(null);
+  }
+
+  public boolean next(Context context) {
     if (DebugThreads) {
       if (thread == null) {
         thread = Thread.currentThread();
@@ -120,7 +138,7 @@ public class DiffMachine {
       switch (state) {
       case Start: {
         if(newMatchers.size() > 0) {
-          iterator = new DiffIterator
+          iterator = new DiffIterator<Context>
             (Revisions.Empty, base.revision, newMatchers);
           
           state = State.New;
@@ -131,7 +149,7 @@ public class DiffMachine {
             return false;
           }
   
-          iterator = new DiffIterator
+          iterator = new DiffIterator<Context>
             (base.revision, head.revision, matchersForTable);
   
           state = State.Uncached;
@@ -139,7 +157,7 @@ public class DiffMachine {
       } break;
       
       case New: {
-        if(iterator.next()) {
+        if(iterator.next(context)) {
           return true;
         } else {
           promoteMatchers();
@@ -148,7 +166,7 @@ public class DiffMachine {
       } break;
 
       case Uncached: {
-        if(iterator.next()) {
+        if(iterator.next(context)) {
           return true;
         } else {
           base = head;
@@ -162,5 +180,26 @@ public class DiffMachine {
     }
   }
 
+  private static class ContextRowAdapter<Context>
+    implements ContextRowListener<Context>
+  {
+    private final RowListener listener;
 
+    public ContextRowAdapter(RowListener listener) {
+      this.listener = listener;
+    }
+
+    public void handleUpdate(Context context, Object[] row) {
+      listener.handleUpdate(row);
+    }
+    
+    public void handleDelete(Context context, Object[] row) {
+      listener.handleDelete(row);
+    }
+  
+    public boolean equals(Object o) {
+      return o instanceof ContextRowAdapter
+        && ((ContextRowAdapter) o).listener.equals(listener);
+    }
+  }
 }
