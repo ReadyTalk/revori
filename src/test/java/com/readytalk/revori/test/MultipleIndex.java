@@ -5,7 +5,7 @@
    that the above copyright notice and this permission notice appear
    in all copies. */
 
-package unittests;
+package com.readytalk.revori.test;
 
 import junit.framework.TestCase;
 
