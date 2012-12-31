@@ -38,7 +38,7 @@ findbugs {
 }
 
 test {
-  //Here due to an issue with jackson 1.9.10 and jre7.
+  //Here due to an issue with cobertura and jre7.
   jvmArgs "-XX:-UseSplitVerifier"
 }
 
