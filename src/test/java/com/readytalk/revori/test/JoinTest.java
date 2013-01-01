@@ -10,6 +10,7 @@ import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
 import static com.readytalk.revori.util.Util.list;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import org.junit.Test;
 
@@ -89,19 +90,19 @@ public class JoinTest {
         
         QueryResult result = tail.diff(first, namesInnerNicknames, parameters);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tom");
-        assertEquals(result.nextItem(), "moneybags");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tim");
-        assertEquals(result.nextItem(), "eight ball");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tod");
-        assertEquals(result.nextItem(), "baldy");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tes");
-        assertEquals(result.nextItem(), "knuckles");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tom", result.nextItem());
+        assertEquals("moneybags", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tim", result.nextItem());
+        assertEquals("eight ball", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tod", result.nextItem());
+        assertEquals("baldy", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tes", result.nextItem());
+        assertEquals("knuckles", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate namesLeftNicknames = new QueryTemplate
           (list(reference(namesReference, name),
@@ -118,22 +119,22 @@ public class JoinTest {
         
         result = tail.diff(first, namesLeftNicknames, parameters1);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tom");
-        assertEquals(result.nextItem(), "moneybags");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "ted");
-        assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tim");
-        assertEquals(result.nextItem(), "eight ball");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tod");
-        assertEquals(result.nextItem(), "baldy");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tes");
-        assertEquals(result.nextItem(), "knuckles");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tom", result.nextItem());
+        assertEquals("moneybags", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("ted", result.nextItem());
+        assertNull(result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tim", result.nextItem());
+        assertEquals("eight ball", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tod", result.nextItem());
+        assertEquals("baldy", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tes", result.nextItem());
+        assertEquals("knuckles", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         builder = first.builder();
 
@@ -149,51 +150,51 @@ public class JoinTest {
 
         result = first.diff(second, namesLeftNicknames, parameters2);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tom");
-        assertEquals(result.nextItem(), "big bucks");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "rapunzel");
-        assertEquals(result.nextItem(), "no name");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "carlos");
-        assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "benjamin");
-        assertEquals(result.nextItem(), "jellybean");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tom", result.nextItem());
+        assertEquals("big bucks", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("rapunzel", result.nextItem());
+        assertEquals("no name", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("carlos", result.nextItem());
+        assertNull(result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("benjamin", result.nextItem());
+        assertEquals("jellybean", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters3 = {};
 
         result = tail.diff(second, namesLeftNicknames, parameters3);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tom");
-        assertEquals(result.nextItem(), "big bucks");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tom");
-        assertEquals(result.nextItem(), "moneybags");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "ted");
-        assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tim");
-        assertEquals(result.nextItem(), "eight ball");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tod");
-        assertEquals(result.nextItem(), "baldy");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tes");
-        assertEquals(result.nextItem(), "knuckles");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "rapunzel");
-        assertEquals(result.nextItem(), "no name");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "carlos");
-        assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "benjamin");
-        assertEquals(result.nextItem(), "jellybean");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tom", result.nextItem());
+        assertEquals("big bucks", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tom", result.nextItem());
+        assertEquals("moneybags", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("ted", result.nextItem());
+        assertNull(result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tim", result.nextItem());
+        assertEquals("eight ball", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tod", result.nextItem());
+        assertEquals("baldy", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tes", result.nextItem());
+        assertEquals("knuckles", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("rapunzel", result.nextItem());
+        assertEquals("no name", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("carlos", result.nextItem());
+        assertNull(result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("benjamin", result.nextItem());
+        assertEquals("jellybean", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
     	
     }
     
@@ -296,19 +297,19 @@ public class JoinTest {
         
         QueryResult result = tail.diff(first, namesInnerNicknamesInnerColors, parameters);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tom");
-        assertEquals(result.nextItem(), "big bucks");
-        assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tim");
-        assertEquals(result.nextItem(), "eight ball");
-        assertEquals(result.nextItem(), "sky blue");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tod");
-        assertEquals(result.nextItem(), "baldy");
-        assertEquals(result.nextItem(), "green");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tom", result.nextItem());
+        assertEquals("big bucks", result.nextItem());
+        assertEquals("red", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tim", result.nextItem());
+        assertEquals("eight ball", result.nextItem());
+        assertEquals("sky blue", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tod", result.nextItem());
+        assertEquals("baldy", result.nextItem());
+        assertEquals("green", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate namesLeftNicknamesInnerColors = new QueryTemplate
           (list(reference(namesReference, name),
@@ -335,19 +336,19 @@ public class JoinTest {
         
         result = tail.diff(first, namesLeftNicknamesInnerColors, parameters1);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tom");
-        assertEquals(result.nextItem(), "big bucks");
-        assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tim");
-        assertEquals(result.nextItem(), "eight ball");
-        assertEquals(result.nextItem(), "sky blue");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tod");
-        assertEquals(result.nextItem(), "baldy");
-        assertEquals(result.nextItem(), "green");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tom", result.nextItem());
+        assertEquals("big bucks", result.nextItem());
+        assertEquals("red", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tim", result.nextItem());
+        assertEquals("eight ball", result.nextItem());
+        assertEquals("sky blue", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tod", result.nextItem());
+        assertEquals("baldy", result.nextItem());
+        assertEquals("green", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate namesInnerNicknamesLeftColors = new QueryTemplate
           (list(reference(namesReference, name),
@@ -374,27 +375,27 @@ public class JoinTest {
         
         result = tail.diff(first, namesInnerNicknamesLeftColors, parameters2);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tom");
-        assertEquals(result.nextItem(), "big bucks");
-        assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tom");
-        assertEquals(result.nextItem(), "moneybags");
-        assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tim");
-        assertEquals(result.nextItem(), "eight ball");
-        assertEquals(result.nextItem(), "sky blue");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tod");
-        assertEquals(result.nextItem(), "baldy");
-        assertEquals(result.nextItem(), "green");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tes");
-        assertEquals(result.nextItem(), "knuckles");
-        assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tom", result.nextItem());
+        assertEquals("big bucks", result.nextItem());
+        assertEquals("red", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tom", result.nextItem());
+        assertEquals("moneybags", result.nextItem());
+        assertNull(result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tim", result.nextItem());
+        assertEquals("eight ball", result.nextItem());
+        assertEquals("sky blue", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tod", result.nextItem());
+        assertEquals("baldy", result.nextItem());
+        assertEquals("green", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tes", result.nextItem());
+        assertEquals("knuckles", result.nextItem());
+        assertNull(result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate namesInnerLastnamesLeftNicknamesLeftColors
           = new QueryTemplate
@@ -432,26 +433,26 @@ public class JoinTest {
         
         result = tail.diff(first, namesInnerLastnamesLeftNicknamesLeftColors, parameters3);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tom");
-        assertEquals(result.nextItem(), "thumb");
-        assertEquals(result.nextItem(), "big bucks");
-        assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tom");
-        assertEquals(result.nextItem(), "thumb");
-        assertEquals(result.nextItem(), "moneybags");
-        assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "ted");
-        assertEquals(result.nextItem(), "thomson");
-        assertEquals(result.nextItem(), null);
-        assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tes");
-        assertEquals(result.nextItem(), "teasdale");
-        assertEquals(result.nextItem(), "knuckles");
-        assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), QueryResult.Type.End);	
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tom", result.nextItem());
+        assertEquals("thumb", result.nextItem());
+        assertEquals("big bucks", result.nextItem());
+        assertEquals("red", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tom", result.nextItem());
+        assertEquals("thumb", result.nextItem());
+        assertEquals("moneybags", result.nextItem());
+        assertNull(result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("ted", result.nextItem());
+        assertEquals("thomson", result.nextItem());
+        assertNull(result.nextItem());
+        assertNull(result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tes", result.nextItem());
+        assertEquals("teasdale", result.nextItem());
+        assertEquals("knuckles", result.nextItem());
+        assertNull(result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());	
     }
 }

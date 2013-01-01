@@ -12,6 +12,7 @@ import static com.readytalk.revori.DuplicateKeyResolution.Throw;
 import static com.readytalk.revori.util.Util.cols;
 import static com.readytalk.revori.util.Util.set;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
@@ -47,9 +48,6 @@ import com.readytalk.revori.server.protocol.WriteContext;
 import com.readytalk.revori.util.BufferOutputStream;
 
 public class EpidemicTest {
-  private static void expectEqual(Object actual, Object expected) {
-    assertEquals(expected, actual);
-  }
 
   @Test
   public void testTwoNodeNetwork() {
@@ -79,7 +77,7 @@ public class EpidemicTest {
 
     Index numbersKey = numbers.primaryKey;
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
 
     base = n2.server.head();
     builder = base.builder();
@@ -88,12 +86,12 @@ public class EpidemicTest {
 
     n2.server.merge(base, builder.commit());
 
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "uno");
+    assertEquals("uno", n2.server.head().query(numbersKey, 1, name));
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n2.server.head().query(numbersKey, 1, name));
 
     base = n2.server.head();
     builder = base.builder();
@@ -102,7 +100,7 @@ public class EpidemicTest {
 
     n2.server.merge(base, builder.commit());
 
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "ichi");
+    assertEquals("ichi", n2.server.head().query(numbersKey, 1, name));
 
     n1.server.updateView(set(n2.id, observer.id));
     n2.server.updateView(set(n1.id, observer.id));
@@ -110,9 +108,9 @@ public class EpidemicTest {
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "ichi");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "ichi");
-    expectEqual(observer.server.head().query(numbersKey, 1, name), "ichi");
+    assertEquals("ichi", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("ichi", n2.server.head().query(numbersKey, 1, name));
+    assertEquals("ichi", observer.server.head().query(numbersKey, 1, name));
 
     base = n2.server.head();
     builder = base.builder();
@@ -121,13 +119,13 @@ public class EpidemicTest {
 
     n2.server.merge(base, builder.commit());
 
-    expectEqual(n2.server.head().query(numbersKey, 3, number), 3);
+    assertEquals(3, n2.server.head().query(numbersKey, 3, number));
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 3, number), 3);
-    expectEqual(n2.server.head().query(numbersKey, 3, number), 3);
-    expectEqual(observer.server.head().query(numbersKey, 3, number), 3);
+    assertEquals(3, n1.server.head().query(numbersKey, 3, number));
+    assertEquals(3, n2.server.head().query(numbersKey, 3, number));
+    assertEquals(3, observer.server.head().query(numbersKey, 3, number));
 
     // System.out.println("\n\n**** yay! ****\n\n");
   }
@@ -183,8 +181,8 @@ public class EpidemicTest {
 
     Index valueKey = valueTable.primaryKey;
     
-    expectEqual(n1.server.head().query(valueKey, 0, value), 2);
-    expectEqual(n2.server.head().query(valueKey, 0, value), 2);
+    assertEquals(2, n1.server.head().query(valueKey, 0, value));
+    assertEquals(2, n2.server.head().query(valueKey, 0, value));
   }
 
   @Test
@@ -214,7 +212,7 @@ public class EpidemicTest {
 
     Index numbersKey = numbers.primaryKey;
 
-    expectEqual(n1.server.head().query(numbersKey, 1, value), 42);
+    assertEquals(42, n1.server.head().query(numbersKey, 1, value));
 
     base = n2.server.head();
     builder = base.builder();
@@ -223,14 +221,14 @@ public class EpidemicTest {
 
     n2.server.merge(base, builder.commit());
 
-    expectEqual(n2.server.head().query(numbersKey, 2, value), 57);
+    assertEquals(57, n2.server.head().query(numbersKey, 2, value));
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, value), 42);
-    expectEqual(n2.server.head().query(numbersKey, 1, value), 42);
-    expectEqual(n1.server.head().query(numbersKey, 2, value), 57);
-    expectEqual(n2.server.head().query(numbersKey, 2, value), 57);
+    assertEquals(42, n1.server.head().query(numbersKey, 1, value));
+    assertEquals(42, n2.server.head().query(numbersKey, 1, value));
+    assertEquals(57, n1.server.head().query(numbersKey, 2, value));
+    assertEquals(57, n2.server.head().query(numbersKey, 2, value));
 
     base = n1.server.head();
     builder = base.builder();
@@ -248,10 +246,10 @@ public class EpidemicTest {
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, value), 43);
-    expectEqual(n2.server.head().query(numbersKey, 1, value), 43);
-    expectEqual(n1.server.head().query(numbersKey, 2, value), 58);
-    expectEqual(n2.server.head().query(numbersKey, 2, value), 58);
+    assertEquals(43, n1.server.head().query(numbersKey, 1, value));
+    assertEquals(43, n2.server.head().query(numbersKey, 1, value));
+    assertEquals(58, n1.server.head().query(numbersKey, 2, value));
+    assertEquals(58, n2.server.head().query(numbersKey, 2, value));
 
     base = n1.server.head();
     builder = base.builder();
@@ -269,10 +267,10 @@ public class EpidemicTest {
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, value), 44);
-    expectEqual(n2.server.head().query(numbersKey, 1, value), 44);
-    expectEqual(n1.server.head().query(numbersKey, 2, value), 59);
-    expectEqual(n2.server.head().query(numbersKey, 2, value), 59);
+    assertEquals(44, n1.server.head().query(numbersKey, 1, value));
+    assertEquals(44, n2.server.head().query(numbersKey, 1, value));
+    assertEquals(59, n1.server.head().query(numbersKey, 2, value));
+    assertEquals(59, n2.server.head().query(numbersKey, 2, value));
   }
 
   @Test
@@ -304,8 +302,8 @@ public class EpidemicTest {
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n2.server.head().query(numbersKey, 1, name));
     
     n1.server.updateView(Collections.<NodeID>emptySet());
 
@@ -320,10 +318,10 @@ public class EpidemicTest {
     
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n1.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n2.server.head().query(numbersKey, 2, name), "two");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n2.server.head().query(numbersKey, 1, name));
+    assertEquals("two", n1.server.head().query(numbersKey, 2, name));
+    assertEquals("two", n2.server.head().query(numbersKey, 2, name));
   }
   
   @Test
@@ -360,10 +358,10 @@ public class EpidemicTest {
 
     Index numbersKey = numbers.primaryKey;
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n1.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n2.server.head().query(numbersKey, 2, name), "two");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n2.server.head().query(numbersKey, 1, name));
+    assertEquals("two", n1.server.head().query(numbersKey, 2, name));
+    assertEquals("two", n2.server.head().query(numbersKey, 2, name));
     
     n1.server.updateView(Collections.<NodeID>emptySet());
 
@@ -378,12 +376,12 @@ public class EpidemicTest {
     
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n1.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n2.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n1.server.head().query(numbersKey, 3, name), "three");
-    expectEqual(n2.server.head().query(numbersKey, 3, name), "three");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n2.server.head().query(numbersKey, 1, name));
+    assertEquals("two", n1.server.head().query(numbersKey, 2, name));
+    assertEquals("two", n2.server.head().query(numbersKey, 2, name));
+    assertEquals("three", n1.server.head().query(numbersKey, 3, name));
+    assertEquals("three", n2.server.head().query(numbersKey, 3, name));
   }
   
   public void testThreeNodeRestart(ServerFactory factory) {
@@ -415,9 +413,9 @@ public class EpidemicTest {
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n3.server.head().query(numbersKey, 1, name), "one");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n2.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n3.server.head().query(numbersKey, 1, name));
     
     n2.server.updateView(set(n1.id));
 
@@ -432,12 +430,12 @@ public class EpidemicTest {
     
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n3.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n1.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n2.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n3.server.head().query(numbersKey, 2, name), "two");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n2.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n3.server.head().query(numbersKey, 1, name));
+    assertEquals("two", n1.server.head().query(numbersKey, 2, name));
+    assertEquals("two", n2.server.head().query(numbersKey, 2, name));
+    assertEquals("two", n3.server.head().query(numbersKey, 2, name));
 
     base = n2.server.head();
     n2.server.merge
@@ -450,15 +448,15 @@ public class EpidemicTest {
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), null);
-    expectEqual(n2.server.head().query(numbersKey, 1, name), null);
-    expectEqual(n3.server.head().query(numbersKey, 1, name), null);
-    expectEqual(n1.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n2.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n3.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n1.server.head().query(numbersKey, 3, name), "three");
-    expectEqual(n2.server.head().query(numbersKey, 3, name), "three");
-    expectEqual(n3.server.head().query(numbersKey, 3, name), "three");
+    assertNull(n1.server.head().query(numbersKey, 1, name));
+    assertNull(n2.server.head().query(numbersKey, 1, name));
+    assertNull(n3.server.head().query(numbersKey, 1, name));
+    assertEquals("two", n1.server.head().query(numbersKey, 2, name));
+    assertEquals("two", n2.server.head().query(numbersKey, 2, name));
+    assertEquals("two", n3.server.head().query(numbersKey, 2, name));
+    assertEquals("three", n1.server.head().query(numbersKey, 3, name));
+    assertEquals("three", n2.server.head().query(numbersKey, 3, name));
+    assertEquals("three", n3.server.head().query(numbersKey, 3, name));
   }
   
   @Test
@@ -496,8 +494,8 @@ public class EpidemicTest {
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n2.server.head().query(numbersKey, 1, name));
     
     n1.server.updateView(Collections.<NodeID>emptySet());
     n2.server.updateView(Collections.<NodeID>emptySet());
@@ -519,10 +517,10 @@ public class EpidemicTest {
     // System.out.print("n1: "); n1.server.dump(System.out);
     // System.out.print("n2: "); n2.server.dump(System.out);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n1.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n2.server.head().query(numbersKey, 2, name), "two");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n2.server.head().query(numbersKey, 1, name));
+    assertEquals("two", n1.server.head().query(numbersKey, 2, name));
+    assertEquals("two", n2.server.head().query(numbersKey, 2, name));
   }
 
   @Test
@@ -553,13 +551,13 @@ public class EpidemicTest {
 
     Index key = table.primaryKey;
 
-    expectEqual(n1.server.head().query(name, key, 1, 2, 1), "foo");
-    expectEqual(n2.server.head().query(name, key, 1, 2, 1), null);
+    assertEquals("foo", n1.server.head().query(name, key, 1, 2, 1));
+    assertNull(n2.server.head().query(name, key, 1, 2, 1));
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(name, key, 1, 2, 1), "foo");
-    expectEqual(n2.server.head().query(name, key, 1, 2, 1), "foo");
+    assertEquals("foo", n1.server.head().query(name, key, 1, 2, 1));
+    assertEquals("foo", n2.server.head().query(name, key, 1, 2, 1));
 
     base = n2.server.head();
     n2.server.merge
@@ -571,17 +569,17 @@ public class EpidemicTest {
       (base, base.builder().table(table).row(1, 2, 2).update(name, "bar")
        .commit());
 
-    expectEqual(n1.server.head().query(name, key, 1, 2, 1), "foo");
-    expectEqual(n2.server.head().query(name, key, 1, 2, 1), null);
-    expectEqual(n1.server.head().query(name, key, 1, 2, 2), "bar");
-    expectEqual(n2.server.head().query(name, key, 1, 2, 2), null);
+    assertEquals("foo", n1.server.head().query(name, key, 1, 2, 1));
+    assertNull(n2.server.head().query(name, key, 1, 2, 1));
+    assertEquals("bar", n1.server.head().query(name, key, 1, 2, 2));
+    assertNull(n2.server.head().query(name, key, 1, 2, 2));
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(name, key, 1, 2, 1), null);
-    expectEqual(n2.server.head().query(name, key, 1, 2, 1), null);
-    expectEqual(n1.server.head().query(name, key, 1, 2, 2), "bar");
-    expectEqual(n2.server.head().query(name, key, 1, 2, 2), "bar");
+    assertNull(n1.server.head().query(name, key, 1, 2, 1));
+    assertNull(n2.server.head().query(name, key, 1, 2, 1));
+    assertEquals("bar", n1.server.head().query(name, key, 1, 2, 2));
+    assertEquals("bar", n2.server.head().query(name, key, 1, 2, 2));
   }
   
   private static void flush(NodeNetwork network, NodeID... dontDeliverTo) {

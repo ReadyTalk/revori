@@ -13,6 +13,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.readytalk.revori.server.SQLServer;
@@ -64,7 +65,8 @@ public class SQLTest {
     assertEquals(RowSetFlag.End.ordinal(), in.read());
   }
   
-  /*@Test
+  @Test
+  @Ignore
   public void testAggregates()  throws IOException {
     Connection connection = new SQLServer("test").makeConnection();
 
@@ -89,7 +91,7 @@ public class SQLTest {
     assertEquals(RowSetFlag.Item.ordinal(), in.read());
     assertEquals("2", readString(in));
     assertEquals(RowSetFlag.End.ordinal(), in.read());
-  }*/
+  }
   
   @Test
   public void testOrderBy() throws IOException {

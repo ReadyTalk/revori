@@ -87,41 +87,41 @@ public class IndexesTest {
 
         QueryResult result = tail.diff(first, stateEqual, parameters);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "teal");
-        assertEquals(result.nextItem(), 80209);
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "orange");
-        assertEquals(result.nextItem(), 81601);
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("teal", result.nextItem());
+        assertEquals(80209, result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("orange", result.nextItem());
+        assertEquals(81601, result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters1 = { "Colorado" };
 
         result = first.diff(tail, stateEqual, parameters1);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result.nextItem(), "teal");
-        assertEquals(result.nextItem(), 80209);
-        assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result.nextItem(), "orange");
-        assertEquals(result.nextItem(), 81601);
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Deleted, result.nextRow());
+        assertEquals("teal", result.nextItem());
+        assertEquals(80209, result.nextItem());
+        assertEquals(QueryResult.Type.Deleted, result.nextRow());
+        assertEquals("orange", result.nextItem());
+        assertEquals(81601, result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters2 = { "N/A" };
 
         result = tail.diff(first, stateEqual, parameters2);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextItem(), 0);
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "green");
-        assertEquals(result.nextItem(), 0);
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextItem(), 0);
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "pink");
-        assertEquals(result.nextItem(), 0);
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("red", result.nextItem());
+        assertEquals(0, result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("green", result.nextItem());
+        assertEquals(0, result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("red", result.nextItem());
+        assertEquals(0, result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("pink", result.nextItem());
+        assertEquals(0, result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate countryEqual = new QueryTemplate
           (list(reference(placesReference, color),
@@ -135,21 +135,21 @@ public class IndexesTest {
 
         result = tail.diff(first, countryEqual, parameters3);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "pink");
-        assertEquals(result.nextItem(), "Paris");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("pink", result.nextItem());
+        assertEquals("Paris", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters4 = { "China" };
 
         result = tail.diff(first, countryEqual, parameters4);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextItem(), "Beijing");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "green");
-        assertEquals(result.nextItem(), "Shanghai");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("red", result.nextItem());
+        assertEquals("Beijing", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("green", result.nextItem());
+        assertEquals("Shanghai", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate countryStateCityEqual = new QueryTemplate
           (list(reference(placesReference, color),
@@ -175,15 +175,15 @@ public class IndexesTest {
 
         result = tail.diff(first, countryStateCityEqual, parameters5);
 
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters6 = { "France", "N/A", "Paris" };
 
         result = tail.diff(first, countryStateCityEqual, parameters6);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "pink");
-        assertEquals(result.nextItem(), "Paris");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("pink", result.nextItem());
+        assertEquals("Paris", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
     }
     
   @Test

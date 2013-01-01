@@ -21,10 +21,6 @@ import com.readytalk.revori.server.RevisionServer;
 import com.readytalk.revori.server.SimpleRevisionServer;
 
 public class BridgeTest {
-  private static void expectEqual(Object actual, Object expected) {
-    assertEquals(expected, actual);
-  }
-
   @Test
   public void testBasic() {
     RevisionServer left = new SimpleRevisionServer(null, null);
@@ -47,8 +43,8 @@ public class BridgeTest {
       left.merge(base, builder.commit());
     }
 
-    expectEqual(left.head().query(numbers.primaryKey, 1, name), "one");
-    expectEqual(right.head().query(numbers.primaryKey, 1, name), "one");
+    assertEquals("one", left.head().query(numbers.primaryKey, 1, name));
+    assertEquals("one", right.head().query(numbers.primaryKey, 1, name));
 
     { Revision base = right.head();
       RevisionBuilder builder = base.builder();
@@ -58,8 +54,8 @@ public class BridgeTest {
       right.merge(base, builder.commit());
     }
 
-    expectEqual(left.head().query(numbers.primaryKey, 2, name), "two");
-    expectEqual(right.head().query(numbers.primaryKey, 2, name), "two");
+    assertEquals("two", left.head().query(numbers.primaryKey, 2, name));
+    assertEquals("two", right.head().query(numbers.primaryKey, 2, name));
   }
 
   @Test
@@ -89,14 +85,14 @@ public class BridgeTest {
       left1.merge(base, builder.commit());
     }
 
-    expectEqual(left1.head().query(numbers.primaryKey, 1, name), "one");
-    expectEqual
+    assertEquals("one", left1.head().query(numbers.primaryKey, 1, name));
+    assertEquals
       (left1.head().query(originNumbers.primaryKey, 1, 1, name), null);
-    expectEqual(left2.head().query(numbers.primaryKey, 1, name), null);
-    expectEqual
+    assertEquals(null, left2.head().query(numbers.primaryKey, 1, name));
+    assertEquals
       (left2.head().query(originNumbers.primaryKey, 1, 1, name), null);
-    expectEqual(right.head().query(numbers.primaryKey, 1, name), null);
-    expectEqual
+    assertEquals(null, right.head().query(numbers.primaryKey, 1, name));
+    assertEquals
       (right.head().query(originNumbers.primaryKey, 1, 1, name), "one");
 
     { Revision base = right.head();
@@ -107,14 +103,14 @@ public class BridgeTest {
       right.merge(base, builder.commit());
     }
 
-    expectEqual(left1.head().query(numbers.primaryKey, 2, name), null);
-    expectEqual
+    assertEquals(null, left1.head().query(numbers.primaryKey, 2, name));
+    assertEquals
       (left1.head().query(originNumbers.primaryKey, 2, 2, name), null);
-    expectEqual(left2.head().query(numbers.primaryKey, 2, name), "two");
-    expectEqual
+    assertEquals("two", left2.head().query(numbers.primaryKey, 2, name));
+    assertEquals
       (left2.head().query(originNumbers.primaryKey, 2, 2, name), null);
-    expectEqual(right.head().query(numbers.primaryKey, 2, name), null);
-    expectEqual
+    assertEquals(null, right.head().query(numbers.primaryKey, 2, name));
+    assertEquals
       (right.head().query(originNumbers.primaryKey, 2, 2, name), "two");
 
     { Revision base = right.head();
@@ -125,16 +121,16 @@ public class BridgeTest {
       right.merge(base, builder.commit());
     }
 
-    expectEqual(left1.head().query(numbers.primaryKey, 2, name), "two");
-    expectEqual
+    assertEquals("two", left1.head().query(numbers.primaryKey, 2, name));
+    assertEquals
       (left1.head().query(originNumbers.primaryKey, 1, 2, name), null);
-    expectEqual(left2.head().query(numbers.primaryKey, 2, name), "two");
-    expectEqual
+    assertEquals("two", left2.head().query(numbers.primaryKey, 2, name));
+    assertEquals
       (left2.head().query(originNumbers.primaryKey, 1, 2, name), null);
-    expectEqual(right.head().query(numbers.primaryKey, 2, name), null);
-    expectEqual
+    assertEquals(null, right.head().query(numbers.primaryKey, 2, name));
+    assertEquals
       (right.head().query(originNumbers.primaryKey, 1, 2, name), "two");
-    expectEqual
+    assertEquals
       (right.head().query(originNumbers.primaryKey, 2, 2, name), "two");
 
     { Revision base = right.head();
@@ -145,12 +141,12 @@ public class BridgeTest {
       right.merge(base, builder.commit());
     }
 
-    expectEqual(left1.head().query(numbers.primaryKey, 2, name), null);
-    expectEqual(left2.head().query(numbers.primaryKey, 2, name), "two");
-    expectEqual(right.head().query(numbers.primaryKey, 2, name), null);
-    expectEqual
+    assertEquals(null, left1.head().query(numbers.primaryKey, 2, name));
+    assertEquals("two", left2.head().query(numbers.primaryKey, 2, name));
+    assertEquals(null, right.head().query(numbers.primaryKey, 2, name));
+    assertEquals
       (right.head().query(originNumbers.primaryKey, 1, 2, name), null);
-    expectEqual
+    assertEquals
       (right.head().query(originNumbers.primaryKey, 2, 2, name), "two");
 
     { Revision base = left2.head();
@@ -161,8 +157,8 @@ public class BridgeTest {
       left2.merge(base, builder.commit());
     }
 
-    expectEqual(left2.head().query(numbers.primaryKey, 2, name), null);
-    expectEqual
+    assertEquals(null, left2.head().query(numbers.primaryKey, 2, name));
+    assertEquals
       (right.head().query(originNumbers.primaryKey, 2, 2, name), null);
   }
 }

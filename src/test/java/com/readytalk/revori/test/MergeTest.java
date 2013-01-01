@@ -9,7 +9,8 @@ package com.readytalk.revori.test;
 
 import static com.readytalk.revori.util.Util.cols;
 import static com.readytalk.revori.util.Util.list;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import org.junit.Test;
 
@@ -98,25 +99,25 @@ public class MergeTest {
 
         QueryResult result = tail.diff(merge, any);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "one");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "two");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "four");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "roku");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "seven");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "eight");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "nine");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "thirteen");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "forty two");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("one", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("two", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("four", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("roku", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("seven", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("eight", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("nine", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("thirteen", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("forty two", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         
         builder = base.builder();
 
@@ -134,9 +135,9 @@ public class MergeTest {
 
         result = base.diff(merge, any);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "four");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("four", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         
         PatchTemplate delete = new DeleteTemplate
           (numbersReference,
@@ -161,9 +162,9 @@ public class MergeTest {
 
         result = base.diff(merge, any);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result.nextItem(), "eight");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Deleted, result.nextRow());
+        assertEquals("eight", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         builder = base.builder();
 
@@ -185,13 +186,13 @@ public class MergeTest {
                                           Object leftValue,
                                           Object rightValue)
             {
-              assertEquals(table, numbers);
-              assertEquals(column, name);
-              assertEquals(primaryKeyValues.length, 1);
-              assertEquals(primaryKeyValues[0], 4);
+              assertEquals(numbers, table);
+              assertEquals(name, column);
+              assertEquals(1, primaryKeyValues.length);
+              assertEquals(4, primaryKeyValues[0]);
               assertNull(baseValue);
-              assertEquals(leftValue, "four");
-              assertEquals(rightValue, "shi");
+              assertEquals("four", leftValue);
+              assertEquals("shi", rightValue);
               
               return "cuatro";
             }
@@ -199,9 +200,9 @@ public class MergeTest {
 
         result = base.diff(merge, any);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "cuatro");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("cuatro", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         builder = base.builder();
 
@@ -223,13 +224,13 @@ public class MergeTest {
                                           Object leftValue,
                                           Object rightValue)
             {
-              assertEquals(table, numbers);
-              assertEquals(column, name);
-              assertEquals(primaryKeyValues.length, 1);
-              assertEquals(primaryKeyValues[0], 1);
-              assertEquals(baseValue, "one");
-              assertEquals(leftValue, "ichi");
-              assertEquals(rightValue, "uno");
+              assertEquals(numbers, table);
+              assertEquals(name, column);
+              assertEquals(1, primaryKeyValues.length);
+              assertEquals(1, primaryKeyValues[0]);
+              assertEquals("one", baseValue);
+              assertEquals("ichi", leftValue);
+              assertEquals("uno", rightValue);
               
               return "unit";
             }
@@ -237,11 +238,11 @@ public class MergeTest {
 
         result = base.diff(merge, any);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result.nextItem(), "one");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "unit");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Deleted, result.nextRow());
+        assertEquals("one", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("unit", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         builder = tail.builder();
 
@@ -263,13 +264,13 @@ public class MergeTest {
                                           Object leftValue,
                                           Object rightValue)
             {
-              assertEquals(table, numbers);
-              assertEquals(column, name);
-              assertEquals(primaryKeyValues.length, 1);
-              assertEquals(primaryKeyValues[0], 1);
+              assertEquals(numbers, table);
+              assertEquals(name, column);
+              assertEquals(1, primaryKeyValues.length);
+              assertEquals(1, primaryKeyValues[0]);
               assertNull(baseValue);
-              assertEquals(leftValue, "one");
-              assertEquals(rightValue, "uno");
+              assertEquals("one", leftValue);
+              assertEquals("uno", rightValue);
               
               return "unit";
             }
@@ -277,9 +278,9 @@ public class MergeTest {
 
         result = tail.diff(merge, any);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "unit");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("unit", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         builder = tail.builder();
 
@@ -303,13 +304,13 @@ public class MergeTest {
                                           Object leftValue,
                                           Object rightValue)
             {
-              assertEquals(table, numbers);
-              assertEquals(column, name);
-              assertEquals(primaryKeyValues.length, 1);
-              assertEquals(primaryKeyValues[0], 1);
+              assertEquals(numbers, table);
+              assertEquals(name, column);
+              assertEquals(1, primaryKeyValues.length);
+              assertEquals(1, primaryKeyValues[0]);
               assertNull(baseValue);
-              assertEquals(leftValue, "one");
-              assertEquals(rightValue, "uno");
+              assertEquals("one", leftValue);
+              assertEquals("uno", rightValue);
               
               return "unit";
             }
@@ -317,18 +318,14 @@ public class MergeTest {
 
         result = tail.diff(merge, any);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "unit");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "two");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tres");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("unit", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("two", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tres", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
     }
-
-  private static void expectEqual(Object actual, Object expected) {
-    assertEquals(expected, actual);
-  }
 
   @Test
   public void testDeleteAndInsert() {
@@ -351,14 +348,14 @@ public class MergeTest {
     Revision merged = base.merge
       (fork1, fork2, ConflictResolvers.Restrict, ForeignKeyResolvers.Restrict);
 
-    expectEqual(merged.query(name, key, 1, 2, 1), null);
-    expectEqual(merged.query(name, key, 1, 2, 2), "bar");
+    assertNull(merged.query(name, key, 1, 2, 1));
+    assertEquals("bar", merged.query(name, key, 1, 2, 2));
 
     merged = base.merge
       (fork2, fork1, ConflictResolvers.Restrict, ForeignKeyResolvers.Restrict);
 
-    expectEqual(merged.query(name, key, 1, 2, 1), null);
-    expectEqual(merged.query(name, key, 1, 2, 2), "bar");
+    assertNull(merged.query(name, key, 1, 2, 1));
+    assertEquals("bar", merged.query(name, key, 1, 2, 2));
 
     base = Revisions.Empty.builder().table(table).row(1, 2, 1)
       .update(name, "foo").commit();
@@ -372,14 +369,14 @@ public class MergeTest {
     merged = base.merge
       (fork1, fork2, ConflictResolvers.Restrict, ForeignKeyResolvers.Restrict);
 
-    expectEqual(merged.query(name, key, 1, 2, 1), null);
-    expectEqual(merged.query(value, key, 1, 2, 1), "bar");
+    assertNull(merged.query(name, key, 1, 2, 1));
+    assertEquals("bar", merged.query(value, key, 1, 2, 1));
 
     merged = base.merge
       (fork2, fork1, ConflictResolvers.Restrict, ForeignKeyResolvers.Restrict);
 
-    expectEqual(merged.query(name, key, 1, 2, 1), null);
-    expectEqual(merged.query(value, key, 1, 2, 1), "bar");
+    assertNull(merged.query(name, key, 1, 2, 1));
+    assertEquals("bar", merged.query(value, key, 1, 2, 1));
   }
 
   @Test
@@ -400,13 +397,13 @@ public class MergeTest {
     Revision merged = base.merge
       (fork1, fork2, ConflictResolvers.Restrict, ForeignKeyResolvers.Restrict);
 
-    expectEqual(merged.query(name, key, 1), null);
-    expectEqual(merged.query(name, key, 2), "bar");
+    assertNull(merged.query(name, key, 1));
+    assertEquals("bar", merged.query(name, key, 2));
 
     merged = base.merge
       (fork2, fork1, ConflictResolvers.Restrict, ForeignKeyResolvers.Restrict);
 
-    expectEqual(merged.query(name, key, 1), null);
-    expectEqual(merged.query(name, key, 2), "bar");
+    assertNull(merged.query(name, key, 1));
+    assertEquals("bar", merged.query(name, key, 2));
   }
 }

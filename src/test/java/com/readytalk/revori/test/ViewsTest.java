@@ -40,9 +40,6 @@ import com.readytalk.revori.TableReference;
 import com.readytalk.revori.View;
 
 public class ViewsTest {
-  private static void expectEqual(Object actual, Object expected) {
-    assertEquals(expected, actual);
-  }
 
   @Test
   public void testCount() {
@@ -58,9 +55,9 @@ public class ViewsTest {
         (aggregate(Integer.class, Foldables.Count)),
         thingsReference, constant(true)));
 
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), 0);
-    expectEqual(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals(0, result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
 
     result = Revisions.Empty.diff
       (Revisions.Empty.builder().table(things).row(1).update(name, "pumpkin")
@@ -69,9 +66,9 @@ public class ViewsTest {
         (aggregate(Integer.class, Foldables.Count)),
         thingsReference, constant(true)));
 
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), 0);
-    expectEqual(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals(0, result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
 
     result = Revisions.Empty.diff
       (Revisions.Empty.builder().table(things).row(1).update(name, "pumpkin")
@@ -81,9 +78,9 @@ public class ViewsTest {
         thingsReference,
         equal(reference(thingsReference, name), constant("pumpkin"))));
 
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), 0);
-    expectEqual(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals(0, result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
 
     RevisionBuilder builder = Revisions.Empty.builder();
 
@@ -102,9 +99,9 @@ public class ViewsTest {
         (aggregate(Integer.class, Foldables.Count)),
         thingsReference, constant(true)));
 
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), 6);
-    expectEqual(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals(6, result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
 
     QueryTemplate group = new QueryTemplate
       (list(reference(thingsReference, name),
@@ -114,16 +111,16 @@ public class ViewsTest {
     
     result = Revisions.Empty.diff(head, group);
 
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), "planet");
-    expectEqual(result.nextItem(), 2);
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), "tree");
-    expectEqual(result.nextItem(), 3);
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), "truck");
-    expectEqual(result.nextItem(), 1);
-    expectEqual(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("planet", result.nextItem());
+    assertEquals(2, result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("tree", result.nextItem());
+    assertEquals(3, result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("truck", result.nextItem());
+    assertEquals(1, result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
 
     result = Revisions.Empty.diff
       (head, new QueryTemplate
@@ -133,10 +130,10 @@ public class ViewsTest {
         (aggregate(Integer.class, Foldables.Count), constant(3)),
         set(reference(thingsReference, name))));
 
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), "tree");
-    expectEqual(result.nextItem(), 3);
-    expectEqual(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("tree", result.nextItem());
+    assertEquals(3, result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
 
     Revision base = head;
 
@@ -148,23 +145,23 @@ public class ViewsTest {
 
     result = Revisions.Empty.diff(head, group);
 
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), "planet");
-    expectEqual(result.nextItem(), 2);
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), "tree");
-    expectEqual(result.nextItem(), 2);
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), "truck");
-    expectEqual(result.nextItem(), 1);
-    expectEqual(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("planet", result.nextItem());
+    assertEquals(2, result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("tree", result.nextItem());
+    assertEquals(2, result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("truck", result.nextItem());
+    assertEquals(1, result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
 
     result = base.diff(head, group);
 
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), "tree");
-    expectEqual(result.nextItem(), -1);
-    expectEqual(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("tree", result.nextItem());
+    assertEquals(result.nextItem(), -1);
+    assertEquals(QueryResult.Type.End, result.nextRow());
   }
 
   @Test
@@ -211,16 +208,16 @@ public class ViewsTest {
 
     QueryResult result = Revisions.Empty.diff(head, viewQuery);
 
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), "planet");
-    expectEqual(result.nextItem(), 7);
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), "tree");
-    expectEqual(result.nextItem(), 12);
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), "truck");
-    expectEqual(result.nextItem(), 2);
-    expectEqual(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("planet", result.nextItem());
+    assertEquals(7, result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("tree", result.nextItem());
+    assertEquals(12, result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("truck", result.nextItem());
+    assertEquals(2, result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
 
     builder = head.builder();
 
@@ -231,13 +228,13 @@ public class ViewsTest {
     
     result = Revisions.Empty.diff(head, viewQuery);
 
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), "planet");
-    expectEqual(result.nextItem(), 7);
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), "tree");
-    expectEqual(result.nextItem(), 19);
-    expectEqual(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("planet", result.nextItem());
+    assertEquals(7, result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("tree", result.nextItem());
+    assertEquals(19, result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
 
     builder = head.builder();
 
@@ -269,16 +266,16 @@ public class ViewsTest {
 
     result = Revisions.Empty.diff(head, viewQuery);
 
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), "bear");
-    expectEqual(result.nextItem(), 19);
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), "planet");
-    expectEqual(result.nextItem(), 15);
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), "tree");
-    expectEqual(result.nextItem(), 18);
-    expectEqual(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("bear", result.nextItem());
+    assertEquals(19, result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("planet", result.nextItem());
+    assertEquals(15, result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("tree", result.nextItem());
+    assertEquals(18, result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
   }
 
   @Test
@@ -315,9 +312,9 @@ public class ViewsTest {
 
     QueryResult result = Revisions.Empty.diff(head, viewQuery);
 
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), 6);
-    expectEqual(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals(6, result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
 
     builder = head.builder();
 
@@ -327,9 +324,9 @@ public class ViewsTest {
     
     result = Revisions.Empty.diff(head, viewQuery);
 
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), 5);
-    expectEqual(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals(5, result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
   }
 
   @Test
@@ -360,25 +357,25 @@ public class ViewsTest {
         list(new QueryTemplate.OrderExpression
              (reference(thingsReference, name), Comparators.Ascending))));
 
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), 3);
-    expectEqual(result.nextItem(), "planet");
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), 4);
-    expectEqual(result.nextItem(), "planet");
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), 1);
-    expectEqual(result.nextItem(), "tree");
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), 5);
-    expectEqual(result.nextItem(), "tree");
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), 6);
-    expectEqual(result.nextItem(), "tree");
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), 2);
-    expectEqual(result.nextItem(), "truck");
-    expectEqual(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals(3, result.nextItem());
+    assertEquals("planet", result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals(4, result.nextItem());
+    assertEquals("planet", result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals(1, result.nextItem());
+    assertEquals("tree", result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals(5, result.nextItem());
+    assertEquals("tree", result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals(6, result.nextItem());
+    assertEquals("tree", result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals(2, result.nextItem());
+    assertEquals("truck", result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
 
     result = Revisions.Empty.diff
       (head, new QueryTemplate
@@ -389,24 +386,24 @@ public class ViewsTest {
         list(new QueryTemplate.OrderExpression
              (reference(thingsReference, name), Comparators.Descending))));
 
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), 2);
-    expectEqual(result.nextItem(), "truck");
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), 1);
-    expectEqual(result.nextItem(), "tree");
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), 5);
-    expectEqual(result.nextItem(), "tree");
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), 6);
-    expectEqual(result.nextItem(), "tree");
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), 3);
-    expectEqual(result.nextItem(), "planet");
-    expectEqual(result.nextRow(), QueryResult.Type.Inserted);
-    expectEqual(result.nextItem(), 4);
-    expectEqual(result.nextItem(), "planet");
-    expectEqual(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals(2, result.nextItem());
+    assertEquals("truck", result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals(1, result.nextItem());
+    assertEquals("tree", result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals(5, result.nextItem());
+    assertEquals("tree", result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals(6, result.nextItem());
+    assertEquals("tree", result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals(3, result.nextItem());
+    assertEquals("planet", result.nextItem());
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals(4, result.nextItem());
+    assertEquals("planet", result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
   }
 }

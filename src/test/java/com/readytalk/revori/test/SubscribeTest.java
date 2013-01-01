@@ -12,6 +12,7 @@ import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
 import static com.readytalk.revori.util.Util.list;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -80,7 +81,7 @@ public class SubscribeTest {
     }
 
     public void expectNothing() {
-      assertEquals(null, updates.peek());
+      assertNull(updates.peek());
     }
   }
 

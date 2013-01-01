@@ -72,13 +72,13 @@ public class PartialIndexTest {
 
         QueryResult result = tail.diff(first, numberEqual, parameters);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "green");
-        assertEquals(result.nextItem(), "circle");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextItem(), "triangle");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("green", result.nextItem());
+        assertEquals("circle", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("red", result.nextItem());
+        assertEquals("triangle", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         PatchTemplate updateShapeWhereNumberEqual = new UpdateTemplate
           (numbersReference,
@@ -98,13 +98,13 @@ public class PartialIndexTest {
 
         result = tail.diff(second, numberEqual, parameters1);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "green");
-        assertEquals(result.nextItem(), "pentagon");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextItem(), "pentagon");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("green", result.nextItem());
+        assertEquals("pentagon", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("red", result.nextItem());
+        assertEquals("pentagon", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
     }
 
     @Test
@@ -147,13 +147,13 @@ public class PartialIndexTest {
 
         QueryResult result = tail.diff(first, numberEqual, parameters);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "green");
-        assertEquals(result.nextItem(), "circle");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextItem(), "triangle");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("green", result.nextItem());
+        assertEquals("circle", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("red", result.nextItem());
+        assertEquals("triangle", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         PatchTemplate deleteWhereNumberEqual = new DeleteTemplate
           (numbersReference,
@@ -171,6 +171,6 @@ public class PartialIndexTest {
 
         result = tail.diff(second, numberEqual, parameters1);
 
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.End, result.nextRow());
     }
 }

@@ -11,6 +11,7 @@ import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
 import static com.readytalk.revori.util.Util.list;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import org.junit.Test;
@@ -65,19 +66,19 @@ public class SimpleTest {
 
         QueryResult result = tail.diff(first, any, parameters);
         
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 1);
-        assertEquals(result.nextItem(), "Charles");
-        assertEquals(result.nextItem(), "Norris");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 2);
-        assertEquals(result.nextItem(), "Chuck");
-        assertEquals(result.nextItem(), "Norris");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 3);
-        assertEquals(result.nextItem(), "Chuck");
-        assertEquals(result.nextItem(), "Taylor");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals(1, result.nextItem());
+        assertEquals("Charles", result.nextItem());
+        assertEquals("Norris", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals(2, result.nextItem());
+        assertEquals("Chuck", result.nextItem());
+        assertEquals("Norris", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals(3, result.nextItem());
+        assertEquals("Chuck", result.nextItem());
+        assertEquals("Taylor", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         }
     
     @Test
@@ -143,25 +144,25 @@ public class SimpleTest {
 
           QueryResult result = tail.diff(third, any, parameters);
         
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 1);
-        assertEquals(result.nextItem(), "Charles");
-        assertEquals(result.nextItem(), "Norris");
-        assertEquals(result.nextItem(), "Montreal");
-        assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 2);
-        assertEquals(result.nextItem(), "Charleston");
-        assertEquals(result.nextItem(), null);
-        assertEquals(result.nextItem(), null);
-        assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 3);
-        assertEquals(result.nextItem(), "Wickerson");
-        assertEquals(result.nextItem(), "Jones");
-        assertEquals(result.nextItem(), "Lancaster");
-        assertEquals(result.nextItem(), 54);
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals(1, result.nextItem());
+        assertEquals("Charles", result.nextItem());
+        assertEquals("Norris", result.nextItem());
+        assertEquals("Montreal", result.nextItem());
+        assertNull(result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals(2, result.nextItem());
+        assertEquals("Charleston", result.nextItem());
+        assertNull(result.nextItem());
+        assertNull(result.nextItem());
+        assertNull(result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals(3, result.nextItem());
+        assertEquals("Wickerson", result.nextItem());
+        assertEquals("Jones", result.nextItem());
+        assertEquals("Lancaster", result.nextItem());
+        assertEquals(54, result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         }
     
     
