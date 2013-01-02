@@ -21,8 +21,8 @@ Status
 The code is currently in an alpha state, meaning some stuff works,
 some stuff doesn't, and the API is not yet thoroughly documented and
 may change without warning.  If you're brave and want to start playing
-with it anyway, you can build and browse the JavaDoc (run "ant
-javadoc") and consult the test/unittests directory for simple examples
+with it anyway, you can build and browse the JavaDoc (run `gradle
+javadoc`) and consult the test/unittests directory for simple examples
 of how to use it.
 
 Build
@@ -30,7 +30,7 @@ Build
 
 #### Client
 
-You'll need to have the libreadline headers and library installed to 
+You'll need to have the libreadline headers and library installed to
 build the client)
 
 	$ gradle client:build
@@ -62,3 +62,17 @@ You can use the SQL front-end client to test out Revori:
 
 
 	$ ./client/build/binaries/client localhost 8017
+
+Known Issues
+------------
+
+There is a known issue with the native client build on Mac OS X platforms.
+The version of readline provided by Apple is not 100% compatible with our
+client implementation. To build and use the client, install the GNU version
+of readline and readline headers. The easiest way to do this is probably with
+[Homebrew](http://mxcl.github.com/homebrew/):
+
+  $ brew install readline
+  $ brew link readline # This overrides the Apple-provided version, so beware.
+
+
