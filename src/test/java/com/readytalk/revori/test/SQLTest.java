@@ -5,22 +5,23 @@
    that the above copyright notice and this permission notice appear
    in all copies. */
 
-package unittests;
+package com.readytalk.revori.test;
 
 import static com.readytalk.revori.server.SQLServer.readString;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.junit.Ignore;
 import org.junit.Test;
-import junit.framework.TestCase;
 
 import com.readytalk.revori.server.SQLServer;
 import com.readytalk.revori.server.SQLServer.Connection;
 import com.readytalk.revori.server.SQLServer.Response;
 import com.readytalk.revori.server.SQLServer.RowSetFlag;
 
-public class SQL extends TestCase {
+public class SQLTest {
   @Test
   public void testLiterals() throws IOException {
     Connection connection = new SQLServer("test").makeConnection();
@@ -64,7 +65,8 @@ public class SQL extends TestCase {
     assertEquals(RowSetFlag.End.ordinal(), in.read());
   }
   
-  /*@Test
+  @Test
+  @Ignore
   public void testAggregates()  throws IOException {
     Connection connection = new SQLServer("test").makeConnection();
 
@@ -89,7 +91,7 @@ public class SQL extends TestCase {
     assertEquals(RowSetFlag.Item.ordinal(), in.read());
     assertEquals("2", readString(in));
     assertEquals(RowSetFlag.End.ordinal(), in.read());
-  }*/
+  }
   
   @Test
   public void testOrderBy() throws IOException {

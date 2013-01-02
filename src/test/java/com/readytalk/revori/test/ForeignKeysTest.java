@@ -5,35 +5,35 @@
    that the above copyright notice and this permission notice appear
    in all copies. */
 
-package unittests;
-
-import static com.readytalk.revori.util.Util.list;
-import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.DuplicateKeyResolution.Throw;
+package com.readytalk.revori.test;
 import static com.readytalk.revori.DuplicateKeyResolution.Overwrite;
-import static com.readytalk.revori.ExpressionFactory.parameter;
+import static com.readytalk.revori.DuplicateKeyResolution.Throw;
 import static com.readytalk.revori.ExpressionFactory.equal;
+import static com.readytalk.revori.ExpressionFactory.parameter;
 import static com.readytalk.revori.ExpressionFactory.reference;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.util.Util.list;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
-import junit.framework.TestCase;
-
 import com.readytalk.revori.Column;
-import com.readytalk.revori.Table;
-import com.readytalk.revori.TableReference;
-import com.readytalk.revori.PatchTemplate;
-import com.readytalk.revori.InsertTemplate;
 import com.readytalk.revori.DeleteTemplate;
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.Revisions;
-import com.readytalk.revori.RevisionBuilder;
 import com.readytalk.revori.DiffResult;
 import com.readytalk.revori.ForeignKey;
-import com.readytalk.revori.ForeignKeyResolvers;
 import com.readytalk.revori.ForeignKeyException;
+import com.readytalk.revori.ForeignKeyResolvers;
+import com.readytalk.revori.InsertTemplate;
+import com.readytalk.revori.PatchTemplate;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.TableReference;
 
-public class ForeignKeys extends TestCase {
+public class ForeignKeysTest {
   private static void testDelete(boolean restrict) {
     Column<Integer> number = new Column<Integer>(Integer.class);
     Column<String> name = new Column<String>(String.class);
@@ -60,13 +60,13 @@ public class ForeignKeys extends TestCase {
 
     Revision head = builder.commit();
 
-    assertEquals(head.query(englishNumbers.primaryKey, 1, name), "one");
-    assertEquals(head.query(spanishNumbers.primaryKey, 1, name), "uno");
-    assertEquals(head.query(japaneseNumbers.primaryKey, 1, name), "ichi");
-    assertEquals(head.query(englishNumbers.primaryKey, 2, name), "two");
-    assertEquals(head.query(spanishNumbers.primaryKey, 2, name), "dos");
-    assertEquals(head.query(japaneseNumbers.primaryKey, 2, name), "ni");
-    assertEquals(head.query(binaryNumbers.primaryKey, 5, name), "101");
+    assertEquals("one", head.query(englishNumbers.primaryKey, 1, name));
+    assertEquals("uno", head.query(spanishNumbers.primaryKey, 1, name));
+    assertEquals("ichi", head.query(japaneseNumbers.primaryKey, 1, name));
+    assertEquals("two", head.query(englishNumbers.primaryKey, 2, name));
+    assertEquals("dos", head.query(spanishNumbers.primaryKey, 2, name));
+    assertEquals("ni", head.query(japaneseNumbers.primaryKey, 2, name));
+    assertEquals("101", head.query(binaryNumbers.primaryKey, 5, name));
 
     builder = head.builder();
 
@@ -82,13 +82,13 @@ public class ForeignKeys extends TestCase {
     } else {
       head = builder.commit(ForeignKeyResolvers.Delete);
 
-      assertEquals(head.query(englishNumbers.primaryKey, 1, name), null);
-      assertEquals(head.query(spanishNumbers.primaryKey, 1, name), null);
-      assertEquals(head.query(japaneseNumbers.primaryKey, 1, name), null);
-      assertEquals(head.query(englishNumbers.primaryKey, 2, name), "two");
-      assertEquals(head.query(spanishNumbers.primaryKey, 2, name), "dos");
-      assertEquals(head.query(japaneseNumbers.primaryKey, 2, name), "ni");
-      assertEquals(head.query(binaryNumbers.primaryKey, 5, name), null);
+      assertNull(head.query(englishNumbers.primaryKey, 1, name));
+      assertNull(head.query(spanishNumbers.primaryKey, 1, name));
+      assertNull(head.query(japaneseNumbers.primaryKey, 1, name));
+      assertEquals("two", head.query(englishNumbers.primaryKey, 2, name));
+      assertEquals("dos", head.query(spanishNumbers.primaryKey, 2, name));
+      assertEquals("ni", head.query(japaneseNumbers.primaryKey, 2, name));
+      assertNull(head.query(binaryNumbers.primaryKey, 5, name));
     }
   }
 
@@ -115,10 +115,10 @@ public class ForeignKeys extends TestCase {
 
     Revision head = builder.commit();
 
-    assertEquals(head.query(name, firstNumbers.primaryKey, 1, "one"), "one");
+    assertEquals("one", head.query(name, firstNumbers.primaryKey, 1, "one"));
     assertEquals
       (head.query(name, secondNumbers.primaryKey, "one", 1, "1"), "one");
-    assertEquals(head.query(name, firstNumbers.primaryKey, 2, "two"), "two");
+    assertEquals("two", head.query(name, firstNumbers.primaryKey, 2, "two"));
     assertEquals
       (head.query(name, secondNumbers.primaryKey, "two", 2, "10"), "two");
 
@@ -135,10 +135,9 @@ public class ForeignKeys extends TestCase {
       head = builder.commit(ForeignKeyResolvers.Delete);
 
 
-      assertEquals(head.query(name, firstNumbers.primaryKey, 1, "one"), null);
-      assertEquals
-        (head.query(name, secondNumbers.primaryKey, "one", 1, "1"), null);
-      assertEquals(head.query(name, firstNumbers.primaryKey, 2, "two"), "two");
+      assertNull(head.query(name, firstNumbers.primaryKey, 1, "one"));
+      assertNull(head.query(name, secondNumbers.primaryKey, "one", 1, "1"));
+      assertEquals("two", head.query(name, firstNumbers.primaryKey, 2, "two"));
       assertEquals
         (head.query(name, secondNumbers.primaryKey, "two", 2, "10"), "two");
     }
@@ -150,7 +149,6 @@ public class ForeignKeys extends TestCase {
     testDeleteMulti(false);
   }
 
-  @Test
   public static void testDeleteTemplate(boolean restrict) {
     Column<Integer> number = new Column<Integer>(Integer.class);
     Column<String> name = new Column<String>(String.class);
@@ -181,10 +179,10 @@ public class ForeignKeys extends TestCase {
 
     Revision head = builder.commit();
 
-    assertEquals(head.query(englishNumbers.primaryKey, 1, name), "one");
-    assertEquals(head.query(spanishNumbers.primaryKey, 1, name), "uno");
-    assertEquals(head.query(englishNumbers.primaryKey, 2, name), "two");
-    assertEquals(head.query(spanishNumbers.primaryKey, 2, name), "dos");
+    assertEquals("one", head.query(englishNumbers.primaryKey, 1, name));
+    assertEquals("uno", head.query(spanishNumbers.primaryKey, 1, name));
+    assertEquals("two", head.query(englishNumbers.primaryKey, 2, name));
+    assertEquals("dos", head.query(spanishNumbers.primaryKey, 2, name));
 
     builder = head.builder();
 
@@ -206,10 +204,10 @@ public class ForeignKeys extends TestCase {
     } else {
       head = builder.commit(ForeignKeyResolvers.Delete);
 
-      assertEquals(head.query(englishNumbers.primaryKey, 1, name), null);
-      assertEquals(head.query(spanishNumbers.primaryKey, 1, name), null);
-      assertEquals(head.query(englishNumbers.primaryKey, 2, name), "two");
-      assertEquals(head.query(spanishNumbers.primaryKey, 2, name), "dos");
+      assertNull(head.query(englishNumbers.primaryKey, 1, name));
+      assertNull(head.query(spanishNumbers.primaryKey, 1, name));
+      assertEquals("two", head.query(englishNumbers.primaryKey, 2, name));
+      assertEquals("dos", head.query(spanishNumbers.primaryKey, 2, name));
     }
   }
 
@@ -232,10 +230,10 @@ public class ForeignKeys extends TestCase {
 
     Revision head = builder.commit();
 
-    assertEquals(head.query(englishNumbers.primaryKey, 1, name), "one");
-    assertEquals(head.query(spanishNumbers.primaryKey, "one", name), "uno");
-    assertEquals(head.query(englishNumbers.primaryKey, 2, name), "two");
-    assertEquals(head.query(spanishNumbers.primaryKey, "two", name), "dos");
+    assertEquals("one", head.query(englishNumbers.primaryKey, 1, name));
+    assertEquals("uno", head.query(spanishNumbers.primaryKey, "one", name));
+    assertEquals("two", head.query(englishNumbers.primaryKey, 2, name));
+    assertEquals("dos", head.query(spanishNumbers.primaryKey, "two", name));
 
     builder = head.builder();
 
@@ -249,11 +247,11 @@ public class ForeignKeys extends TestCase {
     } else {
       head = builder.commit(ForeignKeyResolvers.Delete);
 
-      assertEquals(head.query(englishNumbers.primaryKey, 1, name), "ONE");
-      assertEquals(head.query(spanishNumbers.primaryKey, "one", name), null);
-      assertEquals(head.query(spanishNumbers.primaryKey, "ONE", name), null);
-      assertEquals(head.query(englishNumbers.primaryKey, 2, name), "two");
-      assertEquals(head.query(spanishNumbers.primaryKey, "two", name), "dos");
+      assertEquals("ONE", head.query(englishNumbers.primaryKey, 1, name));
+      assertNull(head.query(spanishNumbers.primaryKey, "one", name));
+      assertNull(head.query(spanishNumbers.primaryKey, "ONE", name));
+      assertEquals("two", head.query(englishNumbers.primaryKey, 2, name));
+      assertEquals("dos", head.query(spanishNumbers.primaryKey, "two", name));
     }
   }
 
@@ -323,10 +321,10 @@ public class ForeignKeys extends TestCase {
       Revision head = base.merge
         (left, right, null, ForeignKeyResolvers.Delete);
 
-      assertEquals(head.query(englishNumbers.primaryKey, 1, name), null);
-      assertEquals(head.query(spanishNumbers.primaryKey, 1, name), null);
-      assertEquals(head.query(englishNumbers.primaryKey, 2, name), "two");
-      assertEquals(head.query(spanishNumbers.primaryKey, 2, name), "dos");
+      assertNull(head.query(englishNumbers.primaryKey, 1, name));
+      assertNull(head.query(spanishNumbers.primaryKey, 1, name));
+      assertEquals("two", head.query(englishNumbers.primaryKey, 2, name));
+      assertEquals("dos", head.query(spanishNumbers.primaryKey, 2, name));
     }
   }
 
@@ -387,45 +385,45 @@ public class ForeignKeys extends TestCase {
     
     DiffResult result = base.diff(fork, skipBrokenReferences);
 
-    assertEquals(result.next(), DiffResult.Type.Key);
-    assertEquals(result.base(), englishNumbers);
-    assertEquals(result.fork(), englishNumbers);
+    assertEquals(DiffResult.Type.Key, result.next());
+    assertEquals(englishNumbers, result.base());
+    assertEquals(englishNumbers, result.fork());
 
-    assertEquals(result.next(), DiffResult.Type.Descend);
-    assertEquals(result.next(), DiffResult.Type.Key);
-    assertEquals(result.base(), 1);
-    assertEquals(result.fork(), null);
-    assertEquals(result.next(), DiffResult.Type.Descend);
-    assertEquals(result.next(), DiffResult.Type.Key);
-    assertEquals(result.base(), name);
-    assertEquals(result.fork(), null);
-    assertEquals(result.next(), DiffResult.Type.Value);
-    assertEquals(result.base(), "one");
-    assertEquals(result.fork(), null);
+    assertEquals(DiffResult.Type.Descend, result.next());
+    assertEquals(DiffResult.Type.Key, result.next());
+    assertEquals(1, result.base());
+    assertNull(result.fork());
+    assertEquals(DiffResult.Type.Descend, result.next());
+    assertEquals(DiffResult.Type.Key, result.next());
+    assertEquals(name, result.base());
+    assertNull(result.fork());
+    assertEquals(DiffResult.Type.Value, result.next());
+    assertEquals("one", result.base());
+    assertNull(result.fork());
 
     if (! skipBrokenReferences) {
-      assertEquals(result.next(), DiffResult.Type.Ascend);
-      assertEquals(result.next(), DiffResult.Type.Ascend);
-      assertEquals(result.next(), DiffResult.Type.Key);
-      assertEquals(result.base(), spanishNumbers);
-      assertEquals(result.fork(), spanishNumbers);
+      assertEquals(DiffResult.Type.Ascend, result.next());
+      assertEquals(DiffResult.Type.Ascend, result.next());
+      assertEquals(DiffResult.Type.Key, result.next());
+      assertEquals(spanishNumbers, result.base());
+      assertEquals(spanishNumbers, result.fork());
 
-      assertEquals(result.next(), DiffResult.Type.Descend);
-      assertEquals(result.next(), DiffResult.Type.Key);
-      assertEquals(result.base(), 1);
-      assertEquals(result.fork(), null);
-      assertEquals(result.next(), DiffResult.Type.Descend);
-      assertEquals(result.next(), DiffResult.Type.Key);
-      assertEquals(result.base(), name);
-      assertEquals(result.fork(), null);
-      assertEquals(result.next(), DiffResult.Type.Value);
-      assertEquals(result.base(), "uno");
-      assertEquals(result.fork(), null);
+      assertEquals(DiffResult.Type.Descend, result.next());
+      assertEquals(DiffResult.Type.Key, result.next());
+      assertEquals(1, result.base());
+      assertNull(result.fork());
+      assertEquals(DiffResult.Type.Descend, result.next());
+      assertEquals(DiffResult.Type.Key, result.next());
+      assertEquals(name, result.base());
+      assertNull(result.fork());
+      assertEquals(DiffResult.Type.Value, result.next());
+      assertEquals("uno", result.base());
+      assertNull(result.fork());
     }
 
-    assertEquals(result.next(), DiffResult.Type.Ascend);
-    assertEquals(result.next(), DiffResult.Type.Ascend);
-    assertEquals(result.next(), DiffResult.Type.End);
+    assertEquals(DiffResult.Type.Ascend, result.next());
+    assertEquals(DiffResult.Type.Ascend, result.next());
+    assertEquals(DiffResult.Type.End, result.next());
   }
 
   @Test
@@ -462,54 +460,54 @@ public class ForeignKeys extends TestCase {
 
     DiffResult result = base.diff(builder.commit(), true);
 
-    assertEquals(result.next(), DiffResult.Type.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), screens);
+    assertEquals(DiffResult.Type.Key, result.next());
+    assertNull(result.base());
+    assertEquals(screens, result.fork());
 
-    assertEquals(result.next(), DiffResult.Type.Descend);
-    assertEquals(result.next(), DiffResult.Type.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), "screen 1");
+    assertEquals(DiffResult.Type.Descend, result.next());
+    assertEquals(DiffResult.Type.Key, result.next());
+    assertNull(result.base());
+    assertEquals("screen 1", result.fork());
 
-    assertEquals(result.next(), DiffResult.Type.Ascend);
-    assertEquals(result.next(), DiffResult.Type.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), windows);
+    assertEquals(DiffResult.Type.Ascend, result.next());
+    assertEquals(DiffResult.Type.Key, result.next());
+    assertNull(result.base());
+    assertEquals(windows, result.fork());
 
-    assertEquals(result.next(), DiffResult.Type.Descend);
-    assertEquals(result.next(), DiffResult.Type.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), "screen 1");
+    assertEquals(DiffResult.Type.Descend, result.next());
+    assertEquals(DiffResult.Type.Key, result.next());
+    assertNull(result.base());
+    assertEquals("screen 1", result.fork());
 
-    assertEquals(result.next(), DiffResult.Type.Descend);
-    assertEquals(result.next(), DiffResult.Type.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), 1);
+    assertEquals(DiffResult.Type.Descend, result.next());
+    assertEquals(DiffResult.Type.Key, result.next());
+    assertNull(result.base());
+    assertEquals(1, result.fork());
 
-    assertEquals(result.next(), DiffResult.Type.Ascend);
-    assertEquals(result.next(), DiffResult.Type.Ascend);
-    assertEquals(result.next(), DiffResult.Type.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), blocks);
+    assertEquals(DiffResult.Type.Ascend, result.next());
+    assertEquals(DiffResult.Type.Ascend, result.next());
+    assertEquals(DiffResult.Type.Key, result.next());
+    assertNull(result.base());
+    assertEquals(blocks, result.fork());
 
-    assertEquals(result.next(), DiffResult.Type.Descend);
-    assertEquals(result.next(), DiffResult.Type.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), "screen 1");
+    assertEquals(DiffResult.Type.Descend, result.next());
+    assertEquals(DiffResult.Type.Key, result.next());
+    assertNull(result.base());
+    assertEquals("screen 1", result.fork());
 
-    assertEquals(result.next(), DiffResult.Type.Descend);
-    assertEquals(result.next(), DiffResult.Type.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), 1);
+    assertEquals(DiffResult.Type.Descend, result.next());
+    assertEquals(DiffResult.Type.Key, result.next());
+    assertNull(result.base());
+    assertEquals(1, result.fork());
 
-    assertEquals(result.next(), DiffResult.Type.Descend);
-    assertEquals(result.next(), DiffResult.Type.Key);
-    assertEquals(result.base(), null);
-    assertEquals(result.fork(), 1);
+    assertEquals(DiffResult.Type.Descend, result.next());
+    assertEquals(DiffResult.Type.Key, result.next());
+    assertNull(result.base());
+    assertEquals(1, result.fork());
 
-    assertEquals(result.next(), DiffResult.Type.Ascend);
-    assertEquals(result.next(), DiffResult.Type.Ascend);
-    assertEquals(result.next(), DiffResult.Type.Ascend);
-    assertEquals(result.next(), DiffResult.Type.End);
+    assertEquals(DiffResult.Type.Ascend, result.next());
+    assertEquals(DiffResult.Type.Ascend, result.next());
+    assertEquals(DiffResult.Type.Ascend, result.next());
+    assertEquals(DiffResult.Type.End, result.next());
   }
 }

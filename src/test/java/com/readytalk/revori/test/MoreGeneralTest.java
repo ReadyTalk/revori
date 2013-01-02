@@ -5,37 +5,34 @@
    that the above copyright notice and this permission notice appear
    in all copies. */
 
-package unittests;
+package com.readytalk.revori.test;
 
-import junit.framework.TestCase;
+import static com.readytalk.revori.ExpressionFactory.reference;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.util.Util.list;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-import static com.readytalk.revori.util.Util.list;
-import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.ExpressionFactory.reference;
-
 import com.readytalk.revori.BinaryOperation;
 import com.readytalk.revori.Column;
-import com.readytalk.revori.Revisions;
-import com.readytalk.revori.Table;
+import com.readytalk.revori.Constant;
+import com.readytalk.revori.DeleteTemplate;
+import com.readytalk.revori.DuplicateKeyResolution;
 import com.readytalk.revori.Expression;
+import com.readytalk.revori.InsertTemplate;
+import com.readytalk.revori.Parameter;
+import com.readytalk.revori.PatchTemplate;
+import com.readytalk.revori.QueryResult;
+import com.readytalk.revori.QueryTemplate;
 import com.readytalk.revori.Revision;
 import com.readytalk.revori.RevisionBuilder;
-import com.readytalk.revori.PatchTemplate;
-import com.readytalk.revori.InsertTemplate;
-import com.readytalk.revori.UpdateTemplate;
-import com.readytalk.revori.DeleteTemplate;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.Table;
 import com.readytalk.revori.TableReference;
-import com.readytalk.revori.QueryTemplate;
-import com.readytalk.revori.QueryResult;
-import com.readytalk.revori.Parameter;
-import com.readytalk.revori.Constant;
-import com.readytalk.revori.ColumnReference;
-import com.readytalk.revori.DuplicateKeyResolution;
+import com.readytalk.revori.UpdateTemplate;
 
-
-public class GeneralTests extends TestCase{
+public class MoreGeneralTest {
     @Test
     public void testSimpleInsertDiffs(){
         Column<Integer> number = new Column<Integer>(Integer.class);
@@ -68,31 +65,31 @@ public class GeneralTests extends TestCase{
         
         QueryResult result = tail.diff(first, equal, parameters);
         
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "forty two");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("forty two", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters1 = { 42 };
         
         result = first.diff(tail, equal, parameters1);
         
-        assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result.nextItem(), "forty two");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Deleted, result.nextRow());
+        assertEquals("forty two", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters2 = { 43 };
         
         result = tail.diff(first, equal, parameters2);
         
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters3 = { 42 };
         
         result = tail.diff(tail, equal, parameters3);
         
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters4 = { 42 };
         
         result = first.diff(first, equal, parameters4);
         
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.End, result.nextRow());
         }
     @Test
     public void testLargerInsertDiffs(){
@@ -132,30 +129,30 @@ public class GeneralTests extends TestCase{
         
         QueryResult result = tail.diff(first, equal, parameters);
         
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "forty two");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("forty two", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters1 = { 42 };
         result = first.diff(tail, equal, parameters1);
         
-        assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result.nextItem(), "forty two");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Deleted, result.nextRow());
+        assertEquals("forty two", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters2 = { 43 };
         result = tail.diff(first, equal, parameters2);
         
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "forty three");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("forty three", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters3 = { 42 };
         result = tail.diff(tail, equal, parameters3);
         
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters4 = { 42 };
         
         result = first.diff(first, equal, parameters4);
         
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.End, result.nextRow());
         
         builder = first.builder();
         
@@ -169,33 +166,33 @@ public class GeneralTests extends TestCase{
         
         result = tail.diff(second, equal, parameters5);
         
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "forty three");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("forty three", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters6 = { 43 };
         
         result = first.diff(second, equal, parameters6);
         
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters7 = { 5 };
         
         result = first.diff(second, equal, parameters7);
         
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "five");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("five", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters8 = { 5 };
         
         result = tail.diff(first, equal, parameters8);
         
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters9 = { 5 };
         
         result = second.diff(first, equal, parameters9);
         
-        assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result.nextItem(), "five");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Deleted, result.nextRow());
+        assertEquals("five", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         }
 
     @Test
@@ -248,40 +245,40 @@ public class GeneralTests extends TestCase{
 
     QueryResult result = first.diff(second, equal, parameters);
 
-    assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-    assertEquals(result.nextItem(), "forty three");
-    assertEquals(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Deleted, result.nextRow());
+    assertEquals("forty three", result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
     Object[] parameters1 = { 43 };
 
     result = second.diff(first, equal, parameters1);
 
-    assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-    assertEquals(result.nextItem(), "forty three");
-    assertEquals(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("forty three", result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
     Object[] parameters2 = { 43 };
 
     result = tail.diff(second, equal, parameters2);
 
-    assertEquals(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.End, result.nextRow());
     Object[] parameters3 = { 42 };
     
     result = first.diff(second, equal, parameters3);
 
-    assertEquals(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.End, result.nextRow());
     Object[] parameters4 = { 42 };
     
     result = tail.diff(second, equal, parameters4);
 
-    assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-    assertEquals(result.nextItem(), "forty two");
-    assertEquals(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("forty two", result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
     Object[] parameters5 = { 42 };
     
     result = second.diff(tail, equal, parameters5);
 
-    assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-    assertEquals(result.nextItem(), "forty two");
-    assertEquals(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Deleted, result.nextRow());
+    assertEquals("forty two", result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
 
     builder = first.builder();
 
@@ -294,54 +291,54 @@ public class GeneralTests extends TestCase{
 
     result = first.diff(second, equal, parameters6);
 
-    assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-    assertEquals(result.nextItem(), "forty three");
-    assertEquals(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Deleted, result.nextRow());
+    assertEquals("forty three", result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
     Object[] parameters7 = { 43 };
 
     result = second.diff(first, equal, parameters7);
 
-    assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-    assertEquals(result.nextItem(), "forty three");
-    assertEquals(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("forty three", result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
     Object[] parameters8 = { 42 };
 
     result = first.diff(second, equal, parameters8);
 
-    assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-    assertEquals(result.nextItem(), "forty two");
-    assertEquals(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Deleted, result.nextRow());
+    assertEquals("forty two", result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
     Object[] parameters9 = { 42 };
 
     result = second.diff(first, equal, parameters9);
 
-    assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-    assertEquals(result.nextItem(), "forty two");
-    assertEquals(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("forty two", result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
     Object[] parameters10 = { 65 };
 
     result = first.diff(second, equal, parameters10);
 
-    assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-    assertEquals(result.nextItem(), "sixty five");
-    assertEquals(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Deleted, result.nextRow());
+    assertEquals("sixty five", result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
     Object[] parameters11 = { 65 };
 
     result = second.diff(first, equal, parameters11);
 
-    assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-    assertEquals(result.nextItem(), "sixty five");
-    assertEquals(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("sixty five", result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
     Object[] parameters12 = { 2 };
     
     result = first.diff(second, equal, parameters12);
 
-    assertEquals(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.End, result.nextRow());
     Object[] parameters13 = { 2 };
     
     result = second.diff(first, equal, parameters13);
 
-    assertEquals(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.End, result.nextRow());
 
     builder = second.builder();
 
@@ -354,26 +351,26 @@ public class GeneralTests extends TestCase{
 
     result = second.diff(third, equal, parameters14);
 
-    assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-    assertEquals(result.nextItem(), "forty four");
-    assertEquals(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Deleted, result.nextRow());
+    assertEquals("forty four", result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
     Object[] parameters15 = { 44 };
 
     result = third.diff(second, equal, parameters15);
 
-    assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-    assertEquals(result.nextItem(), "forty four");
-    assertEquals(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.Inserted, result.nextRow());
+    assertEquals("forty four", result.nextItem());
+    assertEquals(QueryResult.Type.End, result.nextRow());
     Object[] parameters16 = { 44 };
 
     result = tail.diff(third, equal, parameters16);
 
-    assertEquals(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.End, result.nextRow());
     Object[] parameters17 = { 42 };
 
     result = tail.diff(third, equal, parameters17);
 
-    assertEquals(result.nextRow(), QueryResult.Type.End);
+    assertEquals(QueryResult.Type.End, result.nextRow());
     	
     }
     
@@ -437,39 +434,39 @@ public class GeneralTests extends TestCase{
 
         QueryResult result = first.diff(second, equal, parameters);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result.nextItem(), "one");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "ichi");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Deleted, result.nextRow());
+        assertEquals("one", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("ichi", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters1 = { 1 };
 
         result = second.diff(first, equal, parameters1);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result.nextItem(), "ichi");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "one");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Deleted, result.nextRow());
+        assertEquals("ichi", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("one", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters2 = { 2 };
 
         result = first.diff(second, equal, parameters2);
 
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters3 = { 1 };
 
         result = tail.diff(first, equal, parameters3);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "one");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("one", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters4 = { 1 };
 
         result = tail.diff(second, equal, parameters4);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "ichi");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("ichi", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         builder = second.builder();
 
@@ -487,19 +484,19 @@ public class GeneralTests extends TestCase{
 
         result = second.diff(third, any, parameters5);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result.nextItem(), "six");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "roku");
-        assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result.nextItem(), "seven");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "shichi");
-        assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result.nextItem(), "eleven");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "ju ichi");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Deleted, result.nextRow());
+        assertEquals("six", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("roku", result.nextItem());
+        assertEquals(QueryResult.Type.Deleted, result.nextRow());
+        assertEquals("seven", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("shichi", result.nextItem());
+        assertEquals(QueryResult.Type.Deleted, result.nextRow());
+        assertEquals("eleven", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("ju ichi", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
     }
     
     @Test
@@ -548,18 +545,18 @@ public class GeneralTests extends TestCase{
 
         QueryResult result = tail.diff(first, nameEqual, parameters);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 9);
-        assertEquals(result.nextItem(), "nine");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals(9, result.nextItem());
+        assertEquals("nine", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters1 = { "nine" };
 
         result = first.diff(tail, nameEqual, parameters1);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result.nextItem(), 9);
-        assertEquals(result.nextItem(), "nine");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Deleted, result.nextRow());
+        assertEquals(9, result.nextItem());
+        assertEquals("nine", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate nameLessThan = new QueryTemplate
           (list(reference(numbersReference, number),
@@ -573,19 +570,19 @@ public class GeneralTests extends TestCase{
 
         result = tail.diff(first, nameLessThan, parameters2);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 4);
-        assertEquals(result.nextItem(), "four");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 5);
-        assertEquals(result.nextItem(), "five");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 8);
-        assertEquals(result.nextItem(), "eight");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 11);
-        assertEquals(result.nextItem(), "eleven");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals(4, result.nextItem());
+        assertEquals("four", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals(5, result.nextItem());
+        assertEquals("five", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals(8, result.nextItem());
+        assertEquals("eight", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals(11, result.nextItem());
+        assertEquals("eleven", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
     }
     
     @Test
@@ -638,13 +635,13 @@ public class GeneralTests extends TestCase{
 
         QueryResult result = tail.diff(second, numberEqual, parameters);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "three");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("three", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters1 = { 3 };
 
         result = tail.diff(second, numberEqual, parameters1);
 
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.End, result.nextRow());
     }
 }

@@ -5,52 +5,49 @@
    that the above copyright notice and this permission notice appear
    in all copies. */
 
-package unittests;
+package com.readytalk.revori.test;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.fail;
+import static com.readytalk.revori.DuplicateKeyResolution.Overwrite;
+import static com.readytalk.revori.DuplicateKeyResolution.Throw;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.util.Util.set;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.junit.Test;
 
-import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.set;
-import static com.readytalk.revori.DuplicateKeyResolution.Throw;
-import static com.readytalk.revori.DuplicateKeyResolution.Overwrite;
-
-import com.readytalk.revori.Table;
-import com.readytalk.revori.Index;
 import com.readytalk.revori.Column;
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.RevisionBuilder;
 import com.readytalk.revori.ForeignKeyResolver;
 import com.readytalk.revori.ForeignKeyResolvers;
-import com.readytalk.revori.util.BufferOutputStream;
-import com.readytalk.revori.server.TreeServer;
+import com.readytalk.revori.Index;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.Table;
 import com.readytalk.revori.server.EpidemicServer;
 import com.readytalk.revori.server.NetworkServer;
-import com.readytalk.revori.server.NetworkServer.NodeID;
 import com.readytalk.revori.server.NetworkServer.Network;
 import com.readytalk.revori.server.NetworkServer.NodeConflictResolver;
+import com.readytalk.revori.server.NetworkServer.NodeID;
+import com.readytalk.revori.server.TreeServer;
 import com.readytalk.revori.server.protocol.ReadContext;
-import com.readytalk.revori.server.protocol.Writable;
 import com.readytalk.revori.server.protocol.Readable;
+import com.readytalk.revori.server.protocol.Writable;
 import com.readytalk.revori.server.protocol.WriteContext;
+import com.readytalk.revori.util.BufferOutputStream;
 
-import java.io.IOException;
-import java.io.ByteArrayInputStream;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Set;
-
-public class Epidemic {
-  private static void expectEqual(Object actual, Object expected) {
-    assertEquals(expected, actual);
-  }
+public class EpidemicTest {
 
   @Test
   public void testTwoNodeNetwork() {
@@ -59,9 +56,6 @@ public class Epidemic {
        ForeignKeyResolvers.Delete,
        new NodeNetwork(),
        EpidemicFactory);
-
-    NodeConflictResolver conflictResolver = new MyConflictResolver();
-    ForeignKeyResolver foreignKeyResolver = ForeignKeyResolvers.Delete;
 
     Node n1 = new Node(config, 1);
     Node n2 = new Node(config, 2);
@@ -83,7 +77,7 @@ public class Epidemic {
 
     Index numbersKey = numbers.primaryKey;
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
 
     base = n2.server.head();
     builder = base.builder();
@@ -92,12 +86,12 @@ public class Epidemic {
 
     n2.server.merge(base, builder.commit());
 
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "uno");
+    assertEquals("uno", n2.server.head().query(numbersKey, 1, name));
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n2.server.head().query(numbersKey, 1, name));
 
     base = n2.server.head();
     builder = base.builder();
@@ -106,7 +100,7 @@ public class Epidemic {
 
     n2.server.merge(base, builder.commit());
 
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "ichi");
+    assertEquals("ichi", n2.server.head().query(numbersKey, 1, name));
 
     n1.server.updateView(set(n2.id, observer.id));
     n2.server.updateView(set(n1.id, observer.id));
@@ -114,9 +108,9 @@ public class Epidemic {
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "ichi");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "ichi");
-    expectEqual(observer.server.head().query(numbersKey, 1, name), "ichi");
+    assertEquals("ichi", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("ichi", n2.server.head().query(numbersKey, 1, name));
+    assertEquals("ichi", observer.server.head().query(numbersKey, 1, name));
 
     base = n2.server.head();
     builder = base.builder();
@@ -125,13 +119,13 @@ public class Epidemic {
 
     n2.server.merge(base, builder.commit());
 
-    expectEqual(n2.server.head().query(numbersKey, 3, number), 3);
+    assertEquals(3, n2.server.head().query(numbersKey, 3, number));
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 3, number), 3);
-    expectEqual(n2.server.head().query(numbersKey, 3, number), 3);
-    expectEqual(observer.server.head().query(numbersKey, 3, number), 3);
+    assertEquals(3, n1.server.head().query(numbersKey, 3, number));
+    assertEquals(3, n2.server.head().query(numbersKey, 3, number));
+    assertEquals(3, observer.server.head().query(numbersKey, 3, number));
 
     // System.out.println("\n\n**** yay! ****\n\n");
   }
@@ -187,8 +181,8 @@ public class Epidemic {
 
     Index valueKey = valueTable.primaryKey;
     
-    expectEqual(n1.server.head().query(valueKey, 0, value), 2);
-    expectEqual(n2.server.head().query(valueKey, 0, value), 2);
+    assertEquals(2, n1.server.head().query(valueKey, 0, value));
+    assertEquals(2, n2.server.head().query(valueKey, 0, value));
   }
 
   @Test
@@ -218,7 +212,7 @@ public class Epidemic {
 
     Index numbersKey = numbers.primaryKey;
 
-    expectEqual(n1.server.head().query(numbersKey, 1, value), 42);
+    assertEquals(42, n1.server.head().query(numbersKey, 1, value));
 
     base = n2.server.head();
     builder = base.builder();
@@ -227,14 +221,14 @@ public class Epidemic {
 
     n2.server.merge(base, builder.commit());
 
-    expectEqual(n2.server.head().query(numbersKey, 2, value), 57);
+    assertEquals(57, n2.server.head().query(numbersKey, 2, value));
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, value), 42);
-    expectEqual(n2.server.head().query(numbersKey, 1, value), 42);
-    expectEqual(n1.server.head().query(numbersKey, 2, value), 57);
-    expectEqual(n2.server.head().query(numbersKey, 2, value), 57);
+    assertEquals(42, n1.server.head().query(numbersKey, 1, value));
+    assertEquals(42, n2.server.head().query(numbersKey, 1, value));
+    assertEquals(57, n1.server.head().query(numbersKey, 2, value));
+    assertEquals(57, n2.server.head().query(numbersKey, 2, value));
 
     base = n1.server.head();
     builder = base.builder();
@@ -252,10 +246,10 @@ public class Epidemic {
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, value), 43);
-    expectEqual(n2.server.head().query(numbersKey, 1, value), 43);
-    expectEqual(n1.server.head().query(numbersKey, 2, value), 58);
-    expectEqual(n2.server.head().query(numbersKey, 2, value), 58);
+    assertEquals(43, n1.server.head().query(numbersKey, 1, value));
+    assertEquals(43, n2.server.head().query(numbersKey, 1, value));
+    assertEquals(58, n1.server.head().query(numbersKey, 2, value));
+    assertEquals(58, n2.server.head().query(numbersKey, 2, value));
 
     base = n1.server.head();
     builder = base.builder();
@@ -273,10 +267,10 @@ public class Epidemic {
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, value), 44);
-    expectEqual(n2.server.head().query(numbersKey, 1, value), 44);
-    expectEqual(n1.server.head().query(numbersKey, 2, value), 59);
-    expectEqual(n2.server.head().query(numbersKey, 2, value), 59);
+    assertEquals(44, n1.server.head().query(numbersKey, 1, value));
+    assertEquals(44, n2.server.head().query(numbersKey, 1, value));
+    assertEquals(59, n1.server.head().query(numbersKey, 2, value));
+    assertEquals(59, n2.server.head().query(numbersKey, 2, value));
   }
 
   @Test
@@ -308,8 +302,8 @@ public class Epidemic {
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n2.server.head().query(numbersKey, 1, name));
     
     n1.server.updateView(Collections.<NodeID>emptySet());
 
@@ -324,10 +318,10 @@ public class Epidemic {
     
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n1.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n2.server.head().query(numbersKey, 2, name), "two");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n2.server.head().query(numbersKey, 1, name));
+    assertEquals("two", n1.server.head().query(numbersKey, 2, name));
+    assertEquals("two", n2.server.head().query(numbersKey, 2, name));
   }
   
   @Test
@@ -364,10 +358,10 @@ public class Epidemic {
 
     Index numbersKey = numbers.primaryKey;
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n1.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n2.server.head().query(numbersKey, 2, name), "two");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n2.server.head().query(numbersKey, 1, name));
+    assertEquals("two", n1.server.head().query(numbersKey, 2, name));
+    assertEquals("two", n2.server.head().query(numbersKey, 2, name));
     
     n1.server.updateView(Collections.<NodeID>emptySet());
 
@@ -382,12 +376,12 @@ public class Epidemic {
     
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n1.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n2.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n1.server.head().query(numbersKey, 3, name), "three");
-    expectEqual(n2.server.head().query(numbersKey, 3, name), "three");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n2.server.head().query(numbersKey, 1, name));
+    assertEquals("two", n1.server.head().query(numbersKey, 2, name));
+    assertEquals("two", n2.server.head().query(numbersKey, 2, name));
+    assertEquals("three", n1.server.head().query(numbersKey, 3, name));
+    assertEquals("three", n2.server.head().query(numbersKey, 3, name));
   }
   
   public void testThreeNodeRestart(ServerFactory factory) {
@@ -419,9 +413,9 @@ public class Epidemic {
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n3.server.head().query(numbersKey, 1, name), "one");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n2.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n3.server.head().query(numbersKey, 1, name));
     
     n2.server.updateView(set(n1.id));
 
@@ -436,12 +430,12 @@ public class Epidemic {
     
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n3.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n1.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n2.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n3.server.head().query(numbersKey, 2, name), "two");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n2.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n3.server.head().query(numbersKey, 1, name));
+    assertEquals("two", n1.server.head().query(numbersKey, 2, name));
+    assertEquals("two", n2.server.head().query(numbersKey, 2, name));
+    assertEquals("two", n3.server.head().query(numbersKey, 2, name));
 
     base = n2.server.head();
     n2.server.merge
@@ -454,15 +448,15 @@ public class Epidemic {
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), null);
-    expectEqual(n2.server.head().query(numbersKey, 1, name), null);
-    expectEqual(n3.server.head().query(numbersKey, 1, name), null);
-    expectEqual(n1.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n2.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n3.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n1.server.head().query(numbersKey, 3, name), "three");
-    expectEqual(n2.server.head().query(numbersKey, 3, name), "three");
-    expectEqual(n3.server.head().query(numbersKey, 3, name), "three");
+    assertNull(n1.server.head().query(numbersKey, 1, name));
+    assertNull(n2.server.head().query(numbersKey, 1, name));
+    assertNull(n3.server.head().query(numbersKey, 1, name));
+    assertEquals("two", n1.server.head().query(numbersKey, 2, name));
+    assertEquals("two", n2.server.head().query(numbersKey, 2, name));
+    assertEquals("two", n3.server.head().query(numbersKey, 2, name));
+    assertEquals("three", n1.server.head().query(numbersKey, 3, name));
+    assertEquals("three", n2.server.head().query(numbersKey, 3, name));
+    assertEquals("three", n3.server.head().query(numbersKey, 3, name));
   }
   
   @Test
@@ -500,8 +494,8 @@ public class Epidemic {
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n2.server.head().query(numbersKey, 1, name));
     
     n1.server.updateView(Collections.<NodeID>emptySet());
     n2.server.updateView(Collections.<NodeID>emptySet());
@@ -523,10 +517,10 @@ public class Epidemic {
     // System.out.print("n1: "); n1.server.dump(System.out);
     // System.out.print("n2: "); n2.server.dump(System.out);
 
-    expectEqual(n1.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n2.server.head().query(numbersKey, 1, name), "one");
-    expectEqual(n1.server.head().query(numbersKey, 2, name), "two");
-    expectEqual(n2.server.head().query(numbersKey, 2, name), "two");
+    assertEquals("one", n1.server.head().query(numbersKey, 1, name));
+    assertEquals("one", n2.server.head().query(numbersKey, 1, name));
+    assertEquals("two", n1.server.head().query(numbersKey, 2, name));
+    assertEquals("two", n2.server.head().query(numbersKey, 2, name));
   }
 
   @Test
@@ -539,7 +533,6 @@ public class Epidemic {
 
     Node n1 = new Node(config, 1);
     Node n2 = new Node(config, 2);
-    Node observer = new Node(config, 3);
 
     n1.server.updateView(set(n2.id));
     n2.server.updateView(set(n1.id));
@@ -558,13 +551,13 @@ public class Epidemic {
 
     Index key = table.primaryKey;
 
-    expectEqual(n1.server.head().query(name, key, 1, 2, 1), "foo");
-    expectEqual(n2.server.head().query(name, key, 1, 2, 1), null);
+    assertEquals("foo", n1.server.head().query(name, key, 1, 2, 1));
+    assertNull(n2.server.head().query(name, key, 1, 2, 1));
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(name, key, 1, 2, 1), "foo");
-    expectEqual(n2.server.head().query(name, key, 1, 2, 1), "foo");
+    assertEquals("foo", n1.server.head().query(name, key, 1, 2, 1));
+    assertEquals("foo", n2.server.head().query(name, key, 1, 2, 1));
 
     base = n2.server.head();
     n2.server.merge
@@ -576,17 +569,17 @@ public class Epidemic {
       (base, base.builder().table(table).row(1, 2, 2).update(name, "bar")
        .commit());
 
-    expectEqual(n1.server.head().query(name, key, 1, 2, 1), "foo");
-    expectEqual(n2.server.head().query(name, key, 1, 2, 1), null);
-    expectEqual(n1.server.head().query(name, key, 1, 2, 2), "bar");
-    expectEqual(n2.server.head().query(name, key, 1, 2, 2), null);
+    assertEquals("foo", n1.server.head().query(name, key, 1, 2, 1));
+    assertNull(n2.server.head().query(name, key, 1, 2, 1));
+    assertEquals("bar", n1.server.head().query(name, key, 1, 2, 2));
+    assertNull(n2.server.head().query(name, key, 1, 2, 2));
 
     flush(config.network);
 
-    expectEqual(n1.server.head().query(name, key, 1, 2, 1), null);
-    expectEqual(n2.server.head().query(name, key, 1, 2, 1), null);
-    expectEqual(n1.server.head().query(name, key, 1, 2, 2), "bar");
-    expectEqual(n2.server.head().query(name, key, 1, 2, 2), "bar");
+    assertNull(n1.server.head().query(name, key, 1, 2, 1));
+    assertNull(n2.server.head().query(name, key, 1, 2, 1));
+    assertEquals("bar", n1.server.head().query(name, key, 1, 2, 2));
+    assertEquals("bar", n2.server.head().query(name, key, 1, 2, 2));
   }
   
   private static void flush(NodeNetwork network, NodeID... dontDeliverTo) {
@@ -608,7 +601,6 @@ public class Epidemic {
           undelivered.add(m);
         } else {
           try {
-            Node source = network.nodes.get(m.source);
             Node destination = network.nodes.get(m.destination);
   
             BufferOutputStream buffer = new BufferOutputStream();
@@ -649,21 +641,6 @@ public class Epidemic {
         return rightValue;
       }
     }
-  }
-
-  private static class NoConflictResolver implements NodeConflictResolver {
-    public Object resolveConflict(NodeID leftNode,
-                                  NodeID rightNode,
-                                  Table table,
-                                  Column column,
-                                  Object[] primaryKeyValues,
-                                  Object baseValue,
-                                  Object leftValue,
-                                  Object rightValue)
-    {
-      fail("conflict encountered");
-      throw new UnsupportedOperationException();
-    }    
   }
 
   private static class NodeConfig {

@@ -5,22 +5,20 @@
    that the above copyright notice and this permission notice appear
    in all copies. */
 
-package unittests;
+package com.readytalk.revori.test;
 
-import junit.framework.TestCase;
+import static com.readytalk.revori.util.Util.cols;
+import static org.junit.Assert.*;
 
 import org.junit.Test;
-import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.DuplicateKeyResolution.Throw;
-import static com.readytalk.revori.DuplicateKeyResolution.Overwrite;
 
 import com.readytalk.revori.Column;
-import com.readytalk.revori.Revisions;
-import com.readytalk.revori.Table;
 import com.readytalk.revori.Revision;
 import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.Table;
 
-public class TableBuilder extends TestCase {
+public class TableBuilderTest {
   @Test
   public void testColumn() {
     Column<Integer> number = new Column<Integer>(Integer.class);
@@ -53,7 +51,7 @@ public class TableBuilder extends TestCase {
     assertEquals("nine", first.query(numbers.primaryKey, 9, name));
     
     
-    assertEquals(null, first.query(numbers.primaryKey, 10, name));
+    assertNull(first.query(numbers.primaryKey, 10, name));
   }
 
   @Test
@@ -79,7 +77,7 @@ public class TableBuilder extends TestCase {
     assertEquals(28.0, first.query(awesomeNumbers.primaryKey, 28.0, number));
     
     // 10 is decidedly non-awesome
-    assertEquals(null, first.query(awesomeNumbers.primaryKey, 10.0, number));
+    assertNull(first.query(awesomeNumbers.primaryKey, 10.0, number));
   }
 
   @Test
@@ -109,13 +107,13 @@ public class TableBuilder extends TestCase {
     Revision second = builder.commit();
 
     assertEquals(2 * Math.PI, second.query(awesomeNumbers.primaryKey, 2 * Math.PI, number));
-    assertEquals(null, second.query(awesomeNumbers.primaryKey, Math.E, number));
+    assertNull(second.query(awesomeNumbers.primaryKey, Math.E, number));
     assertEquals(6.0, second.query(awesomeNumbers.primaryKey, 6.0, number));
-    assertEquals(null, second.query(awesomeNumbers.primaryKey, 7.0, number));
+    assertNull(second.query(awesomeNumbers.primaryKey, 7.0, number));
     assertEquals(28.0, second.query(awesomeNumbers.primaryKey, 28.0, number));
     
     // 10 is decidedly non-awesome
-    assertEquals(null, second.query(awesomeNumbers.primaryKey, 10.0, number));
+    assertNull(second.query(awesomeNumbers.primaryKey, 10.0, number));
   }
   
   @Test
@@ -139,7 +137,7 @@ public class TableBuilder extends TestCase {
 
     assertEquals("one", second.query(numbers.primaryKey, 1, name));
     assertEquals(1, second.query(numbers.primaryKey, 1, number));
-    assertEquals(null, second.query(numbers.primaryKey, 2, name));
+    assertNull(second.query(numbers.primaryKey, 2, name));
     assertEquals(2, second.query(numbers.primaryKey, 2, number));
   }
   

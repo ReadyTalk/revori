@@ -5,35 +5,33 @@
    that the above copyright notice and this permission notice appear
    in all copies. */
 
-package unittests;
+package com.readytalk.revori.test;
 
-import junit.framework.TestCase;
+import static com.readytalk.revori.ExpressionFactory.reference;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.util.Util.list;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-import static com.readytalk.revori.util.Util.list;
-import static com.readytalk.revori.util.Util.cols;
-
-import static com.readytalk.revori.ExpressionFactory.reference;
-
 import com.readytalk.revori.BinaryOperation;
 import com.readytalk.revori.Column;
-import com.readytalk.revori.Revisions;
-import com.readytalk.revori.Table;
+import com.readytalk.revori.DeleteTemplate;
+import com.readytalk.revori.DuplicateKeyResolution;
 import com.readytalk.revori.Expression;
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.InsertTemplate;
 import com.readytalk.revori.Parameter;
 import com.readytalk.revori.PatchTemplate;
-import com.readytalk.revori.InsertTemplate;
-import com.readytalk.revori.UpdateTemplate;
-import com.readytalk.revori.DeleteTemplate;
-import com.readytalk.revori.TableReference;
-import com.readytalk.revori.QueryTemplate;
 import com.readytalk.revori.QueryResult;
-import com.readytalk.revori.DuplicateKeyResolution;
+import com.readytalk.revori.QueryTemplate;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.TableReference;
+import com.readytalk.revori.UpdateTemplate;
 
-public class PartialIndexTest extends TestCase{
+public class PartialIndexTest {
     @Test
     public void testUpdateOnPartialIndex(){
         Column<Integer> number = new Column<Integer>(Integer.class);
@@ -74,13 +72,13 @@ public class PartialIndexTest extends TestCase{
 
         QueryResult result = tail.diff(first, numberEqual, parameters);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "green");
-        assertEquals(result.nextItem(), "circle");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextItem(), "triangle");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("green", result.nextItem());
+        assertEquals("circle", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("red", result.nextItem());
+        assertEquals("triangle", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         PatchTemplate updateShapeWhereNumberEqual = new UpdateTemplate
           (numbersReference,
@@ -100,13 +98,13 @@ public class PartialIndexTest extends TestCase{
 
         result = tail.diff(second, numberEqual, parameters1);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "green");
-        assertEquals(result.nextItem(), "pentagon");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextItem(), "pentagon");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("green", result.nextItem());
+        assertEquals("pentagon", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("red", result.nextItem());
+        assertEquals("pentagon", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
     }
 
     @Test
@@ -149,13 +147,13 @@ public class PartialIndexTest extends TestCase{
 
         QueryResult result = tail.diff(first, numberEqual, parameters);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "green");
-        assertEquals(result.nextItem(), "circle");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextItem(), "triangle");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("green", result.nextItem());
+        assertEquals("circle", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("red", result.nextItem());
+        assertEquals("triangle", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         PatchTemplate deleteWhereNumberEqual = new DeleteTemplate
           (numbersReference,
@@ -173,6 +171,6 @@ public class PartialIndexTest extends TestCase{
 
         result = tail.diff(second, numberEqual, parameters1);
 
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.End, result.nextRow());
     }
 }
