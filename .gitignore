@@ -1,5 +1,6 @@
 .gradle
 build
+dist
 
 *.class
 
@@ -7,6 +8,8 @@ build
 *.jar
 *.war
 *.ear
+*.pyc
+*.egg-info
 
 .classpath
 .project
