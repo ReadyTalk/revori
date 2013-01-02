@@ -15,14 +15,16 @@ import java.util.TreeMap;
 import java.util.Set;
 import java.util.HashSet;
 
+import javax.annotation.Nullable;
+
 class ExpressionContext {
-  public final Map<Expression, ExpressionAdapter> adapters = new TreeMap();
-  public final Set<ColumnReferenceAdapter> columnReferences = new HashSet();
+  public final Map<Expression, ExpressionAdapter> adapters = new TreeMap<Expression, ExpressionAdapter>();
+  public final Set<ColumnReferenceAdapter> columnReferences = new HashSet<ColumnReferenceAdapter>();
   public final Object[] parameters;
   public final List<ExpressionAdapter> queryExpressions;
   public int parameterIndex;
 
-  public ExpressionContext(Object[] parameters, List<ExpressionAdapter> queryExpressions) {
+  public ExpressionContext(@Nullable Object[] parameters, @Nullable List<ExpressionAdapter> queryExpressions) {
     this.parameters = parameters;
     this.queryExpressions = queryExpressions;
   }

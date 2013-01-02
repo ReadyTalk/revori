@@ -70,6 +70,8 @@ import java.nio.channels.Channels;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.ServerSocketChannel;
 
+import javax.annotation.Nullable;
+
 public class SQLServer implements RevisionServer {
   private static final boolean Verbose = false;
   private static final boolean Debug = true;
@@ -166,7 +168,7 @@ public class SQLServer implements RevisionServer {
   }
 
   private interface Validator<T extends Expression> {
-    public Expression validate(Class<T> type, T expression);
+    public Expression validate(@Nullable Class<T> type, T expression);
   }
 
   private static class Server {
@@ -425,7 +427,7 @@ public class SQLServer implements RevisionServer {
     public final Revision dbTail;
     public Revision dbHead;
 
-    public Transaction(Transaction next,
+    public Transaction(@Nullable Transaction next,
                        Revision dbTail)
     {
       this.next = next;
@@ -456,13 +458,15 @@ public class SQLServer implements RevisionServer {
 
   private static class Client implements Runnable {
     public final Server server;
+    @Nullable
     public final SocketChannel channel;
+    @Nullable
     public Transaction transaction;
     public Database database;
     public CopyContext copyContext;
 
     public Client(Server server,
-                  SocketChannel channel)
+                  @Nullable SocketChannel channel)
     {
       this.server = server;
       this.channel = channel;
@@ -568,9 +572,9 @@ public class SQLServer implements RevisionServer {
     public final boolean lastAtomic;
     public Task task;
 
-    public ParseResult(Tree tree,
-                       String next,
-                       Set<String> completions,
+    public ParseResult(@Nullable Tree tree,
+                       @Nullable String next,
+                       @Nullable Set<String> completions,
                        boolean lastAtomic)
     {
       this.tree = tree;
@@ -775,7 +779,7 @@ public class SQLServer implements RevisionServer {
     }
   }
 
-  private static Expression validate(Class type,
+  private static Expression validate(@Nullable Class type,
                                      Expression expression)
   {
     return validators.get(expression.getClass()).validate(type, expression);
@@ -1738,13 +1742,13 @@ public class SQLServer implements RevisionServer {
 
     public static ParseResult success(Tree tree,
                                       String next,
-                                      Set<String> completions,
+                                      @Nullable Set<String> completions,
                                       boolean lastAtomic)
     {
       return new ParseResult(tree, next, completions, lastAtomic);
     }
 
-    public static ParseResult fail(Set<String> completions) {
+    public static ParseResult fail(@Nullable Set<String> completions) {
       // TODO: is passing false for lastAtomic here correct?
       return new ParseResult(null, null, completions, false);
     }

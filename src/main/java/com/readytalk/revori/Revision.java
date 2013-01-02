@@ -9,6 +9,8 @@ package com.readytalk.revori;
 
 import java.util.Iterator;
 
+import javax.annotation.Nullable;
+
 /**
  * Type representing an immutable database revision.<p>
  *
@@ -178,6 +180,6 @@ public interface Revision {
    */
   public Revision merge(Revision left,
                         Revision right,
-                        ConflictResolver conflictResolver,
-                        ForeignKeyResolver foreignKeyResolver);
+                        @Nullable ConflictResolver conflictResolver,
+                        @Nullable ForeignKeyResolver foreignKeyResolver);
 }

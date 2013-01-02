@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
 
+import javax.annotation.Nullable;
+
 class ForeignKeys {
   public static void checkForeignKeys(NodeStack baseStack,
                                       MyRevision base,
@@ -26,7 +28,7 @@ class ForeignKeys {
                                       MyRevisionBuilder builder,
                                       NodeStack scratchStack,
                                       ForeignKeyResolver resolver,
-                                      Table filter)
+                                      @Nullable Table filter)
   {
     MyRevision r = null;
     while (r != builder.result) {

@@ -17,6 +17,8 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.annotation.Nullable;
+
 public class SimpleRevisionServer implements RevisionServer {
   private final ConflictResolver conflictResolver;
   private final ForeignKeyResolver foreignKeyResolver;
@@ -25,8 +27,8 @@ public class SimpleRevisionServer implements RevisionServer {
   public final AtomicReference<Set<Runnable>> listeners
     = new AtomicReference(new HashSet());
 
-  public SimpleRevisionServer(ConflictResolver conflictResolver,
-                              ForeignKeyResolver foreignKeyResolver)
+  public SimpleRevisionServer(@Nullable ConflictResolver conflictResolver,
+		  @Nullable ForeignKeyResolver foreignKeyResolver)
   {
     this.conflictResolver = conflictResolver;
     this.foreignKeyResolver = foreignKeyResolver;

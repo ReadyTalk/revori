@@ -3,6 +3,8 @@ package com.readytalk.revori.subscribe;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import com.readytalk.revori.Revisions;
 import com.readytalk.revori.Table;
 import com.readytalk.revori.TableReference;
@@ -124,7 +126,7 @@ public class DiffMachine<Context> {
     return next(null);
   }
 
-  public boolean next(Context context) {
+  public boolean next(@Nullable Context context) {
     if (DebugThreads) {
       if (thread == null) {
         thread = Thread.currentThread();

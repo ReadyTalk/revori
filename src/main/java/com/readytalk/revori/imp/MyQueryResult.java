@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.NoSuchElementException;
 
+import javax.annotation.Nullable;
+
 class MyQueryResult implements QueryResult {
   private static class ChangeFinder implements SourceAdapterVisitor {
     public final MyRevision base;
@@ -55,9 +57,9 @@ class MyQueryResult implements QueryResult {
   public int nextItemIndex;
 
   public MyQueryResult(MyRevision base,
-                       NodeStack baseStack,
+                       @Nullable NodeStack baseStack,
                        MyRevision fork,
-                       NodeStack forkStack,
+                       @Nullable NodeStack forkStack,
                        QueryTemplate template,
                        Object[] parameters)
   {
@@ -65,9 +67,9 @@ class MyQueryResult implements QueryResult {
   }
 
   public MyQueryResult(MyRevision base,
-                       NodeStack baseStack,
+                       @Nullable NodeStack baseStack,
                        MyRevision fork,
-                       NodeStack forkStack,
+                       @Nullable NodeStack forkStack,
                        QueryTemplate template,
                        Object[] parameters,
                        boolean force)
