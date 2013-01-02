@@ -9,6 +9,9 @@ package com.readytalk.revori;
 
 import java.util.Comparator;
 
+import javax.annotation.concurrent.Immutable;
+
+@Immutable
 public class Comparators {
   public static final Comparator<Comparable> Ascending
     = new Comparator<Comparable>() {

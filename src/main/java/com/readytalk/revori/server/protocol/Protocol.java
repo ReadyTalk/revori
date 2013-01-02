@@ -19,6 +19,8 @@ import java.util.Set;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 
+import javax.annotation.concurrent.ThreadSafe;
+
 import com.readytalk.revori.Column;
 import com.readytalk.revori.ForeignKey;
 import com.readytalk.revori.Index;
@@ -27,6 +29,7 @@ import com.readytalk.revori.server.EpidemicServer;
 import com.readytalk.revori.server.NetworkServer.NodeID;
 import com.readytalk.revori.server.StreamUtil;
 
+@ThreadSafe
 public class Protocol {
   
   private static final int ClassDefinition = 6;

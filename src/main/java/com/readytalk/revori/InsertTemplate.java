@@ -13,10 +13,13 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
 /**
  * Class representing a template for inserts which is not bound to any
  * specific parameters, analogous to a prepared statement in JDBC.
  */
+@NotThreadSafe
 public final class InsertTemplate implements PatchTemplate {
   private final int parameterCount;
 

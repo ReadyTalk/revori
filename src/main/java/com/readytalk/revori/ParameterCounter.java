@@ -11,11 +11,14 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Collection;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
 /**
  * This is an expression visitor to count the number of unique
  * parameter instances in a set of expressions and their
  * subexpressions.
  */
+@NotThreadSafe
 public class ParameterCounter implements ExpressionVisitor {
   private final Set<Parameter> parameters = new HashSet();
   private int count;

@@ -12,10 +12,13 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
 /**
  * Class representing an index on a table.  Instances of this class
  * may used to specify a way to organize data for efficient access.
  */
+@NotThreadSafe
 public final class Index implements Comparable<Index> {
   /**
    * The table specified when this index was defined.

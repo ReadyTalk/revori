@@ -7,10 +7,13 @@
 
 package com.readytalk.revori;
 
+import javax.annotation.concurrent.Immutable;
+
 /**
  * Type representing a join which matches each row in the left source
  * to a row in the right source according to the specified join type.
  */
+@Immutable
 public class Join implements Source {
   /**
    * These are the possible types which may be specified when defining

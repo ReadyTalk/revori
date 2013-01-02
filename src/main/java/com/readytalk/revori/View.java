@@ -17,6 +17,9 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.TreeSet;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
+@NotThreadSafe
 public final class View implements Comparable<View> {
   public final QueryTemplate query;
   public final List<Object> parameters;

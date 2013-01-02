@@ -9,6 +9,8 @@ package com.readytalk.revori.imp;
 
 import static com.readytalk.revori.util.Util.cols;
 
+import javax.annotation.concurrent.Immutable;
+
 import com.readytalk.revori.Constant;
 import com.readytalk.revori.Column;
 import com.readytalk.revori.Table;
@@ -16,6 +18,7 @@ import com.readytalk.revori.Index;
 import com.readytalk.revori.View;
 import com.readytalk.revori.ForeignKey;
 
+@Immutable
 public class Constants {
   public static final int TableDataDepth = 0;
   public static final int IndexDataDepth = 1;

@@ -7,6 +7,9 @@
 
 package com.readytalk.revori;
 
+import javax.annotation.concurrent.Immutable;
+
+@Immutable
 public class ForeignKeyResolvers {
   public static final ForeignKeyResolver Restrict = new ForeignKeyResolver() {
       public ForeignKeyResolver.Action handleBrokenReference

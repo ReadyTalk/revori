@@ -12,6 +12,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
+@NotThreadSafe
 public final class ForeignKey implements Comparable<ForeignKey> {
   public final Table refererTable;
 

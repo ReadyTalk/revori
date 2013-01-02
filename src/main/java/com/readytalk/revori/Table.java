@@ -9,11 +9,14 @@ package com.readytalk.revori;
 
 import java.util.List;
 
+import javax.annotation.concurrent.ThreadSafe;
+
 /**
  * Class representing a table.  Instances of this class do not hold
  * any data; they're used only to identify a collection of rows of
  * interest in a query or update.
  */
+@ThreadSafe
 public class Table implements Comparable<Table> {
   private static long nextId = 1;
 

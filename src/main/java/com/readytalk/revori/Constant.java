@@ -12,9 +12,12 @@ import static com.readytalk.revori.imp.Compare.equal;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.annotation.concurrent.Immutable;
+
 /**
  * Expression representing a constant value.
  */
+@Immutable
 public class Constant implements Expression {
   private static final AtomicInteger nextOrder = new AtomicInteger();
 

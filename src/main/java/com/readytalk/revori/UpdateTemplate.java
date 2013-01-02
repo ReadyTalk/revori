@@ -13,10 +13,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
 /**
  * Class representing a template for updates which is not bound to any
  * specific parameters, analogous to a prepared statement in JDBC.
  */
+@NotThreadSafe
 public final class UpdateTemplate implements PatchTemplate {
   private final int parameterCount;
 

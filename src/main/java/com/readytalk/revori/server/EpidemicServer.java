@@ -41,6 +41,9 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import javax.annotation.concurrent.ThreadSafe;
+
+@ThreadSafe
 public class EpidemicServer implements NetworkServer {
   private static final boolean DebugHello = false;
   private static final boolean DebugView = false;
@@ -69,6 +72,7 @@ public class EpidemicServer implements NetworkServer {
   private final Map<NodeID, NodeState> directlyConnectedStates = new HashMap<NodeID, NodeState>();
   private final NodeState localNode;
   private long nextLocalSequenceNumber = 1;
+
 
   public EpidemicServer(NodeConflictResolver conflictResolver,
                         ForeignKeyResolver foreignKeyResolver,

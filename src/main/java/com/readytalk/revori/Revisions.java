@@ -7,12 +7,15 @@
 
 package com.readytalk.revori;
 
+import javax.annotation.concurrent.Immutable;
+
 import com.readytalk.revori.imp.MyRevision;
 
 /**
  * Uninstantiable utility class containing the empty database
  * revision.
  */
+@Immutable
 public class Revisions {
   private Revisions() { }
 

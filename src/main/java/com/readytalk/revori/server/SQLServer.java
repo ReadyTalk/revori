@@ -71,7 +71,9 @@ import java.nio.channels.SocketChannel;
 import java.nio.channels.ServerSocketChannel;
 
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
 
+@NotThreadSafe
 public class SQLServer implements RevisionServer {
   private static final boolean Verbose = false;
   private static final boolean Debug = true;
@@ -170,7 +172,8 @@ public class SQLServer implements RevisionServer {
   private interface Validator<T extends Expression> {
     public Expression validate(@Nullable Class<T> type, T expression);
   }
-
+  
+  @NotThreadSafe
   private static class Server {
     public final Parser parser = new ParserFactory().parser();
 

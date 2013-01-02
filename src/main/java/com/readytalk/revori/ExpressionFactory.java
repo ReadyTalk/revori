@@ -9,12 +9,15 @@ package com.readytalk.revori;
 
 import static com.readytalk.revori.util.Util.list;
 
+import javax.annotation.concurrent.Immutable;
+
 import com.readytalk.revori.QueryTemplate.OrderExpression;
 
 /**
  * This class contains static convenience methods for concisely
  * defining expression trees.
  */
+@Immutable
 public class ExpressionFactory {
   /**
    * Alias for <code>new Parameter()</code>

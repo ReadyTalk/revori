@@ -7,6 +7,9 @@
 
 package com.readytalk.revori;
 
+import javax.annotation.concurrent.Immutable;
+
+@Immutable
 public class Foldables {
   public static final Foldable<Integer> Count = new Foldable<Integer>() {
     public Integer base() {

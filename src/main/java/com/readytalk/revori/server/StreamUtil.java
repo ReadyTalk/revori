@@ -12,6 +12,9 @@ import java.io.OutputStream;
 import java.io.IOException;
 import java.io.EOFException;
 
+import javax.annotation.concurrent.Immutable;
+
+@Immutable
 public class StreamUtil {
   public static void writeString(OutputStream out, String s)
     throws IOException

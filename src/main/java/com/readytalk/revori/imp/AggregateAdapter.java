@@ -7,6 +7,8 @@
 
 package com.readytalk.revori.imp;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
 import com.readytalk.revori.ExpressionVisitor;
 import com.readytalk.revori.Aggregate;
 
