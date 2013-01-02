@@ -5,28 +5,27 @@
    that the above copyright notice and this permission notice appear
    in all copies. */
 
-package unittests;
+package com.readytalk.revori.test;
 
 import static com.readytalk.revori.util.Util.cols;
+import static org.junit.Assert.assertEquals;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.Test;
 
-import junit.framework.TestCase;
-
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.Table;
 import com.readytalk.revori.Column;
 import com.readytalk.revori.ConflictResolvers;
 import com.readytalk.revori.ForeignKeyResolvers;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.Table;
 import com.readytalk.revori.server.RevisionServer;
-import com.readytalk.revori.server.SimpleRevisionServer;
 import com.readytalk.revori.server.Servers;
 import com.readytalk.revori.server.Servers.TaskHandler;
+import com.readytalk.revori.server.SimpleRevisionServer;
 
-import java.util.List;
-import java.util.ArrayList;
-
-public class Asynchronous extends TestCase {
+public class AsynchronousTest {
   @Test
   public void test() {
     RevisionServer rawServer = new SimpleRevisionServer
@@ -112,7 +111,7 @@ public class Asynchronous extends TestCase {
   }
 
   private static class MyTaskHandler implements TaskHandler {
-    public final List<Runnable> tasks = new ArrayList();
+    public final List<Runnable> tasks = new ArrayList<Runnable>();
 
     public void handleTask(Runnable task) {
       tasks.add(task);

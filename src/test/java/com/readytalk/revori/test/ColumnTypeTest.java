@@ -5,33 +5,30 @@
    that the above copyright notice and this permission notice appear
    in all copies. */
 
-package unittests;
+package com.readytalk.revori.test;
 
-import junit.framework.TestCase;
+import static com.readytalk.revori.ExpressionFactory.reference;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.util.Util.list;
 
 import org.junit.Test;
 
-import static com.readytalk.revori.util.Util.list;
-import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.ExpressionFactory.reference;
-
 import com.readytalk.revori.BinaryOperation;
 import com.readytalk.revori.Column;
-import com.readytalk.revori.Revisions;
-import com.readytalk.revori.Table;
+import com.readytalk.revori.DuplicateKeyResolution;
+import com.readytalk.revori.Expression;
+import com.readytalk.revori.InsertTemplate;
+import com.readytalk.revori.Parameter;
+import com.readytalk.revori.PatchTemplate;
 import com.readytalk.revori.Revision;
 import com.readytalk.revori.RevisionBuilder;
-import com.readytalk.revori.PatchTemplate;
-import com.readytalk.revori.InsertTemplate;
-import com.readytalk.revori.UpdateTemplate;
-import com.readytalk.revori.Parameter;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.Table;
 import com.readytalk.revori.TableReference;
-import com.readytalk.revori.ColumnReference;
-import com.readytalk.revori.Expression;
-import com.readytalk.revori.DuplicateKeyResolution;
+import com.readytalk.revori.UpdateTemplate;
 
 
-public class ColumnTypeTest extends TestCase{
+public class ColumnTypeTest {
    @Test
    public void testColumnTypes(){
 	    Column<Integer> number = new Column<Integer>(Integer.class);

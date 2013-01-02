@@ -5,38 +5,34 @@
    that the above copyright notice and this permission notice appear
    in all copies. */
 
-package unittests;
+package com.readytalk.revori.test;
 
-import junit.framework.TestCase;
+import static com.readytalk.revori.ExpressionFactory.reference;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.util.Util.list;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-import static com.readytalk.revori.util.Util.list;
-import static com.readytalk.revori.util.Util.cols;
-
-import static com.readytalk.revori.ExpressionFactory.reference;
-
 import com.readytalk.revori.BinaryOperation;
 import com.readytalk.revori.Column;
-import com.readytalk.revori.ConflictResolver;
 import com.readytalk.revori.ConflictResolvers;
-import com.readytalk.revori.ForeignKeyResolver;
+import com.readytalk.revori.DuplicateKeyResolution;
+import com.readytalk.revori.Expression;
 import com.readytalk.revori.ForeignKeyResolvers;
 import com.readytalk.revori.Index;
-import com.readytalk.revori.Revisions;
-import com.readytalk.revori.Table;
-import com.readytalk.revori.Expression;
+import com.readytalk.revori.InsertTemplate;
+import com.readytalk.revori.Parameter;
+import com.readytalk.revori.PatchTemplate;
+import com.readytalk.revori.QueryResult;
+import com.readytalk.revori.QueryTemplate;
 import com.readytalk.revori.Revision;
 import com.readytalk.revori.RevisionBuilder;
-import com.readytalk.revori.PatchTemplate;
-import com.readytalk.revori.InsertTemplate;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.Table;
 import com.readytalk.revori.TableReference;
-import com.readytalk.revori.QueryTemplate;
-import com.readytalk.revori.QueryResult;
-import com.readytalk.revori.Parameter;
-import com.readytalk.revori.DuplicateKeyResolution;
 
-public class IndexesTest extends TestCase{
+public class IndexesTest {
     
     @Test
     public void testMultiLevelIndexes(){
@@ -91,41 +87,41 @@ public class IndexesTest extends TestCase{
 
         QueryResult result = tail.diff(first, stateEqual, parameters);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "teal");
-        assertEquals(result.nextItem(), 80209);
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "orange");
-        assertEquals(result.nextItem(), 81601);
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("teal", result.nextItem());
+        assertEquals(80209, result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("orange", result.nextItem());
+        assertEquals(81601, result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters1 = { "Colorado" };
 
         result = first.diff(tail, stateEqual, parameters1);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result.nextItem(), "teal");
-        assertEquals(result.nextItem(), 80209);
-        assertEquals(result.nextRow(), QueryResult.Type.Deleted);
-        assertEquals(result.nextItem(), "orange");
-        assertEquals(result.nextItem(), 81601);
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Deleted, result.nextRow());
+        assertEquals("teal", result.nextItem());
+        assertEquals(80209, result.nextItem());
+        assertEquals(QueryResult.Type.Deleted, result.nextRow());
+        assertEquals("orange", result.nextItem());
+        assertEquals(81601, result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters2 = { "N/A" };
 
         result = tail.diff(first, stateEqual, parameters2);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextItem(), 0);
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "green");
-        assertEquals(result.nextItem(), 0);
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextItem(), 0);
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "pink");
-        assertEquals(result.nextItem(), 0);
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("red", result.nextItem());
+        assertEquals(0, result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("green", result.nextItem());
+        assertEquals(0, result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("red", result.nextItem());
+        assertEquals(0, result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("pink", result.nextItem());
+        assertEquals(0, result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate countryEqual = new QueryTemplate
           (list(reference(placesReference, color),
@@ -139,21 +135,21 @@ public class IndexesTest extends TestCase{
 
         result = tail.diff(first, countryEqual, parameters3);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "pink");
-        assertEquals(result.nextItem(), "Paris");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("pink", result.nextItem());
+        assertEquals("Paris", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters4 = { "China" };
 
         result = tail.diff(first, countryEqual, parameters4);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "red");
-        assertEquals(result.nextItem(), "Beijing");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "green");
-        assertEquals(result.nextItem(), "Shanghai");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("red", result.nextItem());
+        assertEquals("Beijing", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("green", result.nextItem());
+        assertEquals("Shanghai", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate countryStateCityEqual = new QueryTemplate
           (list(reference(placesReference, color),
@@ -179,15 +175,15 @@ public class IndexesTest extends TestCase{
 
         result = tail.diff(first, countryStateCityEqual, parameters5);
 
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.End, result.nextRow());
         Object[] parameters6 = { "France", "N/A", "Paris" };
 
         result = tail.diff(first, countryStateCityEqual, parameters6);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "pink");
-        assertEquals(result.nextItem(), "Paris");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("pink", result.nextItem());
+        assertEquals("Paris", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
     }
     
   @Test
@@ -383,7 +379,7 @@ public class IndexesTest extends TestCase{
       .update(color, "maroon");
     Revision right = builder.commit();
     
-    Revision merge = first.merge(left, right, ConflictResolvers.Restrict, ForeignKeyResolvers.Restrict);
+    first.merge(left, right, ConflictResolvers.Restrict, ForeignKeyResolvers.Restrict);
     
   }
 }

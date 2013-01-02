@@ -5,38 +5,36 @@
    that the above copyright notice and this permission notice appear
    in all copies. */
 
-package unittests;
-
-import junit.framework.TestCase;
-
-import org.junit.Test;
-
-import static com.readytalk.revori.util.Util.list;
-import static com.readytalk.revori.util.Util.cols;
+package com.readytalk.revori.test;
 
 import static com.readytalk.revori.ExpressionFactory.reference;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.util.Util.list;
+import static org.junit.Assert.assertEquals;
+
+import org.junit.Test;
 
 import com.readytalk.revori.BinaryOperation;
 import com.readytalk.revori.Column;
 import com.readytalk.revori.ConflictResolver;
-import com.readytalk.revori.Index;
-import com.readytalk.revori.Revisions;
-import com.readytalk.revori.Table;
+import com.readytalk.revori.DeleteTemplate;
+import com.readytalk.revori.DuplicateKeyResolution;
 import com.readytalk.revori.Expression;
+import com.readytalk.revori.Index;
+import com.readytalk.revori.InsertTemplate;
+import com.readytalk.revori.Parameter;
+import com.readytalk.revori.PatchTemplate;
+import com.readytalk.revori.QueryResult;
+import com.readytalk.revori.QueryTemplate;
 import com.readytalk.revori.Revision;
 import com.readytalk.revori.RevisionBuilder;
-import com.readytalk.revori.PatchTemplate;
-import com.readytalk.revori.UpdateTemplate;
-import com.readytalk.revori.InsertTemplate;
-import com.readytalk.revori.DeleteTemplate;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.Table;
 import com.readytalk.revori.TableReference;
-import com.readytalk.revori.QueryTemplate;
-import com.readytalk.revori.QueryResult;
-import com.readytalk.revori.Parameter;
-import com.readytalk.revori.DuplicateKeyResolution;
+import com.readytalk.revori.UpdateTemplate;
 
 
-public class MultipleIndex extends TestCase{
+public class MultipleIndexTest {
     @Test
     public void testMultipleIndexInserts(){
         Column<Integer> number = new Column<Integer>(Integer.class);
@@ -93,17 +91,17 @@ public class MultipleIndex extends TestCase{
         // MyDBMS will actually use that index to execute it, and thus we
         // will visit the results in alphabetical order.
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "nine");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "one");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "seven");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "six");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "three");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("nine", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("one", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("seven", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("six", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("three", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         builder = tail.builder();
 
@@ -125,17 +123,17 @@ public class MultipleIndex extends TestCase{
 
         result = tail.diff(first, greaterThanAndLessThan, parameters1);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "nine");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "one");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "seven");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "six");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "three");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("nine", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("one", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("seven", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("six", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("three", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         builder = tail.builder();
 
@@ -156,17 +154,17 @@ public class MultipleIndex extends TestCase{
 
         result = tail.diff(first, greaterThanAndLessThan, parameters2);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "nine");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "one");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "seven");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "six");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "three");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("nine", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("one", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("seven", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("six", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("three", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         builder = first.builder();
 
@@ -177,17 +175,17 @@ public class MultipleIndex extends TestCase{
 
         result = tail.diff(second, greaterThanAndLessThan, parameters3);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "one");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "three");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "six");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "seven");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "nine");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("one", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("three", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("six", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("seven", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("nine", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
     }
     
     @Test
@@ -257,17 +255,17 @@ public class MultipleIndex extends TestCase{
 
         // System.out.println("first: " + first);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "nine");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "ocho");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "seven");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "six");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tres");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("nine", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("ocho", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("seven", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("six", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tres", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         builder = first.builder();
 
@@ -278,17 +276,17 @@ public class MultipleIndex extends TestCase{
 
         result = tail.diff(second, greaterThanAndLessThan, parameters1);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tres");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "six");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "seven");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "ocho");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "nine");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tres", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("six", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("seven", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("ocho", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("nine", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
     }
     
     @Test
@@ -360,15 +358,15 @@ public class MultipleIndex extends TestCase{
 
         QueryResult result = tail.diff(first, greaterThanAndLessThanName, parameters);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "five");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "nine");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "one");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "seven");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("five", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("nine", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("one", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("seven", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate greaterThanAndLessThanNumber = new QueryTemplate
           (list(reference(numbersReference, name)),
@@ -387,13 +385,13 @@ public class MultipleIndex extends TestCase{
 
         result = tail.diff(first, greaterThanAndLessThanNumber, parameters1);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "three");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "five");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "seven");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("three", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("five", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("seven", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         builder = first.builder();
 
@@ -404,15 +402,15 @@ public class MultipleIndex extends TestCase{
 
         result = tail.diff(second, greaterThanAndLessThanName, parameters2);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "one");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "five");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "seven");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "nine");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("one", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("five", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("seven", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("nine", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
     }
     
     @Test
@@ -485,17 +483,17 @@ public class MultipleIndex extends TestCase{
 
         QueryResult result = tail.diff(merge, greaterThanAndLessThan, parameters);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "nine");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "one");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "seven");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "six");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "three");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("nine", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("one", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("seven", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("six", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("three", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         builder = merge.builder();
 
@@ -506,17 +504,17 @@ public class MultipleIndex extends TestCase{
 
         result = tail.diff(second, greaterThanAndLessThan, parameters1);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "one");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "three");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "six");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "seven");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "nine");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("one", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("three", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("six", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("seven", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("nine", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         builder = merge.builder();
 
@@ -563,13 +561,13 @@ public class MultipleIndex extends TestCase{
 
         result = tail.diff(merge, greaterThanAndLessThan, parameters2);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "nine");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "seven");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tres");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("nine", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("seven", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tres", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
 
         builder = merge.builder();
 
@@ -580,12 +578,12 @@ public class MultipleIndex extends TestCase{
 
         result = tail.diff(third, greaterThanAndLessThan, parameters3);
 
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "tres");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "seven");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), "nine");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("tres", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("seven", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals("nine", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
     }
 }

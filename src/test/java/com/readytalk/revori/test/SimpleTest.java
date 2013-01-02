@@ -5,33 +5,33 @@
    that the above copyright notice and this permission notice appear
    in all copies. */
 
-package unittests;
+package com.readytalk.revori.test;
 
-import junit.framework.TestCase;
+import static com.readytalk.revori.ExpressionFactory.reference;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.util.Util.list;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
-import static com.readytalk.revori.util.Util.list;
-import static com.readytalk.revori.util.Util.cols;
-
-import static com.readytalk.revori.ExpressionFactory.reference;
-
 import com.readytalk.revori.Column;
-import com.readytalk.revori.Revisions;
-import com.readytalk.revori.Table;
-import com.readytalk.revori.Expression;
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.RevisionBuilder;
-import com.readytalk.revori.PatchTemplate;
-import com.readytalk.revori.InsertTemplate;
-import com.readytalk.revori.TableReference;
-import com.readytalk.revori.QueryTemplate;
-import com.readytalk.revori.QueryResult;
-import com.readytalk.revori.Parameter;
 import com.readytalk.revori.Constant;
 import com.readytalk.revori.DuplicateKeyResolution;
+import com.readytalk.revori.Expression;
+import com.readytalk.revori.InsertTemplate;
+import com.readytalk.revori.Parameter;
+import com.readytalk.revori.PatchTemplate;
+import com.readytalk.revori.QueryResult;
+import com.readytalk.revori.QueryTemplate;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.TableReference;
 
-public class SimpleTest extends TestCase{
+public class SimpleTest {
     
 	@Test
     public void testSimpleInsertQuery(){
@@ -66,19 +66,19 @@ public class SimpleTest extends TestCase{
 
         QueryResult result = tail.diff(first, any, parameters);
         
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 1);
-        assertEquals(result.nextItem(), "Charles");
-        assertEquals(result.nextItem(), "Norris");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 2);
-        assertEquals(result.nextItem(), "Chuck");
-        assertEquals(result.nextItem(), "Norris");
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 3);
-        assertEquals(result.nextItem(), "Chuck");
-        assertEquals(result.nextItem(), "Taylor");
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals(1, result.nextItem());
+        assertEquals("Charles", result.nextItem());
+        assertEquals("Norris", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals(2, result.nextItem());
+        assertEquals("Chuck", result.nextItem());
+        assertEquals("Norris", result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals(3, result.nextItem());
+        assertEquals("Chuck", result.nextItem());
+        assertEquals("Taylor", result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         }
     
     @Test
@@ -144,25 +144,25 @@ public class SimpleTest extends TestCase{
 
           QueryResult result = tail.diff(third, any, parameters);
         
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 1);
-        assertEquals(result.nextItem(), "Charles");
-        assertEquals(result.nextItem(), "Norris");
-        assertEquals(result.nextItem(), "Montreal");
-        assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 2);
-        assertEquals(result.nextItem(), "Charleston");
-        assertEquals(result.nextItem(), null);
-        assertEquals(result.nextItem(), null);
-        assertEquals(result.nextItem(), null);
-        assertEquals(result.nextRow(), QueryResult.Type.Inserted);
-        assertEquals(result.nextItem(), 3);
-        assertEquals(result.nextItem(), "Wickerson");
-        assertEquals(result.nextItem(), "Jones");
-        assertEquals(result.nextItem(), "Lancaster");
-        assertEquals(result.nextItem(), 54);
-        assertEquals(result.nextRow(), QueryResult.Type.End);
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals(1, result.nextItem());
+        assertEquals("Charles", result.nextItem());
+        assertEquals("Norris", result.nextItem());
+        assertEquals("Montreal", result.nextItem());
+        assertNull(result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals(2, result.nextItem());
+        assertEquals("Charleston", result.nextItem());
+        assertNull(result.nextItem());
+        assertNull(result.nextItem());
+        assertNull(result.nextItem());
+        assertEquals(QueryResult.Type.Inserted, result.nextRow());
+        assertEquals(3, result.nextItem());
+        assertEquals("Wickerson", result.nextItem());
+        assertEquals("Jones", result.nextItem());
+        assertEquals("Lancaster", result.nextItem());
+        assertEquals(54, result.nextItem());
+        assertEquals(QueryResult.Type.End, result.nextRow());
         }
     
     

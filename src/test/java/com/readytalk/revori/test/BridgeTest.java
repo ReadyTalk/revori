@@ -5,27 +5,22 @@
    that the above copyright notice and this permission notice appear
    in all copies. */
 
-package unittests;
-
-import static com.readytalk.revori.util.Util.cols;
+package com.readytalk.revori.test;
 import static com.readytalk.revori.DuplicateKeyResolution.Throw;
+import static com.readytalk.revori.util.Util.cols;
+import static org.junit.Assert.assertEquals;
 
-import com.readytalk.revori.Table;
+import org.junit.Test;
+
 import com.readytalk.revori.Column;
 import com.readytalk.revori.Revision;
 import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.server.Bridge;
 import com.readytalk.revori.server.RevisionServer;
 import com.readytalk.revori.server.SimpleRevisionServer;
-import com.readytalk.revori.server.Bridge;
 
-import org.junit.Test;
-import junit.framework.TestCase;
-
-public class BridgeTest extends TestCase {
-  private static void expectEqual(Object actual, Object expected) {
-    assertEquals(expected, actual);
-  }
-
+public class BridgeTest {
   @Test
   public void testBasic() {
     RevisionServer left = new SimpleRevisionServer(null, null);
@@ -48,8 +43,8 @@ public class BridgeTest extends TestCase {
       left.merge(base, builder.commit());
     }
 
-    expectEqual(left.head().query(numbers.primaryKey, 1, name), "one");
-    expectEqual(right.head().query(numbers.primaryKey, 1, name), "one");
+    assertEquals("one", left.head().query(numbers.primaryKey, 1, name));
+    assertEquals("one", right.head().query(numbers.primaryKey, 1, name));
 
     { Revision base = right.head();
       RevisionBuilder builder = base.builder();
@@ -59,8 +54,8 @@ public class BridgeTest extends TestCase {
       right.merge(base, builder.commit());
     }
 
-    expectEqual(left.head().query(numbers.primaryKey, 2, name), "two");
-    expectEqual(right.head().query(numbers.primaryKey, 2, name), "two");
+    assertEquals("two", left.head().query(numbers.primaryKey, 2, name));
+    assertEquals("two", right.head().query(numbers.primaryKey, 2, name));
   }
 
   @Test
@@ -90,14 +85,14 @@ public class BridgeTest extends TestCase {
       left1.merge(base, builder.commit());
     }
 
-    expectEqual(left1.head().query(numbers.primaryKey, 1, name), "one");
-    expectEqual
+    assertEquals("one", left1.head().query(numbers.primaryKey, 1, name));
+    assertEquals
       (left1.head().query(originNumbers.primaryKey, 1, 1, name), null);
-    expectEqual(left2.head().query(numbers.primaryKey, 1, name), null);
-    expectEqual
+    assertEquals(null, left2.head().query(numbers.primaryKey, 1, name));
+    assertEquals
       (left2.head().query(originNumbers.primaryKey, 1, 1, name), null);
-    expectEqual(right.head().query(numbers.primaryKey, 1, name), null);
-    expectEqual
+    assertEquals(null, right.head().query(numbers.primaryKey, 1, name));
+    assertEquals
       (right.head().query(originNumbers.primaryKey, 1, 1, name), "one");
 
     { Revision base = right.head();
@@ -108,14 +103,14 @@ public class BridgeTest extends TestCase {
       right.merge(base, builder.commit());
     }
 
-    expectEqual(left1.head().query(numbers.primaryKey, 2, name), null);
-    expectEqual
+    assertEquals(null, left1.head().query(numbers.primaryKey, 2, name));
+    assertEquals
       (left1.head().query(originNumbers.primaryKey, 2, 2, name), null);
-    expectEqual(left2.head().query(numbers.primaryKey, 2, name), "two");
-    expectEqual
+    assertEquals("two", left2.head().query(numbers.primaryKey, 2, name));
+    assertEquals
       (left2.head().query(originNumbers.primaryKey, 2, 2, name), null);
-    expectEqual(right.head().query(numbers.primaryKey, 2, name), null);
-    expectEqual
+    assertEquals(null, right.head().query(numbers.primaryKey, 2, name));
+    assertEquals
       (right.head().query(originNumbers.primaryKey, 2, 2, name), "two");
 
     { Revision base = right.head();
@@ -126,16 +121,16 @@ public class BridgeTest extends TestCase {
       right.merge(base, builder.commit());
     }
 
-    expectEqual(left1.head().query(numbers.primaryKey, 2, name), "two");
-    expectEqual
+    assertEquals("two", left1.head().query(numbers.primaryKey, 2, name));
+    assertEquals
       (left1.head().query(originNumbers.primaryKey, 1, 2, name), null);
-    expectEqual(left2.head().query(numbers.primaryKey, 2, name), "two");
-    expectEqual
+    assertEquals("two", left2.head().query(numbers.primaryKey, 2, name));
+    assertEquals
       (left2.head().query(originNumbers.primaryKey, 1, 2, name), null);
-    expectEqual(right.head().query(numbers.primaryKey, 2, name), null);
-    expectEqual
+    assertEquals(null, right.head().query(numbers.primaryKey, 2, name));
+    assertEquals
       (right.head().query(originNumbers.primaryKey, 1, 2, name), "two");
-    expectEqual
+    assertEquals
       (right.head().query(originNumbers.primaryKey, 2, 2, name), "two");
 
     { Revision base = right.head();
@@ -146,12 +141,12 @@ public class BridgeTest extends TestCase {
       right.merge(base, builder.commit());
     }
 
-    expectEqual(left1.head().query(numbers.primaryKey, 2, name), null);
-    expectEqual(left2.head().query(numbers.primaryKey, 2, name), "two");
-    expectEqual(right.head().query(numbers.primaryKey, 2, name), null);
-    expectEqual
+    assertEquals(null, left1.head().query(numbers.primaryKey, 2, name));
+    assertEquals("two", left2.head().query(numbers.primaryKey, 2, name));
+    assertEquals(null, right.head().query(numbers.primaryKey, 2, name));
+    assertEquals
       (right.head().query(originNumbers.primaryKey, 1, 2, name), null);
-    expectEqual
+    assertEquals
       (right.head().query(originNumbers.primaryKey, 2, 2, name), "two");
 
     { Revision base = left2.head();
@@ -162,8 +157,8 @@ public class BridgeTest extends TestCase {
       left2.merge(base, builder.commit());
     }
 
-    expectEqual(left2.head().query(numbers.primaryKey, 2, name), null);
-    expectEqual
+    assertEquals(null, left2.head().query(numbers.primaryKey, 2, name));
+    assertEquals
       (right.head().query(originNumbers.primaryKey, 2, 2, name), null);
   }
 }
