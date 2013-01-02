@@ -49,15 +49,15 @@ other and/or combined using a three-way merge algorithm.</p>
 <p>The code is currently in an alpha state, meaning some stuff works,
 some stuff doesn't, and the API is not yet thoroughly documented and
 may change without warning.  If you're brave and want to start playing
-with it anyway, you can build and browse the JavaDoc (run "ant
-javadoc") and consult the test/unittests directory for simple examples
+with it anyway, you can build and browse the JavaDoc (run <code>gradle
+javadoc</code>) and consult the test/unittests directory for simple examples
 of how to use it.</p>
 
 <h2>Build</h2>
 
 <h4>Client</h4>
 
-<p>You'll need to have the libreadline headers and library installed to 
+<p>You'll need to have the libreadline headers and library installed to
 build the client)</p>
 
 <pre><code>$ gradle client:build
@@ -89,6 +89,18 @@ build the client)</p>
 <p>You can use the SQL front-end client to test out Revori:</p>
 
 <pre><code>$ ./client/build/binaries/client localhost 8017
+</code></pre>
+
+<h2>Known Issues</h2>
+
+<p>There is a known issue with the native client build on Mac OS X platforms.
+The version of readline provided by Apple is not 100% compatible with our
+client implementation. To build and use the client, install the GNU version
+of readline and readline headers. The easiest way to do this is probably with
+<a href="http://mxcl.github.com/homebrew/">Homebrew</a>:</p>
+
+<pre><code>$ brew install readline
+$ brew link readline # This overrides the Apple-provided version, so beware.
 </code></pre>
         </section>
 
