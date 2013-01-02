@@ -7,18 +7,15 @@
 
 package com.readytalk.revori.imp;
 
-import com.readytalk.revori.QueryTemplate;
-import com.readytalk.revori.QueryResult;
-import com.readytalk.revori.Source;
-import com.readytalk.revori.TableReference;
-import com.readytalk.revori.Expression;
-import com.readytalk.revori.Comparators;
-
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 import javax.annotation.Nullable;
+
+import com.readytalk.revori.Expression;
+import com.readytalk.revori.QueryResult;
+import com.readytalk.revori.QueryTemplate;
 
 class MyQueryResult implements QueryResult {
   private static class ChangeFinder implements SourceAdapterVisitor {

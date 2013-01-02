@@ -7,43 +7,40 @@
 
 package com.readytalk.revori.imp;
 
+import static com.readytalk.revori.SourceFactory.reference;
 import static com.readytalk.revori.util.Util.expect;
 import static com.readytalk.revori.util.Util.list;
-import static com.readytalk.revori.util.Util.copy;
 
-import static com.readytalk.revori.SourceFactory.reference;
-import com.readytalk.revori.RevisionBuilder;
-import com.readytalk.revori.TableBuilder;
-import com.readytalk.revori.RowBuilder;
-import com.readytalk.revori.Index;
-import com.readytalk.revori.View;
-import com.readytalk.revori.Table;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import com.readytalk.revori.Column;
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.DuplicateKeyResolution;
-import com.readytalk.revori.DuplicateKeyException;
-import com.readytalk.revori.PatchTemplate;
-import com.readytalk.revori.TableReference;
-import com.readytalk.revori.QueryResult;
-import com.readytalk.revori.UpdateTemplate;
-import com.readytalk.revori.InsertTemplate;
 import com.readytalk.revori.DeleteTemplate;
-import com.readytalk.revori.ColumnList;
+import com.readytalk.revori.DuplicateKeyException;
+import com.readytalk.revori.DuplicateKeyResolution;
 import com.readytalk.revori.ForeignKey;
 import com.readytalk.revori.ForeignKeyResolver;
 import com.readytalk.revori.ForeignKeyResolvers;
-import com.readytalk.revori.SourceVisitor;
+import com.readytalk.revori.Index;
+import com.readytalk.revori.InsertTemplate;
+import com.readytalk.revori.PatchTemplate;
+import com.readytalk.revori.QueryResult;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.RowBuilder;
 import com.readytalk.revori.Source;
-import com.readytalk.revori.Comparators;
+import com.readytalk.revori.SourceVisitor;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.TableBuilder;
+import com.readytalk.revori.TableReference;
+import com.readytalk.revori.UpdateTemplate;
+import com.readytalk.revori.View;
 import com.readytalk.revori.util.Util;
-
-import java.util.Comparator;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Set;
-import java.util.HashSet;
 
 class MyRevisionBuilder implements RevisionBuilder {
   private static final Map<Class, PatchTemplateAdapter> adapters
@@ -1140,7 +1137,7 @@ class MyRevisionBuilder implements RevisionBuilder {
       }
 
       return adapters.get
-        (template.getClass()).apply(this, template, copy(parameters));
+        (template.getClass()).apply(this, template, parameters.clone());
     } catch (RuntimeException e) {
       token = null;
       throw e;

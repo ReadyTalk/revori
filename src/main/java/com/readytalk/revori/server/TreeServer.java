@@ -9,20 +9,19 @@ package com.readytalk.revori.server;
 
 import static com.readytalk.revori.util.Util.set;
 
-import com.readytalk.revori.Table;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
 import com.readytalk.revori.Column;
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.Revisions;
 import com.readytalk.revori.ConflictResolver;
 import com.readytalk.revori.ForeignKeyResolver;
-import com.readytalk.revori.subscribe.Subscription;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.Table;
 import com.readytalk.revori.server.protocol.Readable;
-
-import java.util.Iterator;
-import java.util.Set;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.UUID;
+import com.readytalk.revori.subscribe.Subscription;
 
 public class TreeServer implements NetworkServer {
   private final RevisionServer localServer;

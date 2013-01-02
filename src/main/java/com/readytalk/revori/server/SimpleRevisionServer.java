@@ -7,17 +7,17 @@
 
 package com.readytalk.revori.server;
 
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.Revisions;
-import com.readytalk.revori.ConflictResolver;
-import com.readytalk.revori.ForeignKeyResolver;
-import com.readytalk.revori.subscribe.Subscription;
-
-import java.util.Set;
 import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nullable;
+
+import com.readytalk.revori.ConflictResolver;
+import com.readytalk.revori.ForeignKeyResolver;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.subscribe.Subscription;
 
 public class SimpleRevisionServer implements RevisionServer {
   private final ConflictResolver conflictResolver;

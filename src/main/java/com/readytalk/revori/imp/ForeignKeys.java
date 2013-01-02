@@ -7,19 +7,18 @@
 
 package com.readytalk.revori.imp;
 
-import com.readytalk.revori.ForeignKey;
-import com.readytalk.revori.ForeignKeyResolver;
-import com.readytalk.revori.ForeignKeyException;
-import com.readytalk.revori.Column;
-import com.readytalk.revori.Table;
-import com.readytalk.revori.DiffResult;
-import com.readytalk.revori.Comparators;
-
-import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 import javax.annotation.Nullable;
+
+import com.readytalk.revori.Column;
+import com.readytalk.revori.DiffResult;
+import com.readytalk.revori.ForeignKey;
+import com.readytalk.revori.ForeignKeyException;
+import com.readytalk.revori.ForeignKeyResolver;
+import com.readytalk.revori.Table;
 
 class ForeignKeys {
   public static void checkForeignKeys(NodeStack baseStack,

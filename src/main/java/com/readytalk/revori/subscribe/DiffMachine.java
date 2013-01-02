@@ -1,18 +1,14 @@
 package com.readytalk.revori.subscribe;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import javax.annotation.Nullable;
 
+import com.readytalk.revori.QueryTemplate;
 import com.readytalk.revori.Revisions;
+import com.readytalk.revori.Source;
+import com.readytalk.revori.SourceVisitor;
 import com.readytalk.revori.Table;
 import com.readytalk.revori.TableReference;
-import com.readytalk.revori.Source;
-import com.readytalk.revori.QueryTemplate;
-import com.readytalk.revori.SourceVisitor;
 import com.readytalk.revori.server.RevisionServer;
-
 import com.readytalk.revori.util.SetMultimap;
 
 public class DiffMachine<Context> {

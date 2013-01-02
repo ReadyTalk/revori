@@ -7,15 +7,15 @@
 
 package com.readytalk.revori.imp;
 
-import com.readytalk.revori.Expression;
-
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.Set;
-import java.util.HashSet;
+import java.util.TreeMap;
 
 import javax.annotation.Nullable;
+
+import com.readytalk.revori.Expression;
 
 class ExpressionContext {
   public final Map<Expression, ExpressionAdapter> adapters = new TreeMap<Expression, ExpressionAdapter>();

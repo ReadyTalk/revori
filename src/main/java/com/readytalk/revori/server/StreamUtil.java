@@ -7,10 +7,10 @@
 
 package com.readytalk.revori.server;
 
+import java.io.EOFException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.IOException;
-import java.io.EOFException;
 
 import javax.annotation.concurrent.Immutable;
 

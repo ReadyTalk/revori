@@ -9,9 +9,9 @@ package com.readytalk.revori;
 
 import static com.readytalk.revori.util.Util.append;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.ArrayList;
 
 import javax.annotation.concurrent.NotThreadSafe;
 

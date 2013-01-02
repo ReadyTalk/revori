@@ -7,16 +7,16 @@
 
 package com.readytalk.revori.server;
 
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.Revisions;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
 import com.readytalk.revori.ConflictResolver;
 import com.readytalk.revori.ForeignKeyResolver;
-import com.readytalk.revori.subscribe.Subscription;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.Revisions;
 import com.readytalk.revori.server.protocol.Readable;
-
-import java.util.Set;
-import java.util.List;
-import java.util.ArrayList;
+import com.readytalk.revori.subscribe.Subscription;
 
 public class Servers {
   public static RevisionServer asynchronousRevisionServer

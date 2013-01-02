@@ -7,10 +7,10 @@
 
 package com.readytalk.revori.imp;
 
-import com.readytalk.revori.imp.Interval.BoundType;
-
 import java.util.Comparator;
 import java.util.Iterator;
+
+import com.readytalk.revori.imp.Interval.BoundType;
 
 class DiffIterator {
   private static final boolean Verbose = false;

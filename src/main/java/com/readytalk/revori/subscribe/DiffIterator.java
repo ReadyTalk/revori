@@ -1,14 +1,13 @@
 package com.readytalk.revori.subscribe;
 
-import java.util.Set;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Set;
 
 import com.readytalk.revori.DiffResult;
 import com.readytalk.revori.QueryResult;
-import com.readytalk.revori.Table;
 import com.readytalk.revori.Revision;
-
+import com.readytalk.revori.Table;
 import com.readytalk.revori.util.SetMultimap;
 
 public class DiffIterator<Context> {

@@ -9,10 +9,9 @@ package com.readytalk.revori.imp;
 
 import static com.readytalk.revori.util.Util.list;
 
-import com.readytalk.revori.TableReference;
-import com.readytalk.revori.Index;
 import com.readytalk.revori.Column;
-import com.readytalk.revori.Comparators;
+import com.readytalk.revori.Index;
+import com.readytalk.revori.TableReference;
 
 class Plan {
   public final Index index;

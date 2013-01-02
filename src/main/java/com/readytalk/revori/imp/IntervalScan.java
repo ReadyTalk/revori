@@ -9,9 +9,9 @@ package com.readytalk.revori.imp;
 
 import static com.readytalk.revori.util.Util.list;
 
-import com.readytalk.revori.imp.Interval.BoundType;
-
 import java.util.List;
+
+import com.readytalk.revori.imp.Interval.BoundType;
 
 class IntervalScan implements Scan {
   public static final IntervalScan Unbounded

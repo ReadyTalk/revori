@@ -7,15 +7,14 @@
 
 package com.readytalk.revori.imp;
 
-import com.readytalk.revori.imp.DiffIterator.DiffPair;
-import com.readytalk.revori.QueryResult;
-import com.readytalk.revori.TableReference;
-import com.readytalk.revori.Comparators;
-
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Set;
+
+import com.readytalk.revori.QueryResult;
+import com.readytalk.revori.TableReference;
+import com.readytalk.revori.imp.DiffIterator.DiffPair;
 
 class TableIterator implements SourceIterator {
   private static final boolean Verbose = false;

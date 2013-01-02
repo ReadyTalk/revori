@@ -7,14 +7,14 @@
 
 package com.readytalk.revori;
 
-import static com.readytalk.revori.util.Util.compare;
 import static com.readytalk.revori.util.Util.append;
+import static com.readytalk.revori.util.Util.compare;
 import static com.readytalk.revori.util.Util.union;
 
-import java.util.Comparator;
-import java.util.Collections;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 

@@ -7,41 +7,39 @@
 
 package com.readytalk.revori.server;
 
-import com.readytalk.revori.Table;
+import java.io.ByteArrayInputStream;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.ref.WeakReference;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+import javax.annotation.concurrent.ThreadSafe;
+
 import com.readytalk.revori.Column;
-import com.readytalk.revori.RevisionBuilder;
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.Revisions;
 import com.readytalk.revori.ConflictResolver;
 import com.readytalk.revori.DiffResult;
 import com.readytalk.revori.DuplicateKeyResolution;
 import com.readytalk.revori.ForeignKeyResolver;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.Table;
 import com.readytalk.revori.imp.Constants;
 import com.readytalk.revori.server.protocol.Protocol;
-import com.readytalk.revori.server.protocol.Readable;
 import com.readytalk.revori.server.protocol.ReadContext;
+import com.readytalk.revori.server.protocol.Readable;
+import com.readytalk.revori.server.protocol.Stringable;
 import com.readytalk.revori.server.protocol.Writable;
 import com.readytalk.revori.server.protocol.WriteContext;
-import com.readytalk.revori.server.protocol.Stringable;
+import com.readytalk.revori.subscribe.Subscription;
 import com.readytalk.revori.util.BufferOutputStream;
 import com.readytalk.revori.util.Util;
-import com.readytalk.revori.subscribe.Subscription;
-
-import java.lang.ref.WeakReference;
-import java.io.InputStream;
-import java.io.IOException;
-import java.io.EOFException;
-import java.io.ByteArrayInputStream;
-import java.util.UUID;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Iterator;
-
-import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
 public class EpidemicServer implements NetworkServer {

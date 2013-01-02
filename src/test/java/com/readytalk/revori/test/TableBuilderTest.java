@@ -8,7 +8,8 @@
 package com.readytalk.revori.test;
 
 import static com.readytalk.revori.util.Util.cols;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import org.junit.Test;
 

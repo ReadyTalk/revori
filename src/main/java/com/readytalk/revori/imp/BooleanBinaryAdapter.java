@@ -8,7 +8,6 @@
 package com.readytalk.revori.imp;
 
 import com.readytalk.revori.BinaryOperation;
-import com.readytalk.revori.ExpressionVisitor;
 import com.readytalk.revori.OperationClass;
 
 class BooleanBinaryAdapter implements ExpressionAdapter {

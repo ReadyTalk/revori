@@ -7,13 +7,12 @@
 
 package com.readytalk.revori.imp;
 
-import com.readytalk.revori.Table;
-import com.readytalk.revori.Index;
-import com.readytalk.revori.Column;
-
-import com.readytalk.revori.imp.Interval.BoundType;
-
 import java.util.Comparator;
+
+import com.readytalk.revori.Column;
+import com.readytalk.revori.Index;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.imp.Interval.BoundType;
 
 public class Compare {
   public static final Comparable Undefined = new Comparable() {
