@@ -72,7 +72,5 @@ client implementation. To build and use the client, install the GNU version
 of readline and readline headers. The easiest way to do this is probably with
 [Homebrew](http://mxcl.github.com/homebrew/):
 
-  $ brew install readline
-  $ brew link readline # This overrides the Apple-provided version, so beware.
-
-
+	$ brew install readline
+	$ brew link readline # This overrides the Apple-provided version, so beware.
