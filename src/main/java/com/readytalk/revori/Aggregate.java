@@ -56,7 +56,7 @@ public class Aggregate<T> implements Expression {
   /**
    * {@inheritDoc}
    */
-  public Class typeConstraint() {
+  public Class<T> typeConstraint() {
     return type;
   }
 
