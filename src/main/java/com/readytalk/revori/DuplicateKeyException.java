@@ -7,9 +7,12 @@
 
 package com.readytalk.revori;
 
+import javax.annotation.concurrent.Immutable;
+
 /**
  * Exception thrown when an insert or update introduces a row which
  * conflicts with an existing row by matching the same key of a
  * primary key.
  */
+@Immutable
 public class DuplicateKeyException extends RuntimeException { }

@@ -7,15 +7,17 @@
 
 package com.readytalk.revori.server;
 
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.Revisions;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
+
+import javax.annotation.Nullable;
+
 import com.readytalk.revori.ConflictResolver;
 import com.readytalk.revori.ForeignKeyResolver;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.Revisions;
 import com.readytalk.revori.subscribe.Subscription;
-
-import java.util.Set;
-import java.util.HashSet;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class SimpleRevisionServer implements RevisionServer {
   private final ConflictResolver conflictResolver;
@@ -25,8 +27,8 @@ public class SimpleRevisionServer implements RevisionServer {
   public final AtomicReference<Set<Runnable>> listeners
     = new AtomicReference(new HashSet());
 
-  public SimpleRevisionServer(ConflictResolver conflictResolver,
-                              ForeignKeyResolver foreignKeyResolver)
+  public SimpleRevisionServer(@Nullable ConflictResolver conflictResolver,
+		  @Nullable ForeignKeyResolver foreignKeyResolver)
   {
     this.conflictResolver = conflictResolver;
     this.foreignKeyResolver = foreignKeyResolver;

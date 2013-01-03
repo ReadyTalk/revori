@@ -7,16 +7,16 @@
 
 package com.readytalk.revori.imp;
 
-import com.readytalk.revori.Expression;
-import com.readytalk.revori.Constant;
-import com.readytalk.revori.Parameter;
-import com.readytalk.revori.ColumnReference;
-import com.readytalk.revori.BinaryOperation;
-import com.readytalk.revori.UnaryOperation;
-import com.readytalk.revori.Aggregate;
-
-import java.util.Map;
 import java.util.HashMap;
+import java.util.Map;
+
+import com.readytalk.revori.Aggregate;
+import com.readytalk.revori.BinaryOperation;
+import com.readytalk.revori.ColumnReference;
+import com.readytalk.revori.Constant;
+import com.readytalk.revori.Expression;
+import com.readytalk.revori.Parameter;
+import com.readytalk.revori.UnaryOperation;
 
 class ExpressionAdapterFactory {
   private static final Map<Class, Factory> factories = new HashMap();

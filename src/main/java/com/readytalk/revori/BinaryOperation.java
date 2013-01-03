@@ -9,10 +9,13 @@ package com.readytalk.revori;
 
 import static com.readytalk.revori.util.Util.list;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
 /**
  * Expression which, when evaluated, applies the specified operation
  * to its operands.
  */
+@NotThreadSafe
 public class BinaryOperation implements Expression {
   /**
    * These are the possible types which may be specified when defining

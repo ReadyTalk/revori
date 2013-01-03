@@ -7,11 +7,14 @@
 
 package com.readytalk.revori;
 
-import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
+@NotThreadSafe
 public final class ForeignKey implements Comparable<ForeignKey> {
   public final Table refererTable;
 

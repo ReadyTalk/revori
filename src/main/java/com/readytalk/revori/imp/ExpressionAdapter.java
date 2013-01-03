@@ -7,6 +7,9 @@
 
 package com.readytalk.revori.imp;
 
+import javax.annotation.concurrent.Immutable;
+
+@Immutable
 interface ExpressionAdapter {
   public void visit(ExpressionAdapterVisitor visitor);
   public Object evaluate(boolean convertDummyToNull);

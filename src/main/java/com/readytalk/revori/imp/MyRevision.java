@@ -7,30 +7,27 @@
 
 package com.readytalk.revori.imp;
 
-import static com.readytalk.revori.util.Util.copy;
 import static com.readytalk.revori.util.Util.list;
 
-import com.readytalk.revori.Index;
-import com.readytalk.revori.View;
-import com.readytalk.revori.Column;
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.Revisions;
-import com.readytalk.revori.RevisionBuilder;
-import com.readytalk.revori.QueryTemplate;
-import com.readytalk.revori.QueryResult;
-import com.readytalk.revori.DiffResult;
-import com.readytalk.revori.ConflictResolver;
-import com.readytalk.revori.ForeignKeyResolver;
-import com.readytalk.revori.TableReference;
-import com.readytalk.revori.ColumnReference;
-import com.readytalk.revori.Constant;
-import com.readytalk.revori.Expression;
-import com.readytalk.revori.Comparators;
-
-import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
+
+import com.readytalk.revori.Column;
+import com.readytalk.revori.ColumnReference;
+import com.readytalk.revori.ConflictResolver;
+import com.readytalk.revori.Constant;
+import com.readytalk.revori.DiffResult;
+import com.readytalk.revori.Expression;
+import com.readytalk.revori.ForeignKeyResolver;
+import com.readytalk.revori.Index;
+import com.readytalk.revori.QueryResult;
+import com.readytalk.revori.QueryTemplate;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.TableReference;
+import com.readytalk.revori.View;
 
 public class MyRevision implements Revision {
   public static final MyRevision Empty = new MyRevision
@@ -216,7 +213,7 @@ public class MyRevision implements Revision {
          (expressions, tableReference, new Constant(true)));
     } else {
       return new MyQueryResult
-        (this, null, myFork, null, template, copy(parameters));
+        (this, null, myFork, null, template, parameters.clone());
     }
   }
 

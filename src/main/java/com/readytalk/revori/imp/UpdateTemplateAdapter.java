@@ -7,18 +7,17 @@
 
 package com.readytalk.revori.imp;
 
-import com.readytalk.revori.Table;
-import com.readytalk.revori.PatchTemplate;
-import com.readytalk.revori.UpdateTemplate;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.readytalk.revori.Column;
+import com.readytalk.revori.DuplicateKeyException;
 import com.readytalk.revori.Expression;
 import com.readytalk.revori.Index;
-import com.readytalk.revori.Column;
+import com.readytalk.revori.PatchTemplate;
 import com.readytalk.revori.QueryResult;
-import com.readytalk.revori.DuplicateKeyException;
-import com.readytalk.revori.Comparators;
-
-import java.util.List;
-import java.util.ArrayList;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.UpdateTemplate;
 
 class UpdateTemplateAdapter implements PatchTemplateAdapter {
   public int apply(MyRevisionBuilder builder,

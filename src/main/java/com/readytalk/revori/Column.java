@@ -9,11 +9,16 @@ package com.readytalk.revori;
 
 import java.util.Comparator;
 
+import javax.annotation.concurrent.GuardedBy;
+import javax.annotation.concurrent.ThreadSafe;
+
 /**
  * Class representing a column which may be used to identify an item
  * of interest in a query or update.
  */
+@ThreadSafe
 public final class Column<T> implements Comparable<Column<?>> {
+  @GuardedBy("Column.class")
   private static long nextId = 1;
 
   public synchronized static String makeId() {

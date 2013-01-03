@@ -1,15 +1,18 @@
 package com.readytalk.revori;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
 import com.readytalk.revori.server.RevisionServer;
-import com.readytalk.revori.subscribe.DiffServer;
 import com.readytalk.revori.subscribe.DiffMachine;
+import com.readytalk.revori.subscribe.DiffServer;
 import com.readytalk.revori.subscribe.RowListener;
 import com.readytalk.revori.subscribe.Subscription;
 
+@NotThreadSafe
 public class Database {
 
-  private RevisionServer server;
-  private DiffServer diffServer;
+  private final RevisionServer server;
+  private final DiffServer diffServer;
 
   private DiffMachine machine;
   private DiffMachine manualDeliverMachine;

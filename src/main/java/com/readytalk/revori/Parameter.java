@@ -10,11 +10,14 @@ package com.readytalk.revori;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.annotation.concurrent.ThreadSafe;
+
 
 /**
  * Type representing an expression whose value will be supplied
  * separately when the expression is evaluated.
  */
+@ThreadSafe
 public class Parameter implements Expression {
   private static final AtomicInteger nextOrder = new AtomicInteger();
 

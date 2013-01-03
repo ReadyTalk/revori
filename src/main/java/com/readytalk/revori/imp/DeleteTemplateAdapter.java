@@ -7,15 +7,14 @@
 
 package com.readytalk.revori.imp;
 
-import com.readytalk.revori.PatchTemplate;
-import com.readytalk.revori.DeleteTemplate;
-import com.readytalk.revori.Table;
-import com.readytalk.revori.Index;
-import com.readytalk.revori.Column;
-import com.readytalk.revori.QueryResult;
-import com.readytalk.revori.Comparators;
-
 import java.util.List;
+
+import com.readytalk.revori.Column;
+import com.readytalk.revori.DeleteTemplate;
+import com.readytalk.revori.Index;
+import com.readytalk.revori.PatchTemplate;
+import com.readytalk.revori.QueryResult;
+import com.readytalk.revori.Table;
 
 class DeleteTemplateAdapter implements PatchTemplateAdapter {
   public int apply(MyRevisionBuilder builder,

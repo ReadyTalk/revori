@@ -7,69 +7,72 @@
 
 package com.readytalk.revori.server;
 
-import static com.readytalk.revori.util.Util.list;
+import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.util.Util.list;
 import static com.readytalk.revori.util.Util.set;
 
-import static com.readytalk.revori.ExpressionFactory.reference;
-
-import com.readytalk.revori.util.BufferOutputStream;
-import com.readytalk.revori.server.protocol.Stringable;
-import com.readytalk.revori.BinaryOperation.Type;
-import com.readytalk.revori.Revisions;
-import com.readytalk.revori.Table;
-import com.readytalk.revori.TableReference;
-import com.readytalk.revori.Column;
-import com.readytalk.revori.ColumnReference;
-import com.readytalk.revori.Source;
-import com.readytalk.revori.Expression;
-import com.readytalk.revori.QueryTemplate;
-import com.readytalk.revori.QueryTemplate.OrderExpression;
-import com.readytalk.revori.PatchTemplate;
-import com.readytalk.revori.RevisionBuilder;
-import com.readytalk.revori.QueryResult;
-import com.readytalk.revori.ConflictResolver;
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.Join;
-import com.readytalk.revori.BinaryOperation;
-import com.readytalk.revori.UnaryOperation;
-import com.readytalk.revori.Parameter;
-import com.readytalk.revori.Constant;
-import com.readytalk.revori.DuplicateKeyResolution;
-import com.readytalk.revori.InsertTemplate;
-import com.readytalk.revori.DeleteTemplate;
-import com.readytalk.revori.UpdateTemplate;
-import com.readytalk.revori.ForeignKeyResolvers;
-import com.readytalk.revori.Comparators;
-import com.readytalk.revori.subscribe.Subscription;
-
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.logging.Logger;
-import java.util.logging.Level;
-import java.io.Reader;
-import java.io.InputStreamReader;
-import java.io.IOException;
-import java.io.EOFException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.Reader;
 import java.net.InetSocketAddress;
 import java.nio.channels.Channels;
-import java.nio.channels.SocketChannel;
 import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
+
+import com.readytalk.revori.BinaryOperation;
+import com.readytalk.revori.BinaryOperation.Type;
+import com.readytalk.revori.Column;
+import com.readytalk.revori.ColumnReference;
+import com.readytalk.revori.Comparators;
+import com.readytalk.revori.ConflictResolver;
+import com.readytalk.revori.Constant;
+import com.readytalk.revori.DeleteTemplate;
+import com.readytalk.revori.DuplicateKeyResolution;
+import com.readytalk.revori.Expression;
+import com.readytalk.revori.ForeignKeyResolvers;
+import com.readytalk.revori.InsertTemplate;
+import com.readytalk.revori.Join;
+import com.readytalk.revori.Parameter;
+import com.readytalk.revori.PatchTemplate;
+import com.readytalk.revori.QueryResult;
+import com.readytalk.revori.QueryTemplate;
+import com.readytalk.revori.QueryTemplate.OrderExpression;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.Source;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.TableReference;
+import com.readytalk.revori.UnaryOperation;
+import com.readytalk.revori.UpdateTemplate;
+import com.readytalk.revori.server.protocol.Stringable;
+import com.readytalk.revori.subscribe.Subscription;
+import com.readytalk.revori.util.BufferOutputStream;
+
+@NotThreadSafe
 public class SQLServer implements RevisionServer {
   private static final boolean Verbose = false;
   private static final boolean Debug = true;
@@ -166,9 +169,10 @@ public class SQLServer implements RevisionServer {
   }
 
   private interface Validator<T extends Expression> {
-    public Expression validate(Class<T> type, T expression);
+    public Expression validate(@Nullable Class<T> type, T expression);
   }
-
+  
+  @NotThreadSafe
   private static class Server {
     public final Parser parser = new ParserFactory().parser();
 
@@ -425,7 +429,7 @@ public class SQLServer implements RevisionServer {
     public final Revision dbTail;
     public Revision dbHead;
 
-    public Transaction(Transaction next,
+    public Transaction(@Nullable Transaction next,
                        Revision dbTail)
     {
       this.next = next;
@@ -456,13 +460,15 @@ public class SQLServer implements RevisionServer {
 
   private static class Client implements Runnable {
     public final Server server;
+    @Nullable
     public final SocketChannel channel;
+    @Nullable
     public Transaction transaction;
     public Database database;
     public CopyContext copyContext;
 
     public Client(Server server,
-                  SocketChannel channel)
+                  @Nullable SocketChannel channel)
     {
       this.server = server;
       this.channel = channel;
@@ -568,9 +574,9 @@ public class SQLServer implements RevisionServer {
     public final boolean lastAtomic;
     public Task task;
 
-    public ParseResult(Tree tree,
-                       String next,
-                       Set<String> completions,
+    public ParseResult(@Nullable Tree tree,
+                       @Nullable String next,
+                       @Nullable Set<String> completions,
                        boolean lastAtomic)
     {
       this.tree = tree;
@@ -775,7 +781,7 @@ public class SQLServer implements RevisionServer {
     }
   }
 
-  private static Expression validate(Class type,
+  private static Expression validate(@Nullable Class type,
                                      Expression expression)
   {
     return validators.get(expression.getClass()).validate(type, expression);
@@ -1738,13 +1744,13 @@ public class SQLServer implements RevisionServer {
 
     public static ParseResult success(Tree tree,
                                       String next,
-                                      Set<String> completions,
+                                      @Nullable Set<String> completions,
                                       boolean lastAtomic)
     {
       return new ParseResult(tree, next, completions, lastAtomic);
     }
 
-    public static ParseResult fail(Set<String> completions) {
+    public static ParseResult fail(@Nullable Set<String> completions) {
       // TODO: is passing false for lastAtomic here correct?
       return new ParseResult(null, null, completions, false);
     }

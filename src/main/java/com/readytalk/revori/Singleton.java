@@ -7,6 +7,9 @@
 
 package com.readytalk.revori;
 
+import javax.annotation.concurrent.Immutable;
+
+@Immutable
 public final class Singleton implements Comparable<Singleton> {
   public static Singleton Instance = new Singleton();
 

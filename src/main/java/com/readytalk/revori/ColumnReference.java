@@ -9,12 +9,15 @@ package com.readytalk.revori;
 
 import java.util.Collections;
 
+import javax.annotation.concurrent.Immutable;
+
 /**
  * Type representing a specific reference to a column.  A query may
  * make multiple references to the same column (e.g. when joining a
  * table with itself), in which case it is useful to represent those
  * references unambiguously as separate objects.
  */
+@Immutable
 public final class ColumnReference<T> implements Expression {
   /**
    * The table reference specified when this instance was defined.

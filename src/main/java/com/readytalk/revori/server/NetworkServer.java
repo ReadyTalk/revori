@@ -7,14 +7,14 @@
 
 package com.readytalk.revori.server;
 
-import com.readytalk.revori.Table;
-import com.readytalk.revori.Column;
-import com.readytalk.revori.server.protocol.Readable;
-import com.readytalk.revori.server.protocol.Writable;
-import com.readytalk.revori.server.protocol.Stringable;
-
-import java.util.Set;
 import java.util.Arrays;
+import java.util.Set;
+
+import com.readytalk.revori.Column;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.server.protocol.Readable;
+import com.readytalk.revori.server.protocol.Stringable;
+import com.readytalk.revori.server.protocol.Writable;
 
 public interface NetworkServer extends RevisionServer {
   public void accept(NodeID source, Readable message);

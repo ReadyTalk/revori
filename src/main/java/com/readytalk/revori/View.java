@@ -7,16 +7,19 @@
 
 package com.readytalk.revori;
 
-import static com.readytalk.revori.util.Util.list;
 import static com.readytalk.revori.util.Util.compare;
+import static com.readytalk.revori.util.Util.list;
 
-import java.util.Comparator;
-import java.util.Collections;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
+@NotThreadSafe
 public final class View implements Comparable<View> {
   public final QueryTemplate query;
   public final List<Object> parameters;

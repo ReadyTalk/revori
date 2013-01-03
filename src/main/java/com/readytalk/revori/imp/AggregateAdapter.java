@@ -7,7 +7,6 @@
 
 package com.readytalk.revori.imp;
 
-import com.readytalk.revori.ExpressionVisitor;
 import com.readytalk.revori.Aggregate;
 
 class AggregateAdapter implements ExpressionAdapter {

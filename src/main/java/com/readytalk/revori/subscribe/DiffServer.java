@@ -1,14 +1,12 @@
 package com.readytalk.revori.subscribe;
 
-import java.util.Set;
-import java.util.Map;
-import java.util.TreeMap;
 import java.util.HashMap;
-import java.util.SortedMap;
-import java.util.Set;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
-import com.readytalk.revori.Revision;
 import com.readytalk.revori.Revisions;
 import com.readytalk.revori.server.RevisionServer;
 

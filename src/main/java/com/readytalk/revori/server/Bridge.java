@@ -9,18 +9,18 @@ package com.readytalk.revori.server;
 
 import static com.readytalk.revori.util.Util.expect;
 
-import com.readytalk.revori.Table;
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.Revisions;
-import com.readytalk.revori.RevisionBuilder;
-import com.readytalk.revori.DuplicateKeyResolution;
-import com.readytalk.revori.DiffResult;
-import com.readytalk.revori.subscribe.Subscription;
-
-import java.util.Map;
 import java.util.HashMap;
-import java.util.Set;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import com.readytalk.revori.DiffResult;
+import com.readytalk.revori.DuplicateKeyResolution;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.subscribe.Subscription;
 
 public class Bridge {
   private static final int MaxDepth = 16;

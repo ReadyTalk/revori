@@ -7,6 +7,9 @@
 
 package com.readytalk.revori;
 
+import javax.annotation.concurrent.ThreadSafe;
+
+@ThreadSafe
 public class Util {
   
   public static void massInsert(RevisionBuilder builder, InsertTemplate insert, QueryResult result) {

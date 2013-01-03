@@ -7,6 +7,8 @@
 
 package com.readytalk.revori;
 
+import javax.annotation.Nullable;
+
 /**
  * An interface for resolving conflicts which accepts three versions
  * of a value -- the base version and two forks -- and returns a
@@ -17,7 +19,7 @@ public interface ConflictResolver {
   public Object resolveConflict(Table table,
                                 Column column,
                                 Object[] primaryKeyValues,
-                                Object baseValue,
+                                @Nullable Object baseValue,
                                 Object leftValue,
                                 Object rightValue);
 }

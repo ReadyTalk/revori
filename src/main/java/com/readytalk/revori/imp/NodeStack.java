@@ -9,6 +9,8 @@ package com.readytalk.revori.imp;
 
 import static com.readytalk.revori.util.Util.expect;
 
+import javax.annotation.Nullable;
+
 class NodeStack {
   public static final NodeStack Null = new NodeStack((Node[]) null);
 
@@ -22,7 +24,7 @@ class NodeStack {
   public int index;
   public boolean obsolete = false; // only for making sure we don't reuse popped NodeStacks
 
-  public NodeStack(Node[] array) {
+  public NodeStack(@Nullable Node[] array) {
     this.array = array;
     this.base = 0;
     this.next = null;
