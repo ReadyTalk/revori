@@ -16,6 +16,12 @@ version='0.1.0-SNAPSHOT'
 
 defaultTasks 'build'
 
+ext {
+  mainClassName='com.readytalk.revori.server.SQLServer'
+  serverPort='8017'
+  serverHost='localhost'
+}
+
 repositories {
   mavenCentral()
 }
@@ -31,9 +37,13 @@ dependencies {
   )
 }
 
+jar {
+  baseName = 'revori-server'
+}
+
 cobertura {
-    format = 'html'
-    includes = ['**/*.java']
+  format = 'html'
+  includes = ['**/*.java']
 }
 
 findbugs {
@@ -43,12 +53,6 @@ findbugs {
 test {
   //Here due to an issue with cobertura and jre7.
   jvmArgs "-XX:-UseSplitVerifier"
-}
-
-ext {
-  mainClassName='com.readytalk.revori.server.SQLServer'
-  serverPort='8017'
-  serverHost='localhost'
 }
 
 task start {
