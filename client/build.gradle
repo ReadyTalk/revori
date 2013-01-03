@@ -1,20 +1,21 @@
 apply plugin: 'cpp-exe'
 
 executables {
-    main {
-        spec {
-            args  "-Werror",
-                  "-Wall",
-                  "-Wextra",
-                  "-Wunused-parameter",
-                  "-Winit-self",
-                  "-fno-rtti",
-                  "-fno-exceptions",
-                  "-O0",
-                  "-g3",
-                  "-lreadline"
-        }
+  main {
+    spec {
+      baseName = 'revori-client'
+      args  "-Werror",
+            "-Wall",
+            "-Wextra",
+            "-Wunused-parameter",
+            "-Winit-self",
+            "-fno-rtti",
+            "-fno-exceptions",
+            "-O0",
+            "-g3",
+            "-lreadline"
     }
+  }
 }
 
 task build(dependsOn: compileMain)
