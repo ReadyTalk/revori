@@ -15,6 +15,8 @@ revision from which new revisions may be derived with data added,
 subtracted, or replaced.  These revisions may be compared with each
 other and/or combined using a three-way merge algorithm.
 
+For more information, see the [Wiki](https://github.com/ReadyTalk/revori/wiki)
+
 Status
 ------
 
