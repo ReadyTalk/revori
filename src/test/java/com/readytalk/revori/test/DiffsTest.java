@@ -11,7 +11,7 @@ import static com.readytalk.revori.ExpressionFactory.isNull;
 import static com.readytalk.revori.ExpressionFactory.not;
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.list;
+import com.google.common.collect.Lists;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -46,7 +46,7 @@ public class DiffsTest {
     PatchTemplate insert = new InsertTemplate
       (numbers,
        cols(number, name, origin),
-       list((Expression) new Parameter(), new Parameter(), new Parameter()),
+       Lists.newArrayList((Expression) new Parameter(), new Parameter(), new Parameter()),
        DuplicateKeyResolution.Throw);
   
     RevisionBuilder builder = tail.builder();
@@ -61,7 +61,7 @@ public class DiffsTest {
     TableReference numbersReference = new TableReference(numbers);
     
     QueryTemplate query = new QueryTemplate
-    (list((Expression) reference(numbersReference, name)),
+    (Lists.newArrayList((Expression) reference(numbersReference, name)),
      numbersReference,
      new Constant(true));
 
@@ -106,7 +106,7 @@ public class DiffsTest {
     PatchTemplate insert = new InsertTemplate
       (numbers,
        cols(number, name, origin),
-       list((Expression) new Parameter(), new Parameter(), new Parameter()),
+       Lists.newArrayList((Expression) new Parameter(), new Parameter(), new Parameter()),
        DuplicateKeyResolution.Throw);
   
     RevisionBuilder builder = tail.builder();
@@ -121,7 +121,7 @@ public class DiffsTest {
     TableReference numbersReference = new TableReference(numbers);
     
     QueryTemplate query = new QueryTemplate
-    (list((Expression)
+    (Lists.newArrayList((Expression)
       reference(numbersReference, number),
       reference(numbersReference, name),
       reference(numbersReference, origin)),
@@ -170,7 +170,7 @@ public class DiffsTest {
     TableReference numbersReference = new TableReference(numbers);
 
     QueryTemplate query = new QueryTemplate
-      (list((Expression) reference(numbersReference, name)),
+      (Lists.newArrayList((Expression) reference(numbersReference, name)),
        numbersReference,
        new Constant(true));
 

@@ -8,7 +8,7 @@
 package com.readytalk.revori.imp;
 
 import static com.readytalk.revori.util.Util.expect;
-import static com.readytalk.revori.util.Util.list;
+import com.google.common.collect.Lists;
 
 import java.util.Comparator;
 import java.util.Set;
@@ -210,7 +210,7 @@ class Merge {
                     Constants.IndexTable.primaryKey, Compare.IndexComparator,
                     table, Constants.TableColumn.comparator),
                    leftStack = new NodeStack(leftStack),
-                   list(Interval.Unbounded).iterator(),
+                   Lists.newArrayList(Interval.Unbounded).iterator(),
                    true, Constants.IndexColumn.comparator);
           
                 DiffIterator.DiffPair pair = new DiffIterator.DiffPair();
@@ -253,7 +253,7 @@ class Merge {
                     Constants.ViewTable.primaryKey, Compare.IndexComparator,
                     table, Constants.TableColumn.comparator),
                    leftStack = new NodeStack(leftStack),
-                   list(Interval.Unbounded).iterator(),
+                   Lists.newArrayList(Interval.Unbounded).iterator(),
                    true, Constants.ViewColumn.comparator);
           
                 DiffIterator.DiffPair pair = new DiffIterator.DiffPair();

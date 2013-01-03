@@ -8,13 +8,13 @@
 package com.readytalk.revori.util;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.collect.Lists;
 import com.readytalk.revori.Column;
 import com.readytalk.revori.DiffResult;
 import com.readytalk.revori.Revision;
@@ -34,17 +34,9 @@ public class Util {
     for (T o: elements) result.add(o);
     return result;
   }
-
-  public static <T> List<T> list(T ... elements) {
-    return toList(elements);
-  }
-
+  
   public static List<Column<?>> cols(Column<?> ... elements) {
-    return toList(elements);
-  }
-
-  private static <T> List<T> toList(T[] elements) {
-    return new ArrayList<T>(Arrays.asList(elements));
+    return Lists.newArrayList(elements);
   }
 
   public static <T> Set<T> set(T ... elements) {

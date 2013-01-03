@@ -8,7 +8,7 @@
 package com.readytalk.revori.test;
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.list;
+import com.google.common.collect.Lists;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
@@ -47,13 +47,13 @@ public class JoinTest {
         PatchTemplate nameInsert = new InsertTemplate
           (names,
            cols(id, name),
-           list((Expression) new Parameter(), new Parameter()),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         PatchTemplate nicknameInsert = new InsertTemplate
           (nicknames,
            cols(id, nickname),
-           list((Expression) new Parameter(), new Parameter()),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         RevisionBuilder builder = tail.builder();
@@ -76,7 +76,7 @@ public class JoinTest {
         TableReference nicknamesReference = new TableReference(nicknames);
 
         QueryTemplate namesInnerNicknames = new QueryTemplate
-          (list(reference(namesReference, name),
+          (Lists.newArrayList(reference(namesReference, name),
                 reference(nicknamesReference, nickname)),
            new Join
            (Join.Type.Inner,
@@ -105,7 +105,7 @@ public class JoinTest {
         assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate namesLeftNicknames = new QueryTemplate
-          (list(reference(namesReference, name),
+          (Lists.newArrayList(reference(namesReference, name),
                 reference(nicknamesReference, nickname)),
            new Join
            (Join.Type.LeftOuter,
@@ -220,25 +220,25 @@ public class JoinTest {
         PatchTemplate nameInsert = new InsertTemplate
           (names,
            cols(id, name),
-           list((Expression) new Parameter(), new Parameter()),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         PatchTemplate nicknameInsert = new InsertTemplate
           (nicknames,
            cols(id, nickname),
-           list((Expression) new Parameter(), new Parameter()),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         PatchTemplate lastnameInsert = new InsertTemplate
           (lastnames,
            cols(name, lastname),
-           list((Expression) new Parameter(), new Parameter()),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         PatchTemplate colorInsert = new InsertTemplate
           (colors,
            cols(string, color),
-           list((Expression) new Parameter(), new Parameter()),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         RevisionBuilder builder = tail.builder();
@@ -273,7 +273,7 @@ public class JoinTest {
         TableReference colorsReference = new TableReference(colors);
 
         QueryTemplate namesInnerNicknamesInnerColors = new QueryTemplate
-          (list(reference(namesReference, name),
+          (Lists.newArrayList(reference(namesReference, name),
                 reference(nicknamesReference, nickname),
                 reference(colorsReference, color)),
            new Join
@@ -312,7 +312,7 @@ public class JoinTest {
         assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate namesLeftNicknamesInnerColors = new QueryTemplate
-          (list(reference(namesReference, name),
+          (Lists.newArrayList(reference(namesReference, name),
                 reference(nicknamesReference, nickname),
                 reference(colorsReference, color)),
            new Join
@@ -351,7 +351,7 @@ public class JoinTest {
         assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate namesInnerNicknamesLeftColors = new QueryTemplate
-          (list(reference(namesReference, name),
+          (Lists.newArrayList(reference(namesReference, name),
                 reference(nicknamesReference, nickname),
                 reference(colorsReference, color)),
            new Join
@@ -399,7 +399,7 @@ public class JoinTest {
 
         QueryTemplate namesInnerLastnamesLeftNicknamesLeftColors
           = new QueryTemplate
-          (list(reference(namesReference, name),
+          (Lists.newArrayList(reference(namesReference, name),
                 reference(lastnamesReference, lastname),
                 reference(nicknamesReference, nickname),
                 reference(colorsReference, color)),

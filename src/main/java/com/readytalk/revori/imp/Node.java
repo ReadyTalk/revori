@@ -8,7 +8,7 @@
 package com.readytalk.revori.imp;
 
 import static com.readytalk.revori.util.Util.expect;
-import static com.readytalk.revori.util.Util.list;
+import com.google.common.collect.Lists;
 
 import java.util.Comparator;
 
@@ -578,7 +578,7 @@ class Node {
       DiffIterator iterator = new DiffIterator
         (base, baseStack = new NodeStack(baseStack),
          fork, forkStack = new NodeStack(forkStack),
-         list(Interval.Unbounded).iterator(),
+         Lists.newArrayList(Interval.Unbounded).iterator(),
          true, comparator);
 
       DiffIterator.DiffPair pair = new DiffIterator.DiffPair();

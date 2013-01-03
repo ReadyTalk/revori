@@ -10,7 +10,7 @@ package com.readytalk.revori.test;
 import static com.readytalk.revori.DuplicateKeyResolution.Throw;
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.list;
+import com.google.common.collect.Lists;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
@@ -105,7 +105,7 @@ public class SubscribeTest {
     TableReference numbersReference = new TableReference(numbers);
 
     QueryTemplate query = new QueryTemplate
-      (list((Expression) reference(numbersReference, number), reference(numbersReference, name)),
+      (Lists.newArrayList((Expression) reference(numbersReference, number), reference(numbersReference, name)),
        numbersReference,
        new Constant(true));
 

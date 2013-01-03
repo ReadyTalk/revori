@@ -9,7 +9,7 @@ package com.readytalk.revori.test;
 
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.list;
+import com.google.common.collect.Lists;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -47,7 +47,7 @@ public class DuplicateTest {
         PatchTemplate insert = new InsertTemplate
           (numbers,
            cols(number, name),
-           list((Expression) new Parameter(), new Parameter()),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         RevisionBuilder builder = tail.builder();
@@ -80,7 +80,7 @@ public class DuplicateTest {
         PatchTemplate insertOrUpdate = new InsertTemplate
           (numbers,
            cols(number, name),
-           list((Expression) new Parameter(), new Parameter()),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Overwrite);
 
         builder.apply(insertOrUpdate, 1, "uno");
@@ -90,7 +90,7 @@ public class DuplicateTest {
         TableReference numbersReference = new TableReference(numbers);
 
         QueryTemplate any = new QueryTemplate
-          (list((Expression) reference(numbersReference, name)),
+          (Lists.newArrayList((Expression) reference(numbersReference, name)),
            numbersReference,
            new Constant(true));
 
@@ -118,7 +118,7 @@ public class DuplicateTest {
         PatchTemplate insert = new InsertTemplate
           (numbers,
            cols(number, name),
-           list((Expression) new Parameter(), new Parameter()),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Skip);
 
         RevisionBuilder builder = tail.builder();
@@ -131,7 +131,7 @@ public class DuplicateTest {
         
         TableReference numbersReference = new TableReference(numbers);
         QueryTemplate q1 = new QueryTemplate
-        (list(reference(numbersReference, number), 
+        (Lists.newArrayList(reference(numbersReference, number), 
         		reference(numbersReference, name)),
          numbersReference,
          new Constant(true));
@@ -161,7 +161,7 @@ public class DuplicateTest {
         numbersReference = new TableReference(numbers);
 
         QueryTemplate any = new QueryTemplate
-          (list(reference(numbersReference, number), 
+          (Lists.newArrayList(reference(numbersReference, number), 
         		  reference(numbersReference, name)),
            numbersReference,
            new Constant(true));
@@ -201,7 +201,7 @@ public class DuplicateTest {
         PatchTemplate insert = new InsertTemplate
           (numbers,
            cols(number, name),
-           list((Expression) new Parameter(),
+           Lists.newArrayList((Expression) new Parameter(),
                 new Parameter()), DuplicateKeyResolution.Overwrite);
 
         RevisionBuilder builder = tail.builder();
@@ -214,7 +214,7 @@ public class DuplicateTest {
         
         TableReference numbersReference = new TableReference(numbers);
         QueryTemplate q1 = new QueryTemplate
-        (list(reference(numbersReference, number),
+        (Lists.newArrayList(reference(numbersReference, number),
         		reference(numbersReference, name)),
          numbersReference,
          new Constant(true));
@@ -244,7 +244,7 @@ public class DuplicateTest {
         numbersReference = new TableReference(numbers);
 
         QueryTemplate any = new QueryTemplate
-          (list(reference(numbersReference, number), 
+          (Lists.newArrayList(reference(numbersReference, number), 
         		  reference(numbersReference, name)),
            numbersReference,
            new Constant(true));
@@ -303,7 +303,7 @@ public class DuplicateTest {
         PatchTemplate insert = new InsertTemplate
           (numbers,
            cols(number, name, key),
-           list((Expression) new Parameter(), new Parameter(),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter(),
                 new Parameter()), DuplicateKeyResolution.Throw);
 
         RevisionBuilder builder = tail.builder();
@@ -316,7 +316,7 @@ public class DuplicateTest {
         
         TableReference numbersReference = new TableReference(numbers);
         QueryTemplate q1 = new QueryTemplate
-        (list(reference(numbersReference, number),
+        (Lists.newArrayList(reference(numbersReference, number),
         		reference(numbersReference, name),
         		reference(numbersReference, key)),
          numbersReference,
@@ -363,7 +363,7 @@ public class DuplicateTest {
         numbersReference = new TableReference(numbers);
 
         QueryTemplate any = new QueryTemplate
-          (list(reference(numbersReference, number), 
+          (Lists.newArrayList(reference(numbersReference, number), 
         		  reference(numbersReference, name),
         		  reference(numbersReference, key)),
            numbersReference,
@@ -410,7 +410,7 @@ public class DuplicateTest {
         PatchTemplate insert = new InsertTemplate
           (numbers,
            cols(number, name, key),
-           list((Expression) new Parameter(), new Parameter(),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter(),
                 new Parameter()), DuplicateKeyResolution.Skip);
 
         RevisionBuilder builder = tail.builder();
@@ -423,7 +423,7 @@ public class DuplicateTest {
         
         TableReference numbersReference = new TableReference(numbers);
         QueryTemplate q1 = new QueryTemplate
-        (list(reference(numbersReference, number),
+        (Lists.newArrayList(reference(numbersReference, number),
         		reference(numbersReference, name),
         		reference(numbersReference, key)),
          numbersReference,
@@ -457,7 +457,7 @@ public class DuplicateTest {
         numbersReference = new TableReference(numbers);
 
         QueryTemplate any = new QueryTemplate
-          (list(reference(numbersReference, number), 
+          (Lists.newArrayList(reference(numbersReference, number), 
         		  reference(numbersReference, name),
         		  reference(numbersReference, key)),
            numbersReference,
@@ -504,7 +504,7 @@ public class DuplicateTest {
         PatchTemplate insert = new InsertTemplate
           (numbers,
            cols(number, name, key),
-           list((Expression) new Parameter(), new Parameter(),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter(),
                 new Parameter()), DuplicateKeyResolution.Overwrite);
 
         RevisionBuilder builder = tail.builder();
@@ -517,7 +517,7 @@ public class DuplicateTest {
         
         TableReference numbersReference = new TableReference(numbers);
         QueryTemplate q1 = new QueryTemplate
-        (list(reference(numbersReference, number),
+        (Lists.newArrayList(reference(numbersReference, number),
         		reference(numbersReference, name),
         		reference(numbersReference, key)),
          numbersReference,
@@ -551,7 +551,7 @@ public class DuplicateTest {
         numbersReference = new TableReference(numbers);
 
         QueryTemplate any = new QueryTemplate
-          (list(reference(numbersReference, number), 
+          (Lists.newArrayList(reference(numbersReference, number), 
         		  reference(numbersReference, name),
         		  reference(numbersReference, key)),
            numbersReference,
@@ -622,7 +622,7 @@ public class DuplicateTest {
         PatchTemplate insert = new InsertTemplate
           (numbers,
            cols(number, name),
-           list((Expression) new Parameter(), new Parameter()),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         RevisionBuilder builder = tail.builder();
@@ -642,7 +642,7 @@ public class DuplicateTest {
             reference(numbersReference, number),
             new Parameter()),
            cols(number),
-           list((Expression) new Parameter()));
+           Lists.newArrayList((Expression) new Parameter()));
 
         try {
           first.builder().apply(updateNumberWhereNumberEqual, 1, 2);
@@ -663,7 +663,7 @@ public class DuplicateTest {
         Revision second = builder.commit();
 
         QueryTemplate any = new QueryTemplate
-          (list(reference(numbersReference, number),
+          (Lists.newArrayList(reference(numbersReference, number),
                 reference(numbersReference, name)),
            numbersReference,
            new Constant(true));

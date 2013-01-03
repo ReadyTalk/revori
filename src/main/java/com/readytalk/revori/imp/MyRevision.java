@@ -7,7 +7,7 @@
 
 package com.readytalk.revori.imp;
 
-import static com.readytalk.revori.util.Util.list;
+import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -73,7 +73,7 @@ public class MyRevision implements Revision {
     }
 
     ExpressionContext context = new ExpressionContext
-      (new Object[0], list((ExpressionAdapter) adapter));
+      (new Object[0], Lists.newArrayList((ExpressionAdapter) adapter));
 
     context.columnReferences.add(adapter);
 

@@ -9,7 +9,7 @@ package com.readytalk.revori.imp;
 
 import static com.readytalk.revori.SourceFactory.reference;
 import static com.readytalk.revori.util.Util.expect;
-import static com.readytalk.revori.util.Util.list;
+import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -608,7 +608,7 @@ class MyRevisionBuilder implements RevisionBuilder {
       DiffIterator iterator = new DiffIterator
         (indexBase.root, indexUpdateBaseStack,
          result.root, indexUpdateForkStack,
-         list(Interval.Unbounded).iterator(), false, Compare.TableComparator);
+         Lists.newArrayList(Interval.Unbounded).iterator(), false, Compare.TableComparator);
 
       DiffIterator.DiffPair pair = new DiffIterator.DiffPair();
 

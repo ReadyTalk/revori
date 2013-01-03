@@ -9,10 +9,11 @@ package com.readytalk.revori.test;
 
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.list;
+import com.google.common.collect.Lists;
 
 import org.junit.Test;
 
+import com.google.common.collect.Lists;
 import com.readytalk.revori.BinaryOperation;
 import com.readytalk.revori.Column;
 import com.readytalk.revori.DuplicateKeyResolution;
@@ -40,7 +41,7 @@ public class ColumnTypeTest {
 	    PatchTemplate insert = new InsertTemplate
 	      (numbers,
 	          cols(number, name),
-	       list((Expression) new Parameter(), new Parameter()),
+	       Lists.newArrayList((Expression) new Parameter(), new Parameter()),
                DuplicateKeyResolution.Throw);
 
 	    try {
@@ -68,7 +69,7 @@ public class ColumnTypeTest {
 	        reference(numbersReference, number),
 	        new Parameter()),
 	        cols(name),
-	       list((Expression) new Parameter()));
+	       Lists.newArrayList((Expression) new Parameter()));
 
 	    try {
 	      first.builder().apply(updateNameWhereNumberEqual, 1, 2);
