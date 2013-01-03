@@ -7,6 +7,9 @@
 
 package com.readytalk.revori;
 
+import javax.annotation.concurrent.Immutable;
+
+@Immutable
 public class ConflictResolvers {
   public static final ConflictResolver Restrict = new ConflictResolver() {
     public Object resolveConflict(Table table, Column column,

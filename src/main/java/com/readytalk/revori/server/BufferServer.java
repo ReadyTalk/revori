@@ -2,9 +2,9 @@ package com.readytalk.revori.server;
 
 import java.util.Set;
 
-import com.readytalk.revori.Revision;
 import com.readytalk.revori.ConflictResolver;
 import com.readytalk.revori.ForeignKeyResolver;
+import com.readytalk.revori.Revision;
 import com.readytalk.revori.subscribe.Subscription;
 
 public class BufferServer implements RevisionServer {

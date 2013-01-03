@@ -11,13 +11,13 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.lang.reflect.InvocationTargetException;
-import java.nio.ByteBuffer;
+
+import javax.annotation.concurrent.ThreadSafe;
 
 import com.readytalk.revori.Column;
 import com.readytalk.revori.ForeignKey;
@@ -27,6 +27,7 @@ import com.readytalk.revori.server.EpidemicServer;
 import com.readytalk.revori.server.NetworkServer.NodeID;
 import com.readytalk.revori.server.StreamUtil;
 
+@ThreadSafe
 public class Protocol {
   
   private static final int ClassDefinition = 6;

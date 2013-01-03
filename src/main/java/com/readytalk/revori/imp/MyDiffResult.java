@@ -9,16 +9,15 @@ package com.readytalk.revori.imp;
 
 import static com.readytalk.revori.util.Util.list;
 
-import com.readytalk.revori.Column;
-import com.readytalk.revori.Table;
-import com.readytalk.revori.Index;
-import com.readytalk.revori.DiffResult;
-import com.readytalk.revori.Comparators;
-import com.readytalk.revori.imp.DiffIterator.DiffPair;
-
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+
+import com.readytalk.revori.Column;
+import com.readytalk.revori.DiffResult;
+import com.readytalk.revori.Index;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.imp.DiffIterator.DiffPair;
 
 class MyDiffResult implements DiffResult {
   public enum State {

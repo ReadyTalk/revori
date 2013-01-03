@@ -7,25 +7,24 @@
 
 package com.readytalk.revori.imp;
 
-import static com.readytalk.revori.SourceFactory.reference;
-import static com.readytalk.revori.ExpressionFactory.constant;
-import static com.readytalk.revori.ExpressionFactory.reference;
-import static com.readytalk.revori.ExpressionFactory.parameter;
-import static com.readytalk.revori.ExpressionFactory.equal;
 import static com.readytalk.revori.ExpressionFactory.and;
+import static com.readytalk.revori.ExpressionFactory.constant;
+import static com.readytalk.revori.ExpressionFactory.equal;
+import static com.readytalk.revori.ExpressionFactory.parameter;
+import static com.readytalk.revori.ExpressionFactory.reference;
+import static com.readytalk.revori.SourceFactory.reference;
 
-import com.readytalk.revori.QueryResult;
-import com.readytalk.revori.Revision;
+import java.util.Collections;
+import java.util.List;
+
 import com.readytalk.revori.Column;
-import com.readytalk.revori.TableReference;
-import com.readytalk.revori.QueryTemplate;
 import com.readytalk.revori.Expression;
 import com.readytalk.revori.ForeignKey;
 import com.readytalk.revori.ForeignKeyException;
-import com.readytalk.revori.Comparators;
-
-import java.util.List;
-import java.util.Collections;
+import com.readytalk.revori.QueryResult;
+import com.readytalk.revori.QueryTemplate;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.TableReference;
 
 public class RefererForeignKeyAdapter {
   public final ForeignKey constraint;

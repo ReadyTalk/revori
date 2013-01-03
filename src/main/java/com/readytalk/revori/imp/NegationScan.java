@@ -7,10 +7,10 @@
 
 package com.readytalk.revori.imp;
 
-import com.readytalk.revori.imp.Interval.BoundType;
-
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
+
+import com.readytalk.revori.imp.Interval.BoundType;
 
 class NegationScan implements Scan {
   public final Scan operand;

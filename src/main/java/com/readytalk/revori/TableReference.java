@@ -9,12 +9,15 @@ package com.readytalk.revori;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.annotation.concurrent.ThreadSafe;
+
 /**
  * Type representing a specific reference to a table.  A query may
  * make multiple references to the same table (e.g. when joining a
  * table with itself), in which case it is useful to represent those
  * references unambiguously as separate objects.
  */
+@ThreadSafe
 public class TableReference implements Source {
   private static final AtomicInteger nextOrder = new AtomicInteger();
 

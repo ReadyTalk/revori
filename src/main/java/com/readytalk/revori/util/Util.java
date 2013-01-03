@@ -7,19 +7,19 @@
 
 package com.readytalk.revori.util;
 
-import com.readytalk.revori.Revision;
-import com.readytalk.revori.Table;
-import com.readytalk.revori.DiffResult;
-import com.readytalk.revori.imp.Constants;
-
-import java.util.List;
 import java.util.ArrayList;
-import java.util.Set;
-import java.util.HashSet;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
 import com.readytalk.revori.Column;
+import com.readytalk.revori.DiffResult;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.imp.Constants;
 
 public class Util {
   private static final boolean Debug = true;
@@ -43,17 +43,15 @@ public class Util {
     return toList(elements);
   }
 
-  public static <T> List<T> toList(T[] elements) {
-    List<T> list = new ArrayList<T>(elements.length);
-    for (T o: elements) list.add(o);
-    return list;
+  private static <T> List<T> toList(T[] elements) {
+    return new ArrayList<T>(Arrays.asList(elements));
   }
 
   public static <T> Set<T> set(T ... elements) {
     return toSet(elements);
   }
 
-  public static <T> Set<T> toSet(T[] elements) {
+  private static <T> Set<T> toSet(T[] elements) {
     Set<T> set = new HashSet<T>(elements.length);
     for (T o: elements) set.add(o);
     return set;
@@ -71,12 +69,6 @@ public class Util {
     if (Debug && ! v) {
       throw new RuntimeException();
     }
-  }
-
-  public static Object[] copy(Object[] array) {
-    Object[] copy = new Object[array.length];
-    System.arraycopy(array, 0, copy, 0, array.length);
-    return copy;
   }
 
   public static <T extends Comparable<T>> int compare(Collection<T> a,
@@ -99,7 +91,7 @@ public class Util {
     return 0;
   }
 
-  public static String toString(Object[] array, int offset, int length) {
+  public static <T> String toString(T[] array, int offset, int length) {
     StringBuilder sb = new StringBuilder();
     sb.append("[");
     for (int i = offset; i < offset + length; ++i) {

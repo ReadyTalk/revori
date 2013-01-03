@@ -7,9 +7,8 @@
 
 package com.readytalk.revori.imp;
 
-import com.readytalk.revori.TableReference;
 import com.readytalk.revori.Column;
-import com.readytalk.revori.ExpressionVisitor;
+import com.readytalk.revori.TableReference;
 
 class ColumnReferenceAdapter implements ExpressionAdapter {
   public final TableReference tableReference;

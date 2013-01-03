@@ -7,10 +7,12 @@
 
 package com.readytalk.revori;
 
+import javax.annotation.Nullable;
+
 public interface Foldable<T> {
   public T base();
 
-  public T add(T accumulation, Object ... values);
+  public T add(@Nullable T accumulation, Object ... values);
   
-  public T subtract(T accumulation, Object ... values);
+  public T subtract(@Nullable T accumulation, Object ... values);
 }

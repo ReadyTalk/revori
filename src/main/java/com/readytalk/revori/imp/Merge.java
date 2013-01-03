@@ -10,21 +10,16 @@ package com.readytalk.revori.imp;
 import static com.readytalk.revori.util.Util.expect;
 import static com.readytalk.revori.util.Util.list;
 
+import java.util.Comparator;
+import java.util.Set;
+import java.util.TreeSet;
+
+import com.readytalk.revori.Column;
 import com.readytalk.revori.ConflictResolver;
 import com.readytalk.revori.ForeignKeyResolver;
 import com.readytalk.revori.Index;
 import com.readytalk.revori.Table;
-import com.readytalk.revori.Column;
-import com.readytalk.revori.DiffResult;
-import com.readytalk.revori.Comparators;
 import com.readytalk.revori.View;
-
-import java.util.Comparator;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Set;
-import java.util.TreeSet;
 
 class Merge {
   public static MyRevision mergeRevisions

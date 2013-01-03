@@ -30,6 +30,11 @@ dependencies {
   findbugs 'com.google.code.findbugs:findbugs:2.0.1'
   
   testCompile 'junit:junit:4.11'
+  
+  compile (
+  	['com.google.code.findbugs:jsr305:2.0.1'],
+    ['com.google.code.findbugs:annotations:2.0.1'],
+  )
 }
 
 jar {

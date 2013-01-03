@@ -7,6 +7,8 @@
 
 package com.readytalk.revori;
 
+import java.util.NoSuchElementException;
+
 /**
  * Represents an iterative view of a list of rows produced via
  * execution of a query diff, consisting of any rows added or updated

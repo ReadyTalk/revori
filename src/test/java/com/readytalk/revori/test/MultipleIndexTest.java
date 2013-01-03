@@ -458,8 +458,7 @@ public class MultipleIndexTest {
                                         Object[] primaryKeyValues,
                                         Object baseValue,
                                         Object leftValue,
-                                        Object rightValue)
-          {
+                                        Object rightValue) {
             throw new RuntimeException();
           }
         }, null);

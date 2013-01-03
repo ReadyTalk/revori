@@ -7,9 +7,8 @@
 
 package com.readytalk.revori.imp;
 
-import com.readytalk.revori.UnaryOperation;
-import com.readytalk.revori.ExpressionVisitor;
 import com.readytalk.revori.OperationClass;
+import com.readytalk.revori.UnaryOperation;
 
 class BooleanUnaryAdapter implements ExpressionAdapter {
   public final UnaryOperation.Type type;

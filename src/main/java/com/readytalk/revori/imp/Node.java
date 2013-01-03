@@ -12,6 +12,8 @@ import static com.readytalk.revori.util.Util.list;
 
 import java.util.Comparator;
 
+import javax.annotation.Nullable;
+
 class Node {
   private static final boolean Debug = false;
 
@@ -30,7 +32,7 @@ class Node {
   public Node right;
   public boolean red;
     
-  public Node(Object token, Node basis) {
+  public Node(Object token, @Nullable Node basis) {
     this.token = token;
 
     if (basis != null) {
@@ -489,7 +491,7 @@ class Node {
     throw e;
   }
 
-  public static void validate(Node original, Node n) {
+  public static void validate(@Nullable Node original, Node n) {
     if (original != null) {
       validate(null, original);
     }

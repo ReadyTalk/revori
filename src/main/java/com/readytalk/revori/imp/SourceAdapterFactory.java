@@ -7,12 +7,12 @@
 
 package com.readytalk.revori.imp;
 
-import com.readytalk.revori.TableReference;
+import java.util.HashMap;
+import java.util.Map;
+
 import com.readytalk.revori.Join;
 import com.readytalk.revori.Source;
-
-import java.util.Map;
-import java.util.HashMap;
+import com.readytalk.revori.TableReference;
 
 class SourceAdapterFactory {
   public static final Map<Class<?>, Factory> factories = new HashMap<Class<?>, Factory>();

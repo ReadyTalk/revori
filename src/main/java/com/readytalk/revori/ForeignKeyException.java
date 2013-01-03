@@ -7,6 +7,9 @@
 
 package com.readytalk.revori;
 
+import javax.annotation.concurrent.Immutable;
+
+@Immutable
 public class ForeignKeyException extends RuntimeException {
   public ForeignKeyException() {
     super();

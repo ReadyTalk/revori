@@ -9,8 +9,8 @@ package com.readytalk.revori.imp;
 
 import static com.readytalk.revori.util.Util.expect;
 
-import com.readytalk.revori.QueryResult;
 import com.readytalk.revori.Join;
+import com.readytalk.revori.QueryResult;
 
 public class JoinIterator implements SourceIterator {
   public final JoinAdapter join;
