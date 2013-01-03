@@ -37,7 +37,7 @@ build the client)
 
 #### Server
 
-	$ gradle build
+	$ gradle :build
 
 
 #### All
