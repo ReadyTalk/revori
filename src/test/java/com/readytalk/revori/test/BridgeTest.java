@@ -16,6 +16,7 @@ import com.readytalk.revori.Column;
 import com.readytalk.revori.Revision;
 import com.readytalk.revori.RevisionBuilder;
 import com.readytalk.revori.Table;
+import com.readytalk.revori.subscribe.Subscription;
 import com.readytalk.revori.server.Bridge;
 import com.readytalk.revori.server.RevisionServer;
 import com.readytalk.revori.server.SimpleRevisionServer;
@@ -33,7 +34,7 @@ public class BridgeTest {
     Table numbers = new Table(cols(number), "numbers");
     Bridge.Path path = new Bridge.Path(numbers);
 
-    bridge.register(left, path, right, path);
+    Subscription subscription = bridge.register(left, path, right, path);
 
     { Revision base = left.head();
       RevisionBuilder builder = base.builder();
@@ -56,6 +57,8 @@ public class BridgeTest {
 
     assertEquals("two", left.head().query(numbers.primaryKey, 2, name));
     assertEquals("two", right.head().query(numbers.primaryKey, 2, name));
+
+    subscription.cancel();
   }
 
   @Test

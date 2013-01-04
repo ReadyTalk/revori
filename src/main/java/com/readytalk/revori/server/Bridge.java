@@ -77,7 +77,11 @@ public class Bridge {
 
       if (mapping.leftListener.tree.isEmpty()) {
         mapping.leftListener.subscription.cancel();
-        listeners.remove(mapping.leftListener);
+        if (listeners.remove(mapping.leftListener.server)
+            != mapping.leftListener)
+        {
+          throw new AssertionError();
+        }
       }
     }
   }
