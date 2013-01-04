@@ -7,7 +7,6 @@
 
 package com.readytalk.revori.imp;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import com.google.common.collect.Lists;

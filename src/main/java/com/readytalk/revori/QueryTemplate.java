@@ -92,7 +92,7 @@ public final class QueryTemplate implements Comparable<QueryTemplate> {
     this.parameterCount = ParameterCounter.countParameters
       (union(append(this.expressions, test), groupingExpressions));
 
-    groupingExpressions = new TreeSet(groupingExpressions);
+    groupingExpressions = new TreeSet<Expression>(groupingExpressions);
 
     final boolean hasAggregates[] = new boolean[1];
     ExpressionVisitor v = new ExpressionVisitor() {

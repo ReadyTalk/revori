@@ -402,12 +402,6 @@ public class SQLServer implements RevisionServer {
     }
   }
 
-  private static boolean equal(Object left,
-                               Object right)
-  {
-    return left == right || (left != null && left.equals(right));
-  }
-
   private static class LeftPreferenceConflictResolver
     implements ConflictResolver
   {

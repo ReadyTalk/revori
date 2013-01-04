@@ -8,7 +8,6 @@
 package com.readytalk.revori.imp;
 
 import com.google.common.collect.Lists;
-
 import com.readytalk.revori.Column;
 import com.readytalk.revori.Index;
 import com.readytalk.revori.TableReference;

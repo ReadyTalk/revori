@@ -7,10 +7,9 @@
 
 package com.readytalk.revori.imp;
 
-import com.google.common.collect.Lists;
-
 import java.util.List;
 
+import com.google.common.collect.Lists;
 import com.readytalk.revori.imp.Interval.BoundType;
 
 class IntervalScan implements Scan {

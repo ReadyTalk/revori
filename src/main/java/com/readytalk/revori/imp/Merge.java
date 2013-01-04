@@ -8,12 +8,12 @@
 package com.readytalk.revori.imp;
 
 import static com.readytalk.revori.util.Util.expect;
-import com.google.common.collect.Lists;
 
 import java.util.Comparator;
 import java.util.Set;
 import java.util.TreeSet;
 
+import com.google.common.collect.Lists;
 import com.readytalk.revori.Column;
 import com.readytalk.revori.ConflictResolver;
 import com.readytalk.revori.ForeignKeyResolver;

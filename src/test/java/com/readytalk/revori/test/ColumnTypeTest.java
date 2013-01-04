@@ -9,7 +9,6 @@ package com.readytalk.revori.test;
 
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
-import com.google.common.collect.Lists;
 
 import org.junit.Test;
 

@@ -7,13 +7,11 @@
 
 package com.readytalk.revori.imp;
 
-import com.google.common.collect.Lists;
-
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import com.google.common.collect.Lists;
 import com.readytalk.revori.Column;
 import com.readytalk.revori.ColumnReference;
 import com.readytalk.revori.ConflictResolver;

@@ -14,8 +14,6 @@ import java.util.List;
 
 import javax.annotation.concurrent.NotThreadSafe;
 
-import com.google.common.collect.ImmutableList;
-
 /**
  * Class representing an index on a table.  Instances of this class
  * may used to specify a way to organize data for efficient access.

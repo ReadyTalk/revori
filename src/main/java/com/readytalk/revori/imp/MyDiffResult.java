@@ -7,12 +7,11 @@
 
 package com.readytalk.revori.imp;
 
-import com.google.common.collect.Lists;
-
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import com.google.common.collect.Lists;
 import com.readytalk.revori.Column;
 import com.readytalk.revori.DiffResult;
 import com.readytalk.revori.Index;

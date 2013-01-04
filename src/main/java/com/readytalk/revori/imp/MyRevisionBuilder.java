@@ -9,17 +9,16 @@ package com.readytalk.revori.imp;
 
 import static com.readytalk.revori.SourceFactory.reference;
 import static com.readytalk.revori.util.Util.expect;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.readytalk.revori.Column;
 import com.readytalk.revori.DeleteTemplate;
 import com.readytalk.revori.DuplicateKeyException;

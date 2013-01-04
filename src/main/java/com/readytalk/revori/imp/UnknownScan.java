@@ -7,9 +7,9 @@
 
 package com.readytalk.revori.imp;
 
-import com.google.common.collect.Lists;
-
 import java.util.List;
+
+import com.google.common.collect.Lists;
 
 class UnknownScan implements Scan {
   public static final UnknownScan Instance = new UnknownScan();

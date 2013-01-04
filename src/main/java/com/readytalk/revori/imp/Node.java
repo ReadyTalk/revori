@@ -8,11 +8,12 @@
 package com.readytalk.revori.imp;
 
 import static com.readytalk.revori.util.Util.expect;
-import com.google.common.collect.Lists;
 
 import java.util.Comparator;
 
 import javax.annotation.Nullable;
+
+import com.google.common.collect.Lists;
 
 class Node {
   private static final boolean Debug = false;

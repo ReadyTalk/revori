@@ -7,8 +7,6 @@
 
 package com.readytalk.revori;
 
-import com.google.common.collect.Lists;
-
 import javax.annotation.concurrent.NotThreadSafe;
 
 import com.google.common.collect.Lists;
