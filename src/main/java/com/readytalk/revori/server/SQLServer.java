@@ -42,6 +42,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.readytalk.revori.BinaryOperation;
 import com.readytalk.revori.BinaryOperation.Type;
 import com.readytalk.revori.Column;
@@ -95,7 +96,7 @@ public class SQLServer implements RevisionServer {
 
   private static final Tree Nothing = new Nothing();
 
-  private static final Map<Class, Validator> validators = new HashMap();
+  private static final Map<Class, Validator> validators = Maps.newHashMap();
 
   static {
     validators.put(Parameter.class, new Validator<Parameter>() {

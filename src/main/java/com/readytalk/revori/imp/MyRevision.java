@@ -202,7 +202,7 @@ public class MyRevision implements Revision {
       builder.addView(view, this);
 
       TableReference tableReference = new TableReference(view.table);
-      List<Expression> expressions = new ArrayList(view.primaryKeyOffset);
+      List<Expression> expressions = Lists.newArrayListWithCapacity(view.primaryKeyOffset);
       for (int i = 0; i < view.primaryKeyOffset; ++i) {
         expressions.add
           (new ColumnReference(tableReference, view.columns.get(i)));

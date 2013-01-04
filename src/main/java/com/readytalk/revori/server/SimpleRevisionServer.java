@@ -7,12 +7,13 @@
 
 package com.readytalk.revori.server;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.Atomics;
 import com.readytalk.revori.ConflictResolver;
 import com.readytalk.revori.ForeignKeyResolver;
 import com.readytalk.revori.Revision;
@@ -22,10 +23,8 @@ import com.readytalk.revori.subscribe.Subscription;
 public class SimpleRevisionServer implements RevisionServer {
   private final ConflictResolver conflictResolver;
   private final ForeignKeyResolver foreignKeyResolver;
-  private final AtomicReference<Revision> head = new AtomicReference
-    (Revisions.Empty);
-  public final AtomicReference<Set<Runnable>> listeners
-    = new AtomicReference(new HashSet());
+  private final AtomicReference<Revision> head = Atomics.newReference(Revisions.Empty);
+  public final AtomicReference<Set<Runnable>> listeners = Atomics.<Set<Runnable>>newReference(Sets.<Runnable>newHashSet());
 
   public SimpleRevisionServer(@Nullable ConflictResolver conflictResolver,
 		  @Nullable ForeignKeyResolver foreignKeyResolver)
@@ -56,7 +55,7 @@ public class SimpleRevisionServer implements RevisionServer {
   public Subscription registerListener(final Runnable listener) {
     while (true) {
       Set<Runnable> oldListeners = listeners.get();
-      Set<Runnable> newListeners = new HashSet(oldListeners);
+      Set<Runnable> newListeners = Sets.newHashSet(oldListeners); 
       newListeners.add(listener);
       if (listeners.compareAndSet(oldListeners, newListeners)) {
         break;
@@ -68,7 +67,7 @@ public class SimpleRevisionServer implements RevisionServer {
       public void cancel() {
         while (true) {
           Set<Runnable> oldListeners = listeners.get();
-          Set<Runnable> newListeners = new HashSet(oldListeners);
+          Set<Runnable> newListeners = Sets.newHashSet(oldListeners); 
           newListeners.remove(listener);
           if (listeners.compareAndSet(oldListeners, newListeners)) {
             break;

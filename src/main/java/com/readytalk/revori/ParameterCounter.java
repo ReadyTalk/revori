@@ -8,10 +8,11 @@
 package com.readytalk.revori;
 
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Set;
 
 import javax.annotation.concurrent.NotThreadSafe;
+
+import com.google.common.collect.Sets;
 
 /**
  * This is an expression visitor to count the number of unique
@@ -20,7 +21,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @NotThreadSafe
 public class ParameterCounter implements ExpressionVisitor {
-  private final Set<Parameter> parameters = new HashSet();
+  private final Set<Parameter> parameters = Sets.newHashSet();
   private int count;
 
   /**

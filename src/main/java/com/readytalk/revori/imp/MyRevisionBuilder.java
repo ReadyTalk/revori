@@ -10,6 +10,7 @@ package com.readytalk.revori.imp;
 import static com.readytalk.revori.SourceFactory.reference;
 import static com.readytalk.revori.util.Util.expect;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -612,7 +613,7 @@ class MyRevisionBuilder implements RevisionBuilder {
 
       DiffIterator.DiffPair pair = new DiffIterator.DiffPair();
 
-      Set<View> viewSet = new HashSet();
+      Set<View> viewSet = Sets.newHashSet();
       while (iterator.next(pair)) {
         if (pair.fork != null) {
           for (NodeIterator indexes = new NodeIterator

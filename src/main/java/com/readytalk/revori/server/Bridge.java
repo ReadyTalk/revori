@@ -10,10 +10,11 @@ package com.readytalk.revori.server;
 import static com.readytalk.revori.util.Util.expect;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.readytalk.revori.DiffResult;
 import com.readytalk.revori.DuplicateKeyResolution;
 import com.readytalk.revori.Revision;
@@ -30,7 +31,7 @@ public class Bridge {
     };
 
   private final TaskHandler taskHandler;
-  private final Map<RevisionServer, Listener> listeners = new HashMap();
+  private final Map<RevisionServer, Listener> listeners = Maps.newHashMap();
 
   public Bridge(TaskHandler taskHandler) {
     this.taskHandler = taskHandler;
@@ -97,7 +98,7 @@ public class Bridge {
 
   private Set<Mapping> mappings(Node n) {
     if (n.mappings == null) {
-      n.mappings = new HashSet();
+      n.mappings = Sets.newHashSet();
     }
     return n.mappings;
   }
@@ -199,7 +200,7 @@ public class Bridge {
       };
     public final TaskHandler taskHandler;
     public final RevisionServer server;
-    public final Map<Comparable, Node> tree = new HashMap();
+    public final Map<Comparable, Node> tree = Maps.newHashMap();
     public Revision base = Revisions.Empty;
     public boolean active;
     public Subscription subscription;
@@ -324,7 +325,7 @@ public class Bridge {
         boolean visitedColumn = true;
         Map<Comparable, Node>[] trees = new Map[MaxDepth + 1];
         final DiffResult result = base.diff(head, true);
-        Set<Mapping> allMappings = new HashSet();
+        Set<Mapping> allMappings = Sets.newHashSet();
 
         trees[0] = tree;
 
@@ -426,7 +427,7 @@ public class Bridge {
 
   private static class Node {
     public final Comparable key;
-    public final Map<Comparable, Node> tree = new HashMap();
+    public final Map<Comparable, Node> tree = Maps.newHashMap();
     public Set<Mapping> mappings;
 
     public Node(Comparable key) {

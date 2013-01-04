@@ -14,6 +14,8 @@ import java.util.List;
 
 import javax.annotation.concurrent.NotThreadSafe;
 
+import com.google.common.collect.ImmutableList;
+
 /**
  * Class representing an index on a table.  Instances of this class
  * may used to specify a way to organize data for efficient access.
@@ -44,7 +46,7 @@ public final class Index implements Comparable<Index> {
    */
   public Index(Table table, List<Column<?>> primaryKey) {
     this.table = table;
-
+    
     List<Column<?>> copy = new ArrayList<Column<?>>(primaryKey);
 
     if (table.primaryKey != null) {
