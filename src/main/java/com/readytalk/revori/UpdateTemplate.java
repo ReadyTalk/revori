@@ -9,11 +9,11 @@ package com.readytalk.revori;
 
 import static com.readytalk.revori.util.Util.append;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import javax.annotation.concurrent.NotThreadSafe;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * Class representing a template for updates which is not bound to any
@@ -60,14 +60,12 @@ public final class UpdateTemplate implements PatchTemplate {
   {
     this.tableReference = tableReference;
     this.test = test;
-    this.columns = Collections.unmodifiableList(new ArrayList<Column<?>>(columns));
-    this.values = Collections.unmodifiableList(new ArrayList<Expression>(values));
-    this.parameterCount = ParameterCounter.countParameters
-      (append(this.values, test));
+    this.columns = ImmutableList.copyOf(columns);
+    this.values = ImmutableList.copyOf(values);
+    this.parameterCount = ParameterCounter.countParameters(append(this.values, test));
 
     if (this.columns.size() != this.values.size()) {
-      throw new IllegalArgumentException
-        ("column and value lists must be of equal length");
+      throw new IllegalArgumentException("column and value lists must be of equal length");
     }
   }
 
