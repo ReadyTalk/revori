@@ -7,7 +7,7 @@
 
 package com.readytalk.revori.server;
 
-import static com.readytalk.revori.util.Util.expect;
+import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Map;
 import java.util.Set;
@@ -215,7 +215,7 @@ public class Bridge {
         public void run(Mapping mapping, Object argument) {
           mapping.rightServer.merge(mapping.base, mapping.builder.commit());
           mapping.builder = null;
-          expect(mapping.depth == mapping.rightPath.length - 1);
+          checkArgument(mapping.depth == mapping.rightPath.length - 1);
         }
       };
 
@@ -376,7 +376,7 @@ public class Bridge {
 
                 newMappings = node.mappings;
                 if (newMappings != null) {
-                  expect(! newMappings.isEmpty());
+                  checkArgument(! newMappings.isEmpty());
                   mappings[depth] = newMappings;
                   map(newMappings, start);
                 }

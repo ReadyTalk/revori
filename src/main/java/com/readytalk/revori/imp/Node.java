@@ -7,7 +7,7 @@
 
 package com.readytalk.revori.imp;
 
-import static com.readytalk.revori.util.Util.expect;
+import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Comparator;
 
@@ -75,7 +75,7 @@ class Node {
   }
 
   private static Node leftRotate(Object token, Node n) {
-    if (Debug) expect(n.token == token);
+    if (Debug) checkArgument(n.token == token);
     Node child = getNode(token, n.right);
     n.right = child.left;
     child.left = n;
@@ -83,7 +83,7 @@ class Node {
   }
 
   private static Node rightRotate(Object token, Node n) {
-    if (Debug) expect(n.token == token);
+    if (Debug) checkArgument(n.token == token);
     Node child = getNode(token, n.left);
     n.left = child.right;
     child.right = n;
@@ -348,11 +348,11 @@ class Node {
     if (! dead.red) {
       // rebalance
       while (stack.top != null && ! child.red) {
-        if (Debug) expect(stack.top.token == token);
+        if (Debug) checkArgument(stack.top.token == token);
         if (child == stack.top.left) {
           Node sibling = stack.top.right = getNode(token, stack.top.right);
           if (sibling.red) {
-            if (Debug) expect(sibling.token == token);
+            if (Debug) checkArgument(sibling.token == token);
             sibling.red = false;
             stack.top.red = true;
             
@@ -360,10 +360,10 @@ class Node {
             if (stack.index == stack.base) {
               newRoot = n;
             } else if (stack.peek().right == stack.top) {
-              if (Debug) expect(stack.peek().token == token);
+              if (Debug) checkArgument(stack.peek().token == token);
               stack.peek().right = n;
             } else {
-              if (Debug) expect(stack.peek().token == token);
+              if (Debug) checkArgument(stack.peek().token == token);
               stack.peek().left = n;
             }
             Node parent = stack.top;
@@ -374,7 +374,7 @@ class Node {
           }
 
           if (! (sibling.left.red || sibling.right.red)) {
-            if (Debug) expect(sibling.token == token);
+            if (Debug) checkArgument(sibling.token == token);
             sibling.red = true;
             child = stack.top;
             stack.pop();
@@ -383,12 +383,12 @@ class Node {
               sibling.left = getNode(token, sibling.left);
               sibling.left.red = false;
 
-              if (Debug) expect(sibling.token == token);
+              if (Debug) checkArgument(sibling.token == token);
               sibling.red = true;
               sibling = stack.top.right = rightRotate(token, sibling);
             }
 
-            if (Debug) expect(sibling.token == token);
+            if (Debug) checkArgument(sibling.token == token);
             sibling.red = stack.top.red;
             stack.top.red = false;
 
@@ -399,10 +399,10 @@ class Node {
             if (stack.index == stack.base) {
               newRoot = n;
             } else if (stack.peek().right == stack.top) {
-              if (Debug) expect(stack.peek().token == token);
+              if (Debug) checkArgument(stack.peek().token == token);
               stack.peek().right = n;
             } else {
-              if (Debug) expect(stack.peek().token == token);
+              if (Debug) checkArgument(stack.peek().token == token);
               stack.peek().left = n;
             }
 
@@ -413,7 +413,7 @@ class Node {
           // this is just the above code with left and right swapped:
           Node sibling = stack.top.left = getNode(token, stack.top.left);
           if (sibling.red) {
-            if (Debug) expect(sibling.token == token);
+            if (Debug) checkArgument(sibling.token == token);
             sibling.red = false;
             stack.top.red = true;
             
@@ -421,10 +421,10 @@ class Node {
             if (stack.index == stack.base) {
               newRoot = n;
             } else if (stack.peek().left == stack.top) {
-              if (Debug) expect(stack.peek().token == token);
+              if (Debug) checkArgument(stack.peek().token == token);
               stack.peek().left = n;
             } else {
-              if (Debug) expect(stack.peek().token == token);
+              if (Debug) checkArgument(stack.peek().token == token);
               stack.peek().right = n;
             }
             Node parent = stack.top;
@@ -435,7 +435,7 @@ class Node {
           }
 
           if (! (sibling.right.red || sibling.left.red)) {
-            if (Debug) expect(sibling.token == token);
+            if (Debug) checkArgument(sibling.token == token);
             sibling.red = true;
             child = stack.top;
             stack.pop();
@@ -444,12 +444,12 @@ class Node {
               sibling.right = getNode(token, sibling.right);
               sibling.right.red = false;
 
-              if (Debug) expect(sibling.token == token);
+              if (Debug) checkArgument(sibling.token == token);
               sibling.red = true;
               sibling = stack.top.left = leftRotate(token, sibling);
             }
 
-            if (Debug) expect(sibling.token == token);
+            if (Debug) checkArgument(sibling.token == token);
             sibling.red = stack.top.red;
             stack.top.red = false;
 
@@ -460,10 +460,10 @@ class Node {
             if (stack.index == stack.base) {
               newRoot = n;
             } else if (stack.peek().left == stack.top) {
-              if (Debug) expect(stack.peek().token == token);
+              if (Debug) checkArgument(stack.peek().token == token);
               stack.peek().left = n;
             } else {
-              if (Debug) expect(stack.peek().token == token);
+              if (Debug) checkArgument(stack.peek().token == token);
               stack.peek().right = n;
             }
 
@@ -473,7 +473,7 @@ class Node {
         }
       }
 
-      if (Debug) expect(child.token == token);
+      if (Debug) checkArgument(child.token == token);
       child.red = false;
     }
 

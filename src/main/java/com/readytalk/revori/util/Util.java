@@ -8,6 +8,7 @@
 package com.readytalk.revori.util;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.readytalk.revori.Column;
 import com.readytalk.revori.DiffResult;
 import com.readytalk.revori.Revision;
@@ -22,16 +24,17 @@ import com.readytalk.revori.Table;
 import com.readytalk.revori.imp.Constants;
 
 public class Util {
-  private static final boolean Debug = true;
 
   public static <T> List<T> append(List<T> list, T ... elements) {
     return appendToList(list, elements);
   }
 
-  public static <T> List<T> appendToList(List<T> list, T[] elements) {
+  private static <T> List<T> appendToList(List<T> list, T[] elements) {
     List<T> result = new ArrayList<T>(list.size() + elements.length);
+    
     result.addAll(list);
-    for (T o: elements) result.add(o);
+    result.addAll(Arrays.asList(elements));
+    
     return result;
   }
   
@@ -40,13 +43,7 @@ public class Util {
   }
 
   public static <T> Set<T> set(T ... elements) {
-    return toSet(elements);
-  }
-
-  private static <T> Set<T> toSet(T[] elements) {
-    Set<T> set = new HashSet<T>(elements.length);
-    for (T o: elements) set.add(o);
-    return set;
+	return Sets.newHashSet(elements);
   }
 
   public static <T> Set<T> union(Collection<T> ... sets) {
@@ -55,12 +52,6 @@ public class Util {
       set.addAll(s);
     }
     return set;
-  }
-
-  public static void expect(boolean v) {
-    if (Debug && ! v) {
-      throw new RuntimeException();
-    }
   }
 
   public static <T extends Comparable<T>> int compare(Collection<T> a,
@@ -98,8 +89,6 @@ public class Util {
 
   public static String toString(Revision base, Revision fork) {
     StringBuilder sb = new StringBuilder();
-    // sb.append(" *** from\n").append(base).append(" *** to\n").append(fork)
-    //   .append("\n");
 
     final int MaxDepth = 16;
     Object[] path = new Object[MaxDepth];

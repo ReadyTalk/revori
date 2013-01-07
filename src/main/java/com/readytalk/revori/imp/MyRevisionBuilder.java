@@ -7,8 +7,8 @@
 
 package com.readytalk.revori.imp;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.readytalk.revori.SourceFactory.reference;
-import static com.readytalk.revori.util.Util.expect;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -248,7 +248,7 @@ class MyRevisionBuilder implements RevisionBuilder {
                               NodeStack baseStack,
                               NodeStack forkStack)
   {
-    expect(! index.equals(index.table.primaryKey));
+	checkArgument(!index.equals(index.table.primaryKey));
 
     TableIterator iterator
       = new TableIterator
@@ -282,7 +282,7 @@ class MyRevisionBuilder implements RevisionBuilder {
           (i + Constants.IndexDataBodyDepth,
            Node.find(tree, c, Compare.ColumnComparator).value, c.comparator);
 
-        expect(n.value == Node.Null);
+        checkArgument(n.value == Node.Null);
       
         n.value = tree;
       } break;
@@ -426,7 +426,7 @@ class MyRevisionBuilder implements RevisionBuilder {
                   values);
           }
         } else {
-          expect(n.value == Node.Null);
+          checkArgument(n.value == Node.Null);
         }
       
         n.value = makeTree(stack, view.columns, expressions);

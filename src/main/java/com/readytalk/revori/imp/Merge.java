@@ -7,12 +7,11 @@
 
 package com.readytalk.revori.imp;
 
-import static com.readytalk.revori.util.Util.expect;
-
 import java.util.Comparator;
 import java.util.Set;
 import java.util.TreeSet;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.readytalk.revori.Column;
 import com.readytalk.revori.ConflictResolver;
@@ -29,12 +28,6 @@ class Merge {
      ConflictResolver conflictResolver,
      ForeignKeyResolver foreignKeyResolver)
   {
-    // System.out.println("base:");
-    // Node.dump(base.root, System.out, 0);
-    // System.out.println("left:");
-    // Node.dump(left.root, System.out, 0);
-    // System.out.println("right:");
-    // Node.dump(right.root, System.out, 0);
 
     if (base.equals(right) || left.equals(right)) {
       return left;
@@ -87,7 +80,7 @@ class Merge {
       // rows from any other index data trees as we go
       while (true) {
         if (iterators[depth].next(triple)) {
-          expect(triple.base != Node.Null
+        	Preconditions.checkArgument(triple.base != Node.Null
                  && triple.left != Node.Null
                  && triple.right != Node.Null);
 
