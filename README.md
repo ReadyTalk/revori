@@ -33,20 +33,20 @@ Build
 #### Client
 
 You'll need to have the libreadline headers and library installed to
-build the client)
+build the client
 
-	$ gradle client:build
+	$ ./gradlew client:build
 
 #### Server
 
-	$ gradle :build
+	$ ./gradlew :build
 
 
 #### All
 
 If you want to build it all, just execute:
 
-	$ gradle
+	$ ./gradlew build
 
 
 Runtime
@@ -56,7 +56,7 @@ Runtime
 
 The following starts the Revori server, which listens to localhost:8017
 
-	$ gradle start
+	$ ./gradlew start
 
 #### Client
 
