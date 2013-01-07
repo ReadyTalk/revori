@@ -30,6 +30,13 @@ class ConnectionIntegrationTest(unittest.TestCase):
         self.client.send('drop database zoo')
         self.client.close()
     
+    def test_help(self):
+        self.client.send('help')
+        
+        val = self.client.recv()
+        
+        self.assertEqual(85, val.message.count('\n'))
+    
     def test_db_creation(self):
         self.client.send('create database zoo')
         
@@ -130,6 +137,15 @@ class TerminalIntegrationTest(unittest.TestCase):
         self.client.send('drop database zoo')
         self.client.close()
     
+    def test_casting_exception(self):
+        self.client.send('create table test (id int32, val int32, primary key (id))')
+        self.client.recv()
+        
+        self.client.send("insert into test values (1, 'foo')")
+        val = self.client.recv()
+        
+        self.assertEqual(4, val.code)
+    
     def test_transaction_rollback(self):
         self.client.send('create table test (id int32, val int32, primary key (id))')
         self.client.recv()
@@ -137,7 +153,7 @@ class TerminalIntegrationTest(unittest.TestCase):
         self.client.send('begin')
         self.client.recv()
         
-        self.client.send('insert into test (1, 1)')
+        self.client.send('insert into test values (1, 1)')
         self.client.recv()
         
         self.client.send('rollback')
@@ -170,6 +186,13 @@ class TerminalIntegrationTest(unittest.TestCase):
         self.assertEqual(3, val.code)
         self.assertFalse(val.copy_context)
     
+    def test_copy_no_table(self):
+        self.client.send('copy test from stdin')
+        val = self.client.recv()
+        
+        self.assertEqual('no such table: test', val.message)
+        self.assertFalse(val.copy_context)
+
     def test_table_script(self):
         self.client.send('create table animals(name string, sound string, class string, \
             primary key(name))')
