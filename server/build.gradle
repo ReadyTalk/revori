@@ -1,0 +1,80 @@
+buildscript {
+  repositories {
+    mavenCentral()
+  }
+  dependencies {
+    classpath 'com.mapvine:gradle-cobertura-plugin:1.0'
+  }
+}
+
+apply plugin: 'java'
+apply plugin: 'findbugs'
+apply plugin: 'cobertura'
+
+ext {
+  mainClassName='com.readytalk.revori.server.SQLServer'
+  serverPort='8017'
+  serverHost='localhost'
+}
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  findbugs 'com.google.code.findbugs:findbugs:2.0.1'
+  
+  testCompile 'junit:junit:4.11'
+  
+  compile (
+    ['com.google.code.findbugs:jsr305:2.0.1'],
+    ['com.google.code.findbugs:annotations:2.0.1'],
+  )
+}
+
+jar {
+  baseName = 'revori-server'
+}
+
+cobertura {
+  format = 'html'
+  includes = ['**/*.java']
+}
+
+findbugs {
+  ignoreFailures = true
+}
+
+test {
+  //Here due to an issue with cobertura and jre7.
+  jvmArgs "-XX:-UseSplitVerifier"
+}
+
+task start {
+  dependsOn 'build'
+
+  group = 'application'
+  description = 'Stop the server'
+
+  doLast {
+    ant.java(classname: mainClassName,
+             classpath: runtimeClasspath.asPath,
+             fork: true,
+             spawn: true) {
+      arg(value: serverHost)
+      arg(value: serverPort)
+    }
+  }
+}
+
+task stop {
+  group = 'application'
+  description = 'Stop the server'
+
+  doLast {
+    ant.exec(executable: 'pkill') {
+      arg(value: '-f')
+      arg(value: mainClassName)
+    } 
+  }
+}

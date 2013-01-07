@@ -23,7 +23,7 @@ Status
 The code is currently in an alpha state, meaning some stuff works,
 some stuff doesn't, and the API is not yet thoroughly documented and
 may change without warning.  If you're brave and want to start playing
-with it anyway, you can build and browse the JavaDoc (run `gradle
+with it anyway, you can build and browse the JavaDoc (run `./gradlew
 javadoc`) and consult the test/unittests directory for simple examples
 of how to use it.
 
@@ -39,7 +39,7 @@ build the client
 
 #### Server
 
-	$ ./gradlew :build
+	$ ./gradlew server:build
 
 
 #### All
@@ -54,16 +54,17 @@ Runtime
 
 #### Server
 
-The following starts the Revori server, which listens to localhost:8017
+The following starts/stops the Revori server, which listens to localhost:8017
 
-	$ ./gradlew start
+	$ ./gradlew server:[start,stop]
+
 
 #### Client
 
 You can use the SQL front-end client to test out Revori:
 
-
 	$ ./client/build/binaries/client localhost 8017
+
 
 Known Issues
 ------------
