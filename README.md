@@ -23,7 +23,7 @@ Status
 The code is currently in an alpha state, meaning some stuff works,
 some stuff doesn't, and the API is not yet thoroughly documented and
 may change without warning.  If you're brave and want to start playing
-with it anyway, you can build and browse the JavaDoc (run `gradle
+with it anyway, you can build and browse the JavaDoc (run `./gradlew
 javadoc`) and consult the test/unittests directory for simple examples
 of how to use it.
 
