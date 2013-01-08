@@ -7,10 +7,9 @@
 
 package com.readytalk.revori.imp;
 
-import static com.readytalk.revori.util.Util.list;
-
 import java.util.List;
 
+import com.google.common.collect.Lists;
 import com.readytalk.revori.imp.Interval.BoundType;
 
 class IntervalScan implements Scan {
@@ -56,10 +55,8 @@ class IntervalScan implements Scan {
       && high.evaluate(false) != Compare.Undefined;
   }
 
-  public List<Interval> evaluate() {
-    return list
-      (new Interval
-       ((Comparable) low.evaluate(false), lowBoundType,
-        (Comparable) high.evaluate(false), highBoundType));
-  }
+	public List<Interval> evaluate() {
+		return Lists.newArrayList(new Interval((Comparable) low.evaluate(false), lowBoundType, (Comparable) high
+				.evaluate(false), highBoundType));
+	}
 }

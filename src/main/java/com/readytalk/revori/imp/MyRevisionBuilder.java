@@ -7,18 +7,18 @@
 
 package com.readytalk.revori.imp;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.readytalk.revori.SourceFactory.reference;
-import static com.readytalk.revori.util.Util.expect;
-import static com.readytalk.revori.util.Util.list;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.readytalk.revori.Column;
 import com.readytalk.revori.DeleteTemplate;
 import com.readytalk.revori.DuplicateKeyException;
@@ -248,7 +248,7 @@ class MyRevisionBuilder implements RevisionBuilder {
                               NodeStack baseStack,
                               NodeStack forkStack)
   {
-    expect(! index.equals(index.table.primaryKey));
+	checkArgument(!index.equals(index.table.primaryKey));
 
     TableIterator iterator
       = new TableIterator
@@ -282,7 +282,7 @@ class MyRevisionBuilder implements RevisionBuilder {
           (i + Constants.IndexDataBodyDepth,
            Node.find(tree, c, Compare.ColumnComparator).value, c.comparator);
 
-        expect(n.value == Node.Null);
+        checkArgument(n.value == Node.Null);
       
         n.value = tree;
       } break;
@@ -426,7 +426,7 @@ class MyRevisionBuilder implements RevisionBuilder {
                   values);
           }
         } else {
-          expect(n.value == Node.Null);
+          checkArgument(n.value == Node.Null);
         }
       
         n.value = makeTree(stack, view.columns, expressions);
@@ -608,11 +608,11 @@ class MyRevisionBuilder implements RevisionBuilder {
       DiffIterator iterator = new DiffIterator
         (indexBase.root, indexUpdateBaseStack,
          result.root, indexUpdateForkStack,
-         list(Interval.Unbounded).iterator(), false, Compare.TableComparator);
+         Lists.newArrayList(Interval.Unbounded).iterator(), false, Compare.TableComparator);
 
       DiffIterator.DiffPair pair = new DiffIterator.DiffPair();
 
-      Set<View> viewSet = new HashSet();
+      Set<View> viewSet = Sets.newHashSet();
       while (iterator.next(pair)) {
         if (pair.fork != null) {
           for (NodeIterator indexes = new NodeIterator

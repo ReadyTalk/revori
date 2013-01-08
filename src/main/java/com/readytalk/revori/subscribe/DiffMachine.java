@@ -2,6 +2,8 @@ package com.readytalk.revori.subscribe;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.SetMultimap;
 import com.readytalk.revori.QueryTemplate;
 import com.readytalk.revori.Revisions;
 import com.readytalk.revori.Source;
@@ -9,15 +11,13 @@ import com.readytalk.revori.SourceVisitor;
 import com.readytalk.revori.Table;
 import com.readytalk.revori.TableReference;
 import com.readytalk.revori.server.RevisionServer;
-import com.readytalk.revori.util.SetMultimap;
-
 public class DiffMachine<Context> {
 
   private static boolean DebugThreads = true;
 
-  private final SetMultimap<Table, Matcher<Context>> newMatchers = new SetMultimap<Table, Matcher<Context>>();
+  private final SetMultimap<Table, Matcher<Context>> newMatchers = HashMultimap.create();
   
-  private final SetMultimap<Table, Matcher<Context>> matchersForTable = new SetMultimap<Table, Matcher<Context>>();
+  private final SetMultimap<Table, Matcher<Context>> matchersForTable = HashMultimap.create();
 
   private LinearRevision base;
   private LinearRevision head;

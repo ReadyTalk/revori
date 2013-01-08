@@ -50,8 +50,7 @@ public class EpidemicServer implements NetworkServer {
   private static final boolean DebugState = false;
   private static final boolean DebugUpdate = false;
 
-  private static final UUID DefaultInstance = UUID.fromString
-    ("1c8f9a38-aad4-0d8c-8d62-b52500a8dfa1");
+  private static final UUID DefaultInstance = UUID.fromString("1c8f9a38-aad4-0d8c-8d62-b52500a8dfa1");
 
   private static final int End = 0;
   private static final int Descend = 1;

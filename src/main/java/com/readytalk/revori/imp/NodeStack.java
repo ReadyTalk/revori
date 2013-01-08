@@ -7,9 +7,9 @@
 
 package com.readytalk.revori.imp;
 
-import static com.readytalk.revori.util.Util.expect;
-
 import javax.annotation.Nullable;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 class NodeStack {
   public static final NodeStack Null = new NodeStack((Node[]) null);
@@ -35,8 +35,8 @@ class NodeStack {
   }
 
   public NodeStack(NodeStack basis) {
-    expect(basis.array == null || basis.previous == null);
-    expect(!basis.obsolete); // make sure basis hasn't been popped (sanity check)
+	checkArgument(basis.array == null || basis.previous == null);
+    checkArgument(!basis.obsolete); // make sure basis hasn't been popped (sanity check)
 
     this.array = basis.array;
     this.base = basis.index;
@@ -49,8 +49,8 @@ class NodeStack {
   }
 
   public NodeStack popStack() {
-    expect(previous == null);
-    expect(array == null || next.previous == this);
+    checkArgument(previous == null);
+    checkArgument(array == null || next.previous == this);
 
     NodeStack s = next;
     s.previous = null;
@@ -68,7 +68,7 @@ class NodeStack {
   }
 
   public Node peek(int depth) {
-    expect(index - depth > base);
+    checkArgument(index - depth > base);
 
     return array[index - depth - 1];
   }
@@ -78,16 +78,16 @@ class NodeStack {
   }
 
   public void pop(int count) {
-    expect(count > 0);
-    expect(top != null);
+    checkArgument(count > 0);
+    checkArgument(top != null);
 
     if (index - count < base) {
-      expect(index - count == base - 1);
+      checkArgument(index - count == base - 1);
 
       index -= count - 1;
       top = null;
     } else {
-      expect(index - count >= base);
+      checkArgument(index - count >= base);
 
       index -= count;
       top = array[index];

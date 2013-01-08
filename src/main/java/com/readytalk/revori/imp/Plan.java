@@ -7,8 +7,7 @@
 
 package com.readytalk.revori.imp;
 
-import static com.readytalk.revori.util.Util.list;
-
+import com.google.common.collect.Lists;
 import com.readytalk.revori.Column;
 import com.readytalk.revori.Index;
 import com.readytalk.revori.TableReference;
@@ -113,7 +112,7 @@ class Plan {
                      Constants.IndexTable.primaryKey, Compare.IndexComparator,
                      tableReference.table, Constants.TableColumn.comparator),
        forkStack = new NodeStack(forkStack),
-       list(Interval.Unbounded).iterator(),
+       Lists.newArrayList(Interval.Unbounded).iterator(),
        true, Compare.IndexComparator);
 
     boolean baseEmpty

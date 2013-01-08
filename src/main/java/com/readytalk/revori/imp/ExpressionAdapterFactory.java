@@ -7,9 +7,9 @@
 
 package com.readytalk.revori.imp;
 
-import java.util.HashMap;
 import java.util.Map;
 
+import com.google.common.collect.Maps;
 import com.readytalk.revori.Aggregate;
 import com.readytalk.revori.BinaryOperation;
 import com.readytalk.revori.ColumnReference;
@@ -19,7 +19,7 @@ import com.readytalk.revori.Parameter;
 import com.readytalk.revori.UnaryOperation;
 
 class ExpressionAdapterFactory {
-  private static final Map<Class, Factory> factories = new HashMap();
+  private static final Map<Class, Factory> factories = Maps.newHashMap();
 
   static {
     factories.put(Constant.class, new Factory() {

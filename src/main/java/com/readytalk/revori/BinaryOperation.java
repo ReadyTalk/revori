@@ -7,9 +7,9 @@
 
 package com.readytalk.revori;
 
-import static com.readytalk.revori.util.Util.list;
-
 import javax.annotation.concurrent.NotThreadSafe;
+
+import com.google.common.collect.Lists;
 
 /**
  * Expression which, when evaluated, applies the specified operation
@@ -136,7 +136,7 @@ public class BinaryOperation implements Expression {
    * {@inheritDoc}
    */
   public Iterable<Expression> children() {
-    return list(leftOperand, rightOperand);
+    return Lists.newArrayList(leftOperand, rightOperand);
   }
 
   public int compareTo(Expression e) {

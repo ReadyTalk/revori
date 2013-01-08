@@ -9,12 +9,12 @@ package com.readytalk.revori.server;
 
 import static com.readytalk.revori.util.Util.set;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import com.google.common.collect.Maps;
 import com.readytalk.revori.Column;
 import com.readytalk.revori.ConflictResolver;
 import com.readytalk.revori.ForeignKeyResolver;
@@ -25,7 +25,7 @@ import com.readytalk.revori.subscribe.Subscription;
 
 public class TreeServer implements NetworkServer {
   private final RevisionServer localServer;
-  private final Map<NodeID,ServerState> serverStates = new HashMap();
+  private final Map<NodeID,ServerState> serverStates = Maps.newHashMap();
   private final NodeConflictResolver conflictResolver;
   private final ForeignKeyResolver foreignKeyResolver;
   private final Network network;

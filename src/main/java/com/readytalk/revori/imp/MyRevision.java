@@ -7,13 +7,11 @@
 
 package com.readytalk.revori.imp;
 
-import static com.readytalk.revori.util.Util.list;
-
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import com.google.common.collect.Lists;
 import com.readytalk.revori.Column;
 import com.readytalk.revori.ColumnReference;
 import com.readytalk.revori.ConflictResolver;
@@ -73,7 +71,7 @@ public class MyRevision implements Revision {
     }
 
     ExpressionContext context = new ExpressionContext
-      (new Object[0], list((ExpressionAdapter) adapter));
+      (new Object[0], Lists.newArrayList((ExpressionAdapter) adapter));
 
     context.columnReferences.add(adapter);
 
@@ -202,7 +200,7 @@ public class MyRevision implements Revision {
       builder.addView(view, this);
 
       TableReference tableReference = new TableReference(view.table);
-      List<Expression> expressions = new ArrayList(view.primaryKeyOffset);
+      List<Expression> expressions = Lists.newArrayListWithCapacity(view.primaryKeyOffset);
       for (int i = 0; i < view.primaryKeyOffset; ++i) {
         expressions.add
           (new ColumnReference(tableReference, view.columns.get(i)));

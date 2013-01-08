@@ -7,13 +7,13 @@
 
 package com.readytalk.revori;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import javax.annotation.concurrent.NotThreadSafe;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * Class representing a template for inserts which is not bound to any
@@ -62,8 +62,8 @@ public final class InsertTemplate implements PatchTemplate {
                         DuplicateKeyResolution duplicateKeyResolution)
   {
     this.table = table;
-    this.columns = Collections.unmodifiableList(new ArrayList<Column<?>>(columns));
-    this.values = Collections.unmodifiableList(new ArrayList<Expression>(values));
+    this.columns = ImmutableList.copyOf(columns);
+    this.values = ImmutableList.copyOf(values);
     this.duplicateKeyResolution = duplicateKeyResolution;
     this.parameterCount = ParameterCounter.countParameters(this.values);
 

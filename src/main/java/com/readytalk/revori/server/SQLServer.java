@@ -9,7 +9,6 @@ package com.readytalk.revori.server;
 
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.list;
 import static com.readytalk.revori.util.Util.set;
 
 import java.io.BufferedInputStream;
@@ -42,6 +41,8 @@ import java.util.logging.Logger;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.readytalk.revori.BinaryOperation;
 import com.readytalk.revori.BinaryOperation.Type;
 import com.readytalk.revori.Column;
@@ -95,7 +96,7 @@ public class SQLServer implements RevisionServer {
 
   private static final Tree Nothing = new Nothing();
 
-  private static final Map<Class, Validator> validators = new HashMap();
+  private static final Map<Class, Validator> validators = Maps.newHashMap();
 
   static {
     validators.put(Parameter.class, new Validator<Parameter>() {
@@ -249,16 +250,16 @@ public class SQLServer implements RevisionServer {
 
       this.insertOrUpdateDatabase = new InsertTemplate
         (databases, cols(databasesName, databasesDatabase),
-         list((Expression) new Parameter(), new Parameter()),
+         Lists.newArrayList((Expression) new Parameter(), new Parameter()),
          DuplicateKeyResolution.Overwrite);
 
       this.listDatabases = new QueryTemplate
-        (list(reference(databasesReference, databasesDatabase)),
+        (Lists.newArrayList(reference(databasesReference, databasesDatabase)),
          databasesReference,
          new Constant(true));
 
       this.findDatabase = new QueryTemplate
-        (list(reference(databasesReference, databasesDatabase)),
+        (Lists.newArrayList(reference(databasesReference, databasesDatabase)),
          databasesReference,
          new BinaryOperation
          (BinaryOperation.Type.Equal,
@@ -280,11 +281,11 @@ public class SQLServer implements RevisionServer {
 
       this.insertOrUpdateTable = new InsertTemplate
         (tables, cols(tablesDatabase, tablesName, tablesTable),
-         list((Expression) new Parameter(), new Parameter(), new Parameter()),
+         Lists.newArrayList((Expression) new Parameter(), new Parameter(), new Parameter()),
          DuplicateKeyResolution.Overwrite);
 
       this.listTables = new QueryTemplate
-        (list(reference(tablesReference, tablesTable)),
+        (Lists.newArrayList(reference(tablesReference, tablesTable)),
          tablesReference,
          new BinaryOperation
          (BinaryOperation.Type.Equal,
@@ -292,7 +293,7 @@ public class SQLServer implements RevisionServer {
           new Parameter()));
 
       this.findTable = new QueryTemplate
-        (list(reference(tablesReference, tablesTable)),
+        (Lists.newArrayList(reference(tablesReference, tablesTable)),
          tablesReference,
          new BinaryOperation
          (BinaryOperation.Type.And,
@@ -333,11 +334,11 @@ public class SQLServer implements RevisionServer {
 
       this.insertOrUpdateTag = new InsertTemplate
         (tags, cols(tagsDatabase, tagsName, tagsTag),
-         list((Expression) new Parameter(), new Parameter(), new Parameter()),
+         Lists.newArrayList((Expression) new Parameter(), new Parameter(), new Parameter()),
          DuplicateKeyResolution.Overwrite);
 
       this.listTags = new QueryTemplate
-        (list(reference(tagsReference, tagsTag)),
+        (Lists.newArrayList(reference(tagsReference, tagsTag)),
          tagsReference,
          new BinaryOperation
          (BinaryOperation.Type.Equal,
@@ -345,7 +346,7 @@ public class SQLServer implements RevisionServer {
           new Parameter()));
 
       this.findTag = new QueryTemplate
-        (list(reference(tagsReference, tagsTag)),
+        (Lists.newArrayList(reference(tagsReference, tagsTag)),
          tagsReference,
          new BinaryOperation
          (BinaryOperation.Type.And,
@@ -399,12 +400,6 @@ public class SQLServer implements RevisionServer {
     if (Debug && ! v) {
       throw new RuntimeException();
     }
-  }
-
-  private static boolean equal(Object left,
-                               Object right)
-  {
-    return left == right || (left != null && left.equals(right));
   }
 
   private static class LeftPreferenceConflictResolver
@@ -1125,7 +1120,7 @@ public class SQLServer implements RevisionServer {
     MyTable table = findTable(client, ((Name) tree.get(1)).value);
     MyTableReference tableReference = new MyTableReference
       (table, new TableReference(table.table));
-    List<MyTableReference> tableReferences = list(tableReference);
+    List<MyTableReference> tableReferences = Lists.newArrayList(tableReference);
 
     Tree operations = tree.get(3);
     List<Column<?>> columns = new ArrayList<Column<?>>();
@@ -1153,7 +1148,7 @@ public class SQLServer implements RevisionServer {
     MyTable table = findTable(client, ((Name) tree.get(2)).value);
     MyTableReference tableReference = new MyTableReference
       (table, new TableReference(table.table));
-    List<MyTableReference> tableReferences = list(tableReference);
+    List<MyTableReference> tableReferences = Lists.newArrayList(tableReference);
 
     return new DeleteTemplate
       (tableReference.reference, validate

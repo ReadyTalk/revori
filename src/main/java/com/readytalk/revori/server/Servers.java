@@ -7,10 +7,10 @@
 
 package com.readytalk.revori.server;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.collect.Lists;
 import com.readytalk.revori.ConflictResolver;
 import com.readytalk.revori.ForeignKeyResolver;
 import com.readytalk.revori.Revision;
@@ -72,7 +72,7 @@ public class Servers {
     protected final RevisionServer server;
     private final ConflictResolver conflictResolver;
     private final ForeignKeyResolver foreignKeyResolver;
-    private final List<Runnable> listeners = new ArrayList();
+    private final List<Runnable> listeners = Lists.newArrayList();
     private Revision head;
     private Revision base;
 
