@@ -39,7 +39,7 @@ build the client
 
 #### Server
 
-	$ ./gradlew :build
+	$ ./gradlew server:build
 
 
 #### All
@@ -54,16 +54,17 @@ Runtime
 
 #### Server
 
-The following starts the Revori server, which listens to localhost:8017
+The following starts/stops the Revori server, which listens to localhost:8017
 
-	$ ./gradlew start
+	$ ./gradlew server:[start,stop]
+
 
 #### Client
 
 You can use the SQL front-end client to test out Revori:
 
-
 	$ ./client/build/binaries/client localhost 8017
+
 
 Known Issues
 ------------
