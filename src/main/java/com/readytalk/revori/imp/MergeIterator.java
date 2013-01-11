@@ -7,9 +7,10 @@
 
 package com.readytalk.revori.imp;
 
-import static com.readytalk.revori.util.Util.expect;
 
 import java.util.Comparator;
+
+import static com.google.common.base.Preconditions.*;
 
 class MergeIterator {
   public final NodeStack base;
@@ -40,7 +41,7 @@ class MergeIterator {
       right.push(rightRoot);
     }
 
-    expect(base.top != Node.Null
+    checkArgument(base.top != Node.Null
            && left.top != Node.Null
            && right.top != Node.Null);
 
@@ -133,7 +134,7 @@ class MergeIterator {
       }
     }
 
-    expect(base.top != Node.Null
+    checkArgument(base.top != Node.Null
            && left.top != Node.Null
            && right.top != Node.Null);
   }

@@ -7,8 +7,7 @@
 
 package com.readytalk.revori.imp;
 
-import static com.readytalk.revori.util.Util.expect;
-
+import static com.google.common.base.Preconditions.checkArgument;
 import com.readytalk.revori.Join;
 import com.readytalk.revori.QueryResult;
 
@@ -165,7 +164,7 @@ public class JoinIterator implements SourceIterator {
 
       case Unchanged:
         sawRightUnchanged = true;
-        expect(leftType == QueryResult.Type.Unchanged);
+        checkArgument(leftType == QueryResult.Type.Unchanged);
         if (visitUnchanged) {
           return QueryResult.Type.Unchanged;
         }
@@ -187,7 +186,7 @@ public class JoinIterator implements SourceIterator {
 
       case Deleted:
         sawRightDelete = true;
-        expect(leftType == QueryResult.Type.Unchanged);
+        checkArgument(leftType == QueryResult.Type.Unchanged);
         return QueryResult.Type.Deleted;
 
       default: throw new RuntimeException

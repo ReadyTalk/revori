@@ -11,14 +11,16 @@ import static com.readytalk.revori.util.Util.append;
 import static com.readytalk.revori.util.Util.compare;
 import static com.readytalk.revori.util.Util.union;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
+import java.util.SortedSet;
 
 import javax.annotation.concurrent.NotThreadSafe;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedSet;
 
 /**
  * Class representing a template for queries which is not bound to any
@@ -51,7 +53,7 @@ public final class QueryTemplate implements Comparable<QueryTemplate> {
    */
   public final Expression test;
 
-  public final Set<Expression> groupingExpressions;
+  public final SortedSet<Expression> groupingExpressions;
 
   public final List<OrderExpression> orderByExpressions;
 
@@ -85,14 +87,14 @@ public final class QueryTemplate implements Comparable<QueryTemplate> {
                        Set<Expression> groupingExpressions,
                        List<OrderExpression> orderByExpressions)
   {
-    this.expressions = Collections.unmodifiableList
-      (new ArrayList<Expression>(expressions));
+    this.expressions = ImmutableList.copyOf(expressions);
+    this.groupingExpressions = ImmutableSortedSet.copyOf(groupingExpressions);
+    this.orderByExpressions = ImmutableList.copyOf(orderByExpressions);
+    
     this.source = source;
     this.test = test;
     this.parameterCount = ParameterCounter.countParameters
       (union(append(this.expressions, test), groupingExpressions));
-
-    groupingExpressions = new TreeSet(groupingExpressions);
 
     final boolean hasAggregates[] = new boolean[1];
     ExpressionVisitor v = new ExpressionVisitor() {
@@ -111,11 +113,6 @@ public final class QueryTemplate implements Comparable<QueryTemplate> {
 
     this.hasAggregates = hasAggregates[0];
 
-    this.groupingExpressions = Collections.unmodifiableSet
-      (groupingExpressions);
-
-    this.orderByExpressions = Collections.unmodifiableList
-      (orderByExpressions);
   }
 
   public int compareTo(QueryTemplate o) {

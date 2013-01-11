@@ -7,9 +7,9 @@
 
 package com.readytalk.revori.imp;
 
-import static com.readytalk.revori.util.Util.list;
-
 import java.util.List;
+
+import com.google.common.collect.Lists;
 
 class UnknownScan implements Scan {
   public static final UnknownScan Instance = new UnknownScan();
@@ -27,6 +27,6 @@ class UnknownScan implements Scan {
   }
 
   public List<Interval> evaluate() {
-    return list(Interval.Unbounded);
+    return Lists.newArrayList(Interval.Unbounded);
   }
 }

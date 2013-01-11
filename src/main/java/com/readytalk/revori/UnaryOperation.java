@@ -7,9 +7,9 @@
 
 package com.readytalk.revori;
 
-import static com.readytalk.revori.util.Util.list;
-
 import javax.annotation.concurrent.Immutable;
+
+import com.google.common.collect.Lists;
 
 /**
  * Expression which, when evaluated, applies the specified operation
@@ -88,7 +88,7 @@ public class UnaryOperation implements Expression {
    * {@inheritDoc}
    */
   public Iterable<Expression> children() {
-    return list(operand);
+    return Lists.newArrayList(operand);
   }
 
   public int compareTo(Expression e) {

@@ -20,30 +20,21 @@ import com.readytalk.revori.InsertTemplate;
 import com.readytalk.revori.PatchTemplate;
 
 class InsertTemplateAdapter implements PatchTemplateAdapter {
-  public int apply(MyRevisionBuilder builder,
-                   PatchTemplate template,
-                   Object[] parameters)
-  {
-    InsertTemplate insert = (InsertTemplate) template;
+	public int apply(MyRevisionBuilder builder, PatchTemplate template, Object[] parameters) {
+		InsertTemplate insert = (InsertTemplate) template;
 
-    ExpressionContext expressionContext = new ExpressionContext(parameters, null);
+		ExpressionContext expressionContext = new ExpressionContext(parameters, null);
 
-    Map<Column<?>, Object> map = new HashMap<Column<?>, Object>();
-    { int index = 0;
-      Iterator<Column<?>> columnIterator = insert.columns.iterator();
-      Iterator<Expression> valueIterator = insert.values.iterator();
-      while (columnIterator.hasNext()) {
-        Column<?> column = columnIterator.next();
+		Map<Column<?>, Object> map = new HashMap<Column<?>, Object>();
+		Iterator<Column<?>> columnIterator = insert.columns.iterator();
+		Iterator<Expression> valueIterator = insert.values.iterator();
+		while (columnIterator.hasNext()) {
+			Column<?> column = columnIterator.next();
 
-        map.put
-          (column, Compare.validate
-           (ExpressionAdapterFactory.makeAdapter
-            (expressionContext, valueIterator.next()).evaluate(false),
-            column.type));
-
-        ++ index;
-      }
-    }
+			map.put(column, Compare.validate(
+					ExpressionAdapterFactory.makeAdapter(expressionContext, valueIterator.next()).evaluate(false),
+					column.type));
+		}
       
     Node tree = Node.Null;
     Node.BlazeResult result = new Node.BlazeResult();

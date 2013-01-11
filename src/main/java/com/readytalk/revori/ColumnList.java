@@ -7,10 +7,9 @@
 
 package com.readytalk.revori;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Collections;
-import java.util.Arrays;
+
+import com.google.common.collect.ImmutableList;
 
 public final class ColumnList {
 
@@ -29,11 +28,11 @@ public final class ColumnList {
   public Object impData;
 
   public ColumnList(List<Column<?>> columns) {
-    this.columns = Collections.unmodifiableList(columns);
+    this.columns = ImmutableList.copyOf(columns);
   }
 
   public ColumnList(Column<?>... columns) {
-    this.columns = Collections.unmodifiableList(new ArrayList<Column<?>>(Arrays.asList(columns)));
+    this.columns = ImmutableList.copyOf(columns);
   }
 
 }

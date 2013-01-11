@@ -9,7 +9,7 @@ package com.readytalk.revori.test;
 
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.list;
+import com.google.common.collect.Lists;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
@@ -44,7 +44,7 @@ public class PartialIndexTest {
         PatchTemplate insert = new InsertTemplate
           (numbers,
            cols(number, color, shape),
-           list((Expression) new Parameter(),
+           Lists.newArrayList((Expression) new Parameter(),
                 new Parameter(),
                 new Parameter()), DuplicateKeyResolution.Throw);
 
@@ -61,7 +61,7 @@ public class PartialIndexTest {
         TableReference numbersReference = new TableReference(numbers);
 
         QueryTemplate numberEqual = new QueryTemplate
-          (list(reference(numbersReference, color),
+          (Lists.newArrayList(reference(numbersReference, color),
                 reference(numbersReference, shape)),
            numbersReference,
            new BinaryOperation
@@ -87,7 +87,7 @@ public class PartialIndexTest {
             reference(numbersReference, number),
             new Parameter()),
            cols(shape),
-           list((Expression) new Parameter()));
+           Lists.newArrayList((Expression) new Parameter()));
 
         builder = first.builder();
 
@@ -119,7 +119,7 @@ public class PartialIndexTest {
         PatchTemplate insert = new InsertTemplate
           (numbers,
            cols(number, color, shape),
-           list((Expression) new Parameter(),
+           Lists.newArrayList((Expression) new Parameter(),
                 new Parameter(),
                 new Parameter()), DuplicateKeyResolution.Throw);
 
@@ -136,7 +136,7 @@ public class PartialIndexTest {
         TableReference numbersReference = new TableReference(numbers);
 
         QueryTemplate numberEqual = new QueryTemplate
-          (list(reference(numbersReference, color),
+          (Lists.newArrayList(reference(numbersReference, color),
                 reference(numbersReference, shape)),
            numbersReference,
            new BinaryOperation

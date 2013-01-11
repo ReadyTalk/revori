@@ -9,7 +9,7 @@ package com.readytalk.revori.test;
 
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.list;
+import com.google.common.collect.Lists;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
@@ -46,7 +46,7 @@ public class MoreGeneralTest {
         PatchTemplate insert = new InsertTemplate
         (numbers,
          cols(number, name),
-         list((Expression) new Parameter(), new Parameter()),
+         Lists.newArrayList((Expression) new Parameter(), new Parameter()),
          DuplicateKeyResolution.Throw);
         
         builder.apply(insert, 42, "forty two");
@@ -55,7 +55,7 @@ public class MoreGeneralTest {
         
         TableReference numbersReference = new TableReference(numbers);
         QueryTemplate equal = new QueryTemplate
-        (list(reference(numbersReference, name)),
+        (Lists.newArrayList(reference(numbersReference, name)),
                 numbersReference,
                 new BinaryOperation
                 (BinaryOperation.Type.Equal,
@@ -102,7 +102,7 @@ public class MoreGeneralTest {
         PatchTemplate insert = new InsertTemplate
         (numbers,
          cols(number, name),
-         list((Expression) new Parameter(), new Parameter()),
+         Lists.newArrayList((Expression) new Parameter(), new Parameter()),
          DuplicateKeyResolution.Throw);
         
         RevisionBuilder builder = tail.builder();
@@ -119,7 +119,7 @@ public class MoreGeneralTest {
         TableReference numbersReference = new TableReference(numbers);
 
         QueryTemplate equal = new QueryTemplate
-        (list(reference(numbersReference, name)),
+        (Lists.newArrayList(reference(numbersReference, name)),
                 numbersReference,
                 new BinaryOperation
                 (BinaryOperation.Type.Equal,
@@ -206,7 +206,7 @@ public class MoreGeneralTest {
     PatchTemplate insert = new InsertTemplate
       (numbers,
        cols(number, name),
-       list((Expression) new Parameter(), new Parameter()),
+       Lists.newArrayList((Expression) new Parameter(), new Parameter()),
        DuplicateKeyResolution.Throw);
 
     RevisionBuilder builder = tail.builder();
@@ -222,7 +222,7 @@ public class MoreGeneralTest {
 
     TableReference numbersReference = new TableReference(numbers);
     QueryTemplate equal = new QueryTemplate
-      (list(reference(numbersReference, name)),
+      (Lists.newArrayList(reference(numbersReference, name)),
        numbersReference,
        new BinaryOperation
        (BinaryOperation.Type.Equal,
@@ -385,7 +385,7 @@ public class MoreGeneralTest {
         PatchTemplate insert = new InsertTemplate
         (numbers,
          cols(number, name),
-         list((Expression) new Parameter(), new Parameter()),
+         Lists.newArrayList((Expression) new Parameter(), new Parameter()),
          DuplicateKeyResolution.Throw);
         
         RevisionBuilder builder = tail.builder();
@@ -415,7 +415,7 @@ public class MoreGeneralTest {
           reference(numbersReference, number),
           new Parameter()),
          cols(name),
-         list((Expression) new Parameter()));
+         Lists.newArrayList((Expression) new Parameter()));
 
         builder = first.builder();
 
@@ -424,7 +424,7 @@ public class MoreGeneralTest {
         Revision second = builder.commit();
 
         QueryTemplate equal = new QueryTemplate
-        (list(reference(numbersReference, name)),
+        (Lists.newArrayList(reference(numbersReference, name)),
                 numbersReference,
                 new BinaryOperation
                 (BinaryOperation.Type.Equal,
@@ -477,7 +477,7 @@ public class MoreGeneralTest {
         Revision third = builder.commit();
 
         QueryTemplate any = new QueryTemplate
-        (list(reference(numbersReference, name)),
+        (Lists.newArrayList(reference(numbersReference, name)),
                 numbersReference,
                 new Constant(true));
         Object[] parameters5 = {};
@@ -510,7 +510,7 @@ public class MoreGeneralTest {
         PatchTemplate insert = new InsertTemplate
           (numbers,
            cols(number, name),
-           list((Expression) new Parameter(), new Parameter()),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         RevisionBuilder builder = tail.builder();
@@ -534,7 +534,7 @@ public class MoreGeneralTest {
         TableReference numbersReference = new TableReference(numbers);
 
         QueryTemplate nameEqual = new QueryTemplate
-          (list(reference(numbersReference, number),
+          (Lists.newArrayList(reference(numbersReference, number),
                 reference(numbersReference, name)),
            numbersReference,
            new BinaryOperation
@@ -559,7 +559,7 @@ public class MoreGeneralTest {
         assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate nameLessThan = new QueryTemplate
-          (list(reference(numbersReference, number),
+          (Lists.newArrayList(reference(numbersReference, number),
                 reference(numbersReference, name)),
            numbersReference,
            new BinaryOperation
@@ -596,7 +596,7 @@ public class MoreGeneralTest {
         PatchTemplate insert = new InsertTemplate
           (numbers,
            cols(number, name),
-           list((Expression) new Parameter(), new Parameter()),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         RevisionBuilder builder = tail.builder();
@@ -616,7 +616,7 @@ public class MoreGeneralTest {
             reference(numbersReference, number),
             new Parameter()),
            cols(number),
-           list((Expression) new Parameter()));
+           Lists.newArrayList((Expression) new Parameter()));
 
         builder = first.builder();
 
@@ -625,7 +625,7 @@ public class MoreGeneralTest {
         Revision second = builder.commit();
 
         QueryTemplate numberEqual = new QueryTemplate
-          (list(reference(numbersReference, name)),
+          (Lists.newArrayList(reference(numbersReference, name)),
            numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.Equal,

@@ -8,7 +8,6 @@
 package com.readytalk.revori;
 
 import static com.readytalk.revori.util.Util.compare;
-import static com.readytalk.revori.util.Util.list;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,6 +17,8 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import javax.annotation.concurrent.NotThreadSafe;
+
+import com.google.common.collect.Lists;
 
 @NotThreadSafe
 public final class View implements Comparable<View> {
@@ -144,7 +145,7 @@ public final class View implements Comparable<View> {
   public View(QueryTemplate query,
               Object ... parameters)
   {
-    this(query, list(parameters),
+    this(query, Lists.newArrayList(parameters),
          makeColumnList(query.expressions),
          Collections.<Column<?>>emptyList(),
          Collections.<Expression>emptyList(),

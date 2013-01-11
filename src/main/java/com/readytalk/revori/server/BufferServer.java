@@ -49,8 +49,7 @@ public class BufferServer implements RevisionServer {
   }
 
   public void merge(Revision base, Revision fork) {
-    head = base.merge
-      (head, fork, conflictResolver, foreignKeyResolver);
+    head = base.merge(head, fork, conflictResolver, foreignKeyResolver);
 
     if (! dirty) {
       dirty = true;

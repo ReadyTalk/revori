@@ -19,7 +19,7 @@ import static com.readytalk.revori.ExpressionFactory.or;
 import static com.readytalk.revori.ExpressionFactory.parameter;
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.list;
+import com.google.common.collect.Lists;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
@@ -50,7 +50,7 @@ public class OperationTest {
         PatchTemplate insert = new InsertTemplate
           (numbers,
            cols(number, name),
-           list(parameter(), parameter()),
+           Lists.newArrayList(parameter(), parameter()),
            DuplicateKeyResolution.Throw);
 
         RevisionBuilder builder = tail.builder();
@@ -74,7 +74,7 @@ public class OperationTest {
         TableReference numbersReference = new TableReference(numbers);
 
         QueryTemplate lessThan = new QueryTemplate
-          (list(reference(numbersReference, name)),
+          (Lists.newArrayList(reference(numbersReference, name)),
            numbersReference,
            lessThan(reference(numbersReference, number),
                     parameter()));
@@ -138,7 +138,7 @@ public class OperationTest {
         assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate greaterThan = new QueryTemplate
-          (list(reference(numbersReference, name)),
+          (Lists.newArrayList(reference(numbersReference, name)),
            numbersReference,
            greaterThan(reference(numbersReference, number), parameter()));
         Object[] parameters4 = { 13 };
@@ -164,7 +164,7 @@ public class OperationTest {
         assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate lessThanOrEqual = new QueryTemplate
-          (list(reference(numbersReference, name)),
+          (Lists.newArrayList(reference(numbersReference, name)),
            numbersReference,
            lessThanOrEqual(reference(numbersReference, number), parameter()));
         Object[] parameters7 = { 0 };
@@ -190,7 +190,7 @@ public class OperationTest {
         assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate greaterThanOrEqual = new QueryTemplate
-          (list(reference(numbersReference, name)),
+          (Lists.newArrayList(reference(numbersReference, name)),
            numbersReference,
            greaterThanOrEqual(reference(numbersReference, number),
                               parameter()));
@@ -217,7 +217,7 @@ public class OperationTest {
         assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate notEqual = new QueryTemplate
-          (list(reference(numbersReference, name)),
+          (Lists.newArrayList(reference(numbersReference, name)),
            numbersReference,
            notEqual(reference(numbersReference, number), parameter()));
         Object[] parameters13 = { 4 };
@@ -262,7 +262,7 @@ public class OperationTest {
         PatchTemplate insert = new InsertTemplate
           (numbers,
            cols(number, name),
-           list(parameter(), parameter()),
+           Lists.newArrayList(parameter(), parameter()),
            DuplicateKeyResolution.Throw);
 
         RevisionBuilder builder = tail.builder();
@@ -286,7 +286,7 @@ public class OperationTest {
         TableReference numbersReference = new TableReference(numbers);
 
         QueryTemplate greaterThanAndLessThan = new QueryTemplate
-          (list(reference(numbersReference, name)),
+          (Lists.newArrayList(reference(numbersReference, name)),
            numbersReference,
            and(greaterThan(reference(numbersReference, number), parameter()),
                lessThan(reference(numbersReference, number), parameter())));
@@ -313,7 +313,7 @@ public class OperationTest {
         assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate lessThanOrGreaterThan = new QueryTemplate
-          (list(reference(numbersReference, name)),
+          (Lists.newArrayList(reference(numbersReference, name)),
            numbersReference,
            or(lessThan(reference(numbersReference, number), parameter()),
               greaterThan(reference(numbersReference, number), parameter())));
@@ -400,7 +400,7 @@ public class OperationTest {
         assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate notEqual = new QueryTemplate
-          (list(reference(numbersReference, name)),
+          (Lists.newArrayList(reference(numbersReference, name)),
            numbersReference,
            not(equal(reference(numbersReference, number), parameter())));
         Object[] parameters6 = { 2 };
@@ -435,7 +435,7 @@ public class OperationTest {
 
         QueryTemplate greaterThanAndLessThanOrNotLessThanOrEqual
           = new QueryTemplate
-          (list(reference(numbersReference, name)),
+          (Lists.newArrayList(reference(numbersReference, name)),
            numbersReference,
            or(and(greaterThan(reference(numbersReference, number),
                               parameter()),

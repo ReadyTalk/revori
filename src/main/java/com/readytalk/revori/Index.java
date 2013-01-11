@@ -44,7 +44,7 @@ public final class Index implements Comparable<Index> {
    */
   public Index(Table table, List<Column<?>> primaryKey) {
     this.table = table;
-
+    
     List<Column<?>> copy = new ArrayList<Column<?>>(primaryKey);
 
     if (table.primaryKey != null) {
