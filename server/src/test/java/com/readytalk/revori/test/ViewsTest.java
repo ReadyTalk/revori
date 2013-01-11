@@ -15,7 +15,7 @@ import static com.readytalk.revori.ExpressionFactory.isNull;
 import static com.readytalk.revori.ExpressionFactory.not;
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.list;
+import com.google.common.collect.Lists;
 import static com.readytalk.revori.util.Util.set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -51,7 +51,7 @@ public class ViewsTest {
 
     QueryResult result = Revisions.Empty.diff
       (Revisions.Empty, new QueryTemplate
-       (list
+       (Lists.newArrayList
         (aggregate(Integer.class, Foldables.Count)),
         thingsReference, constant(true)));
 
@@ -62,7 +62,7 @@ public class ViewsTest {
     result = Revisions.Empty.diff
       (Revisions.Empty.builder().table(things).row(1).update(name, "pumpkin")
        .table(things).delete(1).commit(), new QueryTemplate
-       (list
+       (Lists.newArrayList
         (aggregate(Integer.class, Foldables.Count)),
         thingsReference, constant(true)));
 
@@ -73,7 +73,7 @@ public class ViewsTest {
     result = Revisions.Empty.diff
       (Revisions.Empty.builder().table(things).row(1).update(name, "pumpkin")
        .table(things).delete(1).commit(), new QueryTemplate
-       (list
+       (Lists.newArrayList
         (aggregate(Integer.class, Foldables.Count)),
         thingsReference,
         equal(reference(thingsReference, name), constant("pumpkin"))));
@@ -95,7 +95,7 @@ public class ViewsTest {
 
     result = Revisions.Empty.diff
       (head, new QueryTemplate
-       (list
+       (Lists.newArrayList
         (aggregate(Integer.class, Foldables.Count)),
         thingsReference, constant(true)));
 
@@ -104,7 +104,7 @@ public class ViewsTest {
     assertEquals(QueryResult.Type.End, result.nextRow());
 
     QueryTemplate group = new QueryTemplate
-      (list(reference(thingsReference, name),
+      (Lists.newArrayList(reference(thingsReference, name),
             aggregate(Integer.class, Foldables.Count)),
        thingsReference, constant(true),
        set(reference(thingsReference, name)));
@@ -124,7 +124,7 @@ public class ViewsTest {
 
     result = Revisions.Empty.diff
       (head, new QueryTemplate
-       (list(reference(thingsReference, name),
+       (Lists.newArrayList(reference(thingsReference, name),
              aggregate(Integer.class, Foldables.Count)),
         thingsReference, equal
         (aggregate(Integer.class, Foldables.Count), constant(3)),
@@ -185,7 +185,7 @@ public class ViewsTest {
 
     View view = new View
       (new QueryTemplate
-       (list(reference(thingsReference, name),
+       (Lists.newArrayList(reference(thingsReference, name),
              aggregate(Integer.class, Foldables.Sum,
                        reference(thingsReference, number))),
         thingsReference, constant(true),
@@ -193,7 +193,7 @@ public class ViewsTest {
        Collections.emptyList(),
        cols(name, sum),
        cols(name),
-       list(reference(thingsReference, name)),
+       Lists.newArrayList(reference(thingsReference, name)),
        "view");
 
     builder.add(view);
@@ -203,7 +203,7 @@ public class ViewsTest {
     TableReference viewReference = new TableReference(view.table);
 
     QueryTemplate viewQuery = new QueryTemplate
-      (list(reference(viewReference, name), reference(viewReference, sum)),
+      (Lists.newArrayList(reference(viewReference, name), reference(viewReference, sum)),
        viewReference, constant(true));
 
     QueryResult result = Revisions.Empty.diff(head, viewQuery);
@@ -297,7 +297,7 @@ public class ViewsTest {
 
     View view = new View
       (new QueryTemplate
-       (list(aggregate(Integer.class, Foldables.Count)),
+       (Lists.newArrayList(aggregate(Integer.class, Foldables.Count)),
         thingsReference, not(isNull(reference(thingsReference, name)))));
 
     builder.add(view);
@@ -307,7 +307,7 @@ public class ViewsTest {
     TableReference viewReference = new TableReference(view.table);
 
     QueryTemplate viewQuery = new QueryTemplate
-      (list(reference(viewReference, view.columns.get(0))),
+      (Lists.newArrayList(reference(viewReference, view.columns.get(0))),
        viewReference, constant(true));
 
     QueryResult result = Revisions.Empty.diff(head, viewQuery);
@@ -350,11 +350,11 @@ public class ViewsTest {
 
     QueryResult result = Revisions.Empty.diff
       (head, new QueryTemplate
-       (list
+       (Lists.newArrayList
         (reference(thingsReference, number), reference(thingsReference, name)),
         thingsReference, constant(true),
         Collections.<Expression>emptySet(),
-        list(new QueryTemplate.OrderExpression
+        Lists.newArrayList(new QueryTemplate.OrderExpression
              (reference(thingsReference, name), Comparators.Ascending))));
 
     assertEquals(QueryResult.Type.Inserted, result.nextRow());
@@ -379,11 +379,11 @@ public class ViewsTest {
 
     result = Revisions.Empty.diff
       (head, new QueryTemplate
-       (list
+       (Lists.newArrayList
         (reference(thingsReference, number), reference(thingsReference, name)),
         thingsReference, constant(true),
         Collections.<Expression>emptySet(),
-        list(new QueryTemplate.OrderExpression
+        Lists.newArrayList(new QueryTemplate.OrderExpression
              (reference(thingsReference, name), Comparators.Descending))));
 
     assertEquals(QueryResult.Type.Inserted, result.nextRow());

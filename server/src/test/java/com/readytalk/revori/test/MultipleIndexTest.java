@@ -9,7 +9,7 @@ package com.readytalk.revori.test;
 
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.list;
+import com.google.common.collect.Lists;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
@@ -46,7 +46,7 @@ public class MultipleIndexTest {
         PatchTemplate insert = new InsertTemplate
           (numbers,
            cols(number, name),
-           list((Expression) new Parameter(), new Parameter()),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         RevisionBuilder builder = tail.builder();
@@ -70,7 +70,7 @@ public class MultipleIndexTest {
         TableReference numbersReference = new TableReference(numbers);
         
         QueryTemplate greaterThanAndLessThan = new QueryTemplate
-          (list(reference(numbersReference, name)),
+          (Lists.newArrayList(reference(numbersReference, name)),
            numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.And,
@@ -199,7 +199,7 @@ public class MultipleIndexTest {
         PatchTemplate insert = new InsertTemplate
           (numbers,
            cols(number, name),
-           list((Expression) new Parameter(), new Parameter()),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         RevisionBuilder builder = tail.builder();
@@ -227,7 +227,7 @@ public class MultipleIndexTest {
             reference(numbersReference, number),
             new Parameter()),
            cols(name),
-           list((Expression) new Parameter()));
+           Lists.newArrayList((Expression) new Parameter()));
 
         builder.apply(updateNameWhereNumberEqual, 1, "uno");
         builder.apply(updateNameWhereNumberEqual, 2, "dos");
@@ -237,7 +237,7 @@ public class MultipleIndexTest {
         Revision first = builder.commit();
 
         QueryTemplate greaterThanAndLessThan = new QueryTemplate
-          (list(reference(numbersReference, name)),
+          (Lists.newArrayList(reference(numbersReference, name)),
            numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.And,
@@ -300,7 +300,7 @@ public class MultipleIndexTest {
         PatchTemplate insert = new InsertTemplate
           (numbers,
            cols(number, name),
-           list((Expression) new Parameter(), new Parameter()),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         RevisionBuilder builder = tail.builder();
@@ -342,7 +342,7 @@ public class MultipleIndexTest {
         Revision first = builder.commit();
 
         QueryTemplate greaterThanAndLessThanName = new QueryTemplate
-          (list(reference(numbersReference, name)),
+          (Lists.newArrayList(reference(numbersReference, name)),
            numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.And,
@@ -369,7 +369,7 @@ public class MultipleIndexTest {
         assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate greaterThanAndLessThanNumber = new QueryTemplate
-          (list(reference(numbersReference, name)),
+          (Lists.newArrayList(reference(numbersReference, name)),
            numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.And,
@@ -424,7 +424,7 @@ public class MultipleIndexTest {
         PatchTemplate insert = new InsertTemplate
           (numbers,
            cols(number, name),
-           list((Expression) new Parameter(), new Parameter()),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         RevisionBuilder builder = tail.builder();
@@ -466,7 +466,7 @@ public class MultipleIndexTest {
         TableReference numbersReference = new TableReference(numbers);
 
         QueryTemplate greaterThanAndLessThan = new QueryTemplate
-          (list(reference(numbersReference, name)),
+          (Lists.newArrayList(reference(numbersReference, name)),
            numbersReference,
            new BinaryOperation
            (BinaryOperation.Type.And,
@@ -524,7 +524,7 @@ public class MultipleIndexTest {
             reference(numbersReference, number),
             new Parameter()),
            cols(name),
-           list((Expression) new Parameter()));
+           Lists.newArrayList((Expression) new Parameter()));
 
         builder.apply(updateNameWhereNumberEqual, 1, "uno");
         builder.apply(updateNameWhereNumberEqual, 3, "tres");

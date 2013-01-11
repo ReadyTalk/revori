@@ -9,7 +9,7 @@ package com.readytalk.revori.test;
 
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.list;
+import com.google.common.collect.Lists;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
@@ -45,7 +45,7 @@ public class SimpleTest {
         PatchTemplate insert = new InsertTemplate
          (names,
           cols(key, firstName, lastName),
-          list((Expression) new Parameter(),
+          Lists.newArrayList((Expression) new Parameter(),
                new Parameter(),
                new Parameter()), DuplicateKeyResolution.Throw);
         builder.apply(insert, 1, "Charles", "Norris");
@@ -57,7 +57,7 @@ public class SimpleTest {
         TableReference namesReference = new TableReference(names);
         
         QueryTemplate any = new QueryTemplate
-          (list(reference(namesReference, key),
+          (Lists.newArrayList(reference(namesReference, key),
         		  reference(namesReference, firstName),
                   reference(namesReference, lastName)),
                   namesReference,
@@ -95,7 +95,7 @@ public class SimpleTest {
         PatchTemplate insert = new InsertTemplate
          (names,
                  cols(key, firstName, lastName, city),
-                 list((Expression) new Parameter(),
+                 Lists.newArrayList((Expression) new Parameter(),
                          new Parameter(),
                          new Parameter(),
                          new Parameter()), DuplicateKeyResolution.Throw);
@@ -108,7 +108,7 @@ public class SimpleTest {
         insert = new InsertTemplate
          (names,
                  cols(key, firstName),
-                 list((Expression) new Parameter(),
+                 Lists.newArrayList((Expression) new Parameter(),
                          new Parameter()), DuplicateKeyResolution.Throw);
         builder.apply(insert, 2, "Charleston");
         
@@ -119,7 +119,7 @@ public class SimpleTest {
         insert = new InsertTemplate
          (names,
                  cols(key, firstName, lastName, city, age),
-                 list((Expression) new Parameter(),
+                 Lists.newArrayList((Expression) new Parameter(),
                          new Parameter(),
                          new Parameter(),
                          new Parameter(),
@@ -133,7 +133,7 @@ public class SimpleTest {
         TableReference namesReference = new TableReference(names);
         
         QueryTemplate any = new QueryTemplate
-          (list(reference(namesReference, key),
+          (Lists.newArrayList(reference(namesReference, key),
         		  reference(namesReference, firstName),
                   reference(namesReference, lastName),
                   reference(namesReference, city),
@@ -178,7 +178,7 @@ public class SimpleTest {
           new InsertTemplate
            (names,
             cols(key, firstName, lastName),
-            list((Expression) new Parameter(),
+            Lists.newArrayList((Expression) new Parameter(),
                            new Parameter(),
                            new Parameter()), DuplicateKeyResolution.Throw);
           fail("Expected IllegalArgumentException...");

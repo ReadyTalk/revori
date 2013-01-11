@@ -7,9 +7,9 @@
 
 package com.readytalk.revori.imp;
 
-import java.util.ArrayList;
 import java.util.List;
 
+import com.google.common.collect.Lists;
 import com.readytalk.revori.imp.Interval.BoundType;
 
 class NegationScan implements Scan {
@@ -32,7 +32,7 @@ class NegationScan implements Scan {
   }
 
   public List<Interval> evaluate() {
-    List<Interval> result = new ArrayList();
+    List<Interval> result = Lists.newArrayList();
     Interval previous = null;
 
     for (Interval i: operand.evaluate()) {

@@ -7,10 +7,9 @@
 
 package com.readytalk.revori;
 
-import static com.readytalk.revori.util.Util.list;
-
 import javax.annotation.concurrent.Immutable;
 
+import com.google.common.collect.Lists;
 import com.readytalk.revori.QueryTemplate.OrderExpression;
 
 /**
@@ -157,6 +156,6 @@ public class ExpressionFactory {
                                          Foldable<T> function,
                                          Expression ... expressions)
   {
-    return new Aggregate<T>(type, function, list(expressions));
+    return new Aggregate<T>(type, function, Lists.newArrayList(expressions));
   }
 }

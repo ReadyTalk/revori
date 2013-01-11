@@ -12,7 +12,7 @@ import static com.readytalk.revori.ExpressionFactory.equal;
 import static com.readytalk.revori.ExpressionFactory.parameter;
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.list;
+import com.google.common.collect.Lists;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
@@ -163,13 +163,13 @@ public class ForeignKeysTest {
     PatchTemplate englishInsert = new InsertTemplate
       (englishNumbers,
        cols(number, name),
-       list(parameter(), parameter()),
+       Lists.newArrayList(parameter(), parameter()),
        Throw);
 
     PatchTemplate spanishInsert = new InsertTemplate
       (spanishNumbers,
        cols(number, name),
-       list(parameter(), parameter()),
+       Lists.newArrayList(parameter(), parameter()),
        Throw);
 
     builder.apply(englishInsert, 1, "one");
@@ -363,7 +363,7 @@ public class ForeignKeysTest {
     Column<String> name = new Column<String>(String.class);
     Table englishNumbers = new Table(cols(number), "english");
     Table spanishNumbers = new Table
-      (cols(number), "spanish", list(englishNumbers));
+      (cols(number), "spanish", Lists.newArrayList(englishNumbers));
 
     RevisionBuilder builder = Revisions.Empty.builder();
 
@@ -440,9 +440,9 @@ public class ForeignKeysTest {
 
     Table screens = new Table(cols(screenId), "screens");
     Table windows = new Table
-      (cols(screenId, windowId), "windows", list(screens));
+      (cols(screenId, windowId), "windows", Lists.newArrayList(screens));
     Table blocks = new Table
-      (cols(screenId, windowId, blockId), "blocks", list(windows));
+      (cols(screenId, windowId, blockId), "blocks", Lists.newArrayList(windows));
 
     RevisionBuilder builder = Revisions.Empty.builder();
     builder.add

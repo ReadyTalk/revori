@@ -12,8 +12,9 @@ import static com.readytalk.revori.util.Util.compare;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import com.google.common.collect.ImmutableList;
 
 public class Aggregate<T> implements Expression {
   private static final AtomicInteger nextOrder = new AtomicInteger();
@@ -29,8 +30,7 @@ public class Aggregate<T> implements Expression {
   {
     this.type = type;
     this.function = function;
-    this.expressions = Collections.unmodifiableList
-      (new ArrayList<Expression>(expressions));
+    this.expressions = ImmutableList.copyOf(expressions);
 
     this.order = nextOrder.getAndIncrement();
 
@@ -56,7 +56,7 @@ public class Aggregate<T> implements Expression {
   /**
    * {@inheritDoc}
    */
-  public Class typeConstraint() {
+  public Class<T> typeConstraint() {
     return type;
   }
 

@@ -7,12 +7,12 @@
 
 package com.readytalk.revori;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
 import javax.annotation.concurrent.NotThreadSafe;
+
+import com.google.common.collect.ImmutableList;
 
 @NotThreadSafe
 public final class ForeignKey implements Comparable<ForeignKey> {
@@ -30,11 +30,9 @@ public final class ForeignKey implements Comparable<ForeignKey> {
                     List<Column<?>> referentColumns)
   {
     this.refererTable = refererTable;
-    this.refererColumns = Collections.unmodifiableList
-      (new ArrayList<Column<?>>(refererColumns));
+    this.refererColumns = ImmutableList.copyOf(refererColumns);
     this.referentTable = referentTable;
-    this.referentColumns = Collections.unmodifiableList
-      (new ArrayList<Column<?>>(referentColumns));
+    this.referentColumns = ImmutableList.copyOf(referentColumns);
 
     if (this.refererColumns.size() !=this. referentColumns.size()) {
       throw new IllegalArgumentException

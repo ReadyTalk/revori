@@ -8,7 +8,7 @@
 package com.readytalk.revori.test;
 
 import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.list;
+import com.google.common.collect.Lists;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
@@ -51,7 +51,7 @@ public class MergeTest {
         PatchTemplate insert = new InsertTemplate
           (numbers,
            cols(number, name),
-           list((Expression) new Parameter(), new Parameter()),
+           Lists.newArrayList((Expression) new Parameter(), new Parameter()),
            DuplicateKeyResolution.Throw);
 
         RevisionBuilder builder = tail.builder();
@@ -81,7 +81,7 @@ public class MergeTest {
             new ColumnReference(numbersReference, number),
             new Parameter()),
            cols(name),
-           list((Expression) new Parameter()));
+           Lists.newArrayList((Expression) new Parameter()));
 
         builder = base.builder();
 
@@ -93,7 +93,7 @@ public class MergeTest {
         Revision merge = base.merge(left, right, null, null);
 
         QueryTemplate any = new QueryTemplate
-          (list((Expression) new ColumnReference(numbersReference, name)),
+          (Lists.newArrayList((Expression) new ColumnReference(numbersReference, name)),
            numbersReference,
            new Constant(true));
 

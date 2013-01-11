@@ -9,7 +9,7 @@ package com.readytalk.revori.test;
 
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.list;
+import com.google.common.collect.Lists;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
@@ -48,7 +48,7 @@ public class IndexesTest {
         PatchTemplate insert = new InsertTemplate
           (places,
            cols(country, state, city, zip, color),
-           list((Expression) new Parameter(),
+           Lists.newArrayList((Expression) new Parameter(),
                 new Parameter(),
                 new Parameter(),
                 new Parameter(),
@@ -76,7 +76,7 @@ public class IndexesTest {
         TableReference placesReference = new TableReference(places);
 
         QueryTemplate stateEqual = new QueryTemplate
-          (list(reference(placesReference, color),
+          (Lists.newArrayList(reference(placesReference, color),
                 reference(placesReference, zip)),
            placesReference,
            new BinaryOperation
@@ -124,7 +124,7 @@ public class IndexesTest {
         assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate countryEqual = new QueryTemplate
-          (list(reference(placesReference, color),
+          (Lists.newArrayList(reference(placesReference, color),
                 reference(placesReference, city)),
            placesReference,
            new BinaryOperation
@@ -152,7 +152,7 @@ public class IndexesTest {
         assertEquals(QueryResult.Type.End, result.nextRow());
 
         QueryTemplate countryStateCityEqual = new QueryTemplate
-          (list(reference(placesReference, color),
+          (Lists.newArrayList(reference(placesReference, color),
                 reference(placesReference, city)),
            placesReference,
            new BinaryOperation
@@ -200,7 +200,7 @@ public class IndexesTest {
     PatchTemplate insert = new InsertTemplate
       (places,
        cols(country, state, city, zip, color),
-       list((Expression) new Parameter(),
+       Lists.newArrayList((Expression) new Parameter(),
             new Parameter(),
             new Parameter(),
             new Parameter(),
@@ -269,7 +269,7 @@ public class IndexesTest {
     PatchTemplate insert = new InsertTemplate
       (places,
        cols(country, state, city, zip, color),
-       list((Expression) new Parameter(),
+       Lists.newArrayList((Expression) new Parameter(),
             new Parameter(),
             new Parameter(),
             new Parameter(),
@@ -341,7 +341,7 @@ public class IndexesTest {
     PatchTemplate insert = new InsertTemplate
       (places,
        cols(country, state, city, zip, color),
-       list((Expression) new Parameter(),
+       Lists.newArrayList((Expression) new Parameter(),
             new Parameter(),
             new Parameter(),
             new Parameter(),

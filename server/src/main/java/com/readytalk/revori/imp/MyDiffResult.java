@@ -7,12 +7,11 @@
 
 package com.readytalk.revori.imp;
 
-import static com.readytalk.revori.util.Util.list;
-
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import com.google.common.collect.Lists;
 import com.readytalk.revori.Column;
 import com.readytalk.revori.DiffResult;
 import com.readytalk.revori.Index;
@@ -110,7 +109,7 @@ class MyDiffResult implements DiffResult {
        this.baseStack = new NodeStack(baseStack),
        fork.root,
        this.forkStack = new NodeStack(forkStack),
-       list(Interval.Unbounded).iterator(),
+       Lists.newArrayList(Interval.Unbounded).iterator(),
        false, Compare.TableComparator);
 
     pairs[0] = new DiffPair();
@@ -287,7 +286,7 @@ class MyDiffResult implements DiffResult {
        baseStack = new NodeStack(baseStack),
        fork == null ? Node.Null : (Node) fork.value,
        forkStack = new NodeStack(forkStack),
-       list(Interval.Unbounded).iterator(),
+       Lists.newArrayList(Interval.Unbounded).iterator(),
        false, depth == Constants.IndexDataDepth ? Compare.IndexComparator
        : (depth == bottom ? Compare.ColumnComparator
           : table.primaryKey.columns.get

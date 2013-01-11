@@ -7,7 +7,7 @@
 
 package com.readytalk.revori;
 
-import static com.readytalk.revori.util.Util.list;
+import com.google.common.collect.Lists;
 
 /**
  * Class representing a template for deletes which is not bound to any
@@ -37,7 +37,7 @@ public final class DeleteTemplate implements PatchTemplate {
   {
     this.tableReference = tableReference;
     this.test = test;
-    this.parameterCount = ParameterCounter.countParameters(list(test));
+    this.parameterCount = ParameterCounter.countParameters(Lists.newArrayList(test));
   }
 
   /**
