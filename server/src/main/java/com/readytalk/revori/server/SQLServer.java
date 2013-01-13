@@ -7,11 +7,40 @@
 
 package com.readytalk.revori.server;
 
-import static com.readytalk.revori.ExpressionFactory.reference;
-import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.set;
-import static com.readytalk.revori.util.Util.convert;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.readytalk.revori.BinaryOperation;
+import com.readytalk.revori.BinaryOperation.Type;
+import com.readytalk.revori.Column;
+import com.readytalk.revori.ColumnReference;
+import com.readytalk.revori.Comparators;
+import com.readytalk.revori.ConflictResolver;
+import com.readytalk.revori.Constant;
+import com.readytalk.revori.DeleteTemplate;
+import com.readytalk.revori.DuplicateKeyResolution;
+import com.readytalk.revori.Expression;
+import com.readytalk.revori.ForeignKeyResolvers;
+import com.readytalk.revori.InsertTemplate;
+import com.readytalk.revori.Join;
+import com.readytalk.revori.Parameter;
+import com.readytalk.revori.PatchTemplate;
+import com.readytalk.revori.QueryResult;
+import com.readytalk.revori.QueryTemplate;
+import com.readytalk.revori.QueryTemplate.OrderExpression;
+import com.readytalk.revori.Revision;
+import com.readytalk.revori.RevisionBuilder;
+import com.readytalk.revori.Revisions;
+import com.readytalk.revori.Source;
+import com.readytalk.revori.Table;
+import com.readytalk.revori.TableReference;
+import com.readytalk.revori.UnaryOperation;
+import com.readytalk.revori.UpdateTemplate;
+import com.readytalk.revori.server.protocol.Stringable;
+import com.readytalk.revori.subscribe.Subscription;
+import com.readytalk.revori.util.BufferOutputStream;
 
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
@@ -39,17 +68,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.NotThreadSafe;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.readytalk.revori.*;
-import com.readytalk.revori.BinaryOperation.Type;
-import com.readytalk.revori.QueryTemplate.OrderExpression;
-import com.readytalk.revori.server.protocol.Stringable;
-import com.readytalk.revori.subscribe.Subscription;
-import com.readytalk.revori.util.BufferOutputStream;
+import static com.readytalk.revori.ExpressionFactory.reference;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.util.Util.convert;
+import static com.readytalk.revori.util.Util.set;
 
 @NotThreadSafe
 public class SQLServer implements RevisionServer {
