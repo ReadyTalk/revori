@@ -11,6 +11,8 @@ import java.util.Collections;
 
 import javax.annotation.concurrent.Immutable;
 
+import com.google.common.base.Objects;
+
 /**
  * Type representing a specific reference to a column.  A query may
  * make multiple references to the same column (e.g. when joining a
@@ -52,7 +54,7 @@ public final class ColumnReference<T> implements Expression {
   /**
    * {@inheritDoc}
    */
-  public Class typeConstraint() {
+  public Class<T> typeConstraint() {
     return column.type;
   }
 
@@ -82,5 +84,9 @@ public final class ColumnReference<T> implements Expression {
 
   public boolean equals(Object o) {
     return o instanceof ColumnReference && compareTo((ColumnReference<T>) o) == 0;
+  }
+  
+  public int hashCode() {
+	  return Objects.hashCode(column, tableReference);
   }
 }

@@ -24,7 +24,10 @@ repositories {
 dependencies {
   findbugs 'com.google.code.findbugs:findbugs:2.0.1'
   
-  testCompile 'junit:junit:4.11'
+  testCompile (
+  	['junit:junit:4.11'],
+  	['org.mockito:mockito-all:1.9.5'],
+  )
   
   compile (
     ['com.google.code.findbugs:jsr305:2.0.1'],
