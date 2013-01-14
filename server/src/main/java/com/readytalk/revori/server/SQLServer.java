@@ -35,8 +35,8 @@ import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -75,10 +75,9 @@ import com.readytalk.revori.util.BufferOutputStream;
 
 @NotThreadSafe
 public class SQLServer implements RevisionServer {
-  private static final boolean Verbose = false;
   private static final boolean Debug = true;
 
-  private static final Logger log = Logger.getLogger("SQLServer");
+  private static final Logger log = LoggerFactory.getLogger(SQLServer.class);
 
   public enum Request {
     Execute, Complete;
@@ -485,7 +484,7 @@ public class SQLServer implements RevisionServer {
           channel.close();
         }
       } catch (Exception e) {
-        log.log(Level.WARNING, null, e);
+        log.warn("Problem with channel.", e);
       }
     }
   }
@@ -1573,7 +1572,7 @@ public class SQLServer implements RevisionServer {
         ++ c.count;
       } catch (Exception e) {
         c.trouble = true;
-        log.log(Level.WARNING, null, e);
+        log.warn("Trouble with copy operation.", e);
       }
     }
   }
@@ -2605,9 +2604,7 @@ public class SQLServer implements RevisionServer {
     String s = tokenize(readString(in));
     try {
       if (client.copyContext == null) {
-        if (Verbose) {
-          log.info("execute \"" + s + "\"");
-        }
+        log.debug("execute \"{}\"", s);
         ParseResult result = client.server.parser.parse
           (new ParseContext(client, s), s, true);
         if (result.task != null) {
@@ -2623,7 +2620,7 @@ public class SQLServer implements RevisionServer {
       out.write(Response.Error.ordinal());
       String message = e.getMessage();
       writeString(out, message == null ? e.getClass().getName() : message); 
-      log.log(Level.WARNING, null, e);       
+      log.warn("Problem executing request.", e);
     }
   }
 
@@ -2633,31 +2630,23 @@ public class SQLServer implements RevisionServer {
     throws IOException
   {
     String s = tokenize(readString(in));
-    if (Verbose) {
-      log.info("complete \"" + s + "\"");
-    }
+    log.info("complete \"{}\"", s);
     if (client.copyContext == null) {
       ParseResult result = client.server.parser.parse
         (new ParseContext(client, s), s, true);
       out.write(Response.Success.ordinal());
       if (result.completions == null) {
-        if (Verbose) {
-          log.info("no completions");
-        }
+        log.debug("no completions");
         writeInteger(out, 0);
       } else {
-        if (Verbose) {
-          log.info("completions: " + result.completions);
-        }
+        log.debug("completions: {}", result.completions);
         writeInteger(out, result.completions.size());
         for (String completion: result.completions) {
           writeString(out, completion);
         }
       }
     } else {
-      if (Verbose) {
-        log.info("no completions in copy mode");
-      }
+      log.debug("no completions in copy mode");
       out.write(Response.Success.ordinal());
       writeInteger(out, 0);
     }

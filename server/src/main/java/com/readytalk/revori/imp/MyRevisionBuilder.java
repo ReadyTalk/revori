@@ -19,6 +19,9 @@ import java.util.Set;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.readytalk.revori.Column;
 import com.readytalk.revori.DeleteTemplate;
 import com.readytalk.revori.DuplicateKeyException;
@@ -43,6 +46,8 @@ import com.readytalk.revori.View;
 import com.readytalk.revori.util.Util;
 
 class MyRevisionBuilder implements RevisionBuilder {
+  private static final Logger log = LoggerFactory.getLogger(RevisionBuilder.class);
+
   private static final Map<Class, PatchTemplateAdapter> adapters
     = new HashMap<Class, PatchTemplateAdapter>();
 
@@ -337,12 +342,7 @@ class MyRevisionBuilder implements RevisionBuilder {
                              NodeStack baseStack,
                              NodeStack forkStack)
   {
-    final boolean Verbose = false;
-
-    if (Verbose) {
-      System.err.println("update " + view + " diff "
-                         + Util.toString(base, result));
-    }
+    log.debug("update " + view + " diff " + Util.toString(base, result));
 
     MyQueryResult qr = new MyQueryResult
       (base, baseStack, result, forkStack, view.query,
@@ -405,10 +405,8 @@ class MyRevisionBuilder implements RevisionBuilder {
            expressions.get(view.primaryKeyOffset + i).evaluate(true),
            keyColumns.get(i).comparator);
 
-        if (Verbose) {
-          System.err.println("inserted " + Util.toString
-                             (keys, 0, Constants.IndexDataBodyDepth + i + 1));
-        }
+        log.debug("inserted " +
+            Util.toString(keys, 0, Constants.IndexDataBodyDepth + i + 1));
 
         if (view.query.hasAggregates) {
           int columnOffset = view.aggregateOffset;
@@ -447,9 +445,7 @@ class MyRevisionBuilder implements RevisionBuilder {
         }
         int index = keyColumns.size() - 1 + Constants.IndexDataBodyDepth;
 
-        if (Verbose) {
-          System.err.println("deleted " + Util.toString(keys, 0, index + 1));
-        }
+        log.debug("deleted " + Util.toString(keys, 0, index + 1));
 
         if (view.query.hasAggregates) {
           Node n = find(index);
@@ -537,7 +533,7 @@ class MyRevisionBuilder implements RevisionBuilder {
         QueryResult.Type type = qr.nextRow();
         switch (type) {
         case End:
-          if (Verbose) System.err.println("updated " + view);
+          log.debug("updated " + view);
           return;
 
         case Inserted:
@@ -559,12 +555,18 @@ class MyRevisionBuilder implements RevisionBuilder {
                Compare.ColumnComparator).value;
           }
 
-          // System.err.print("filter: ");
-          // for (ColumnReferenceAdapter r: qr.expressionContext.columnReferences)
-          // {
-          //   System.err.print(r.column + ":" + r.value + " ");
-          // }
-          // System.err.println(": " + qr.test.evaluate(false));
+          if (log.isTraceEnabled()){
+            //todo: implement toString() methods for these objects
+            StringBuilder filter = new StringBuilder("filter: \n");
+
+            for (ColumnReferenceAdapter r: qr.expressionContext.columnReferences)
+            {
+              filter.append(r.column).append(":").append(r.value).append(" ");
+            }
+
+            filter.append(": ").append(qr.test.evaluate(false)).append("\n");
+            log.trace(filter.toString());
+          }
 
           if (qr.test.evaluate(false) == Boolean.FALSE) {
             // todo: rather than delete this row from the view we
