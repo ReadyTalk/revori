@@ -1,4 +1,5 @@
 .gradle
+.DS_Store
 build
 dist
 
@@ -11,5 +12,10 @@ dist
 *.pyc
 *.egg-info
 
+# Eclipse IDE files #
 .classpath
 .project
+
+# Idea IDE files #
+.idea
+*.iml
