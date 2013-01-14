@@ -146,4 +146,18 @@ public class Util {
       }
     }
   }
+
+  public static Object convert(Class<?> type,
+                                String value)
+  {
+    if (type == Integer.class
+        || type == Long.class)
+    {
+      return Long.parseLong(value.trim());
+    } else if (type == String.class) {
+      return value;
+    } else {
+      throw new RuntimeException("unexpected type: " + type);
+    }
+  }
 }

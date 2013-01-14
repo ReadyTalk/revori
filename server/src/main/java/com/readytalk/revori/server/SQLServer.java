@@ -7,40 +7,6 @@
 
 package com.readytalk.revori.server;
 
-import static com.readytalk.revori.ExpressionFactory.reference;
-import static com.readytalk.revori.util.Util.cols;
-import static com.readytalk.revori.util.Util.set;
-
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.Reader;
-import java.net.InetSocketAddress;
-import java.nio.channels.Channels;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.NotThreadSafe;
-
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.readytalk.revori.BinaryOperation;
@@ -72,6 +38,40 @@ import com.readytalk.revori.UpdateTemplate;
 import com.readytalk.revori.server.protocol.Stringable;
 import com.readytalk.revori.subscribe.Subscription;
 import com.readytalk.revori.util.BufferOutputStream;
+
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.Reader;
+import java.net.InetSocketAddress;
+import java.nio.channels.Channels;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import static com.readytalk.revori.ExpressionFactory.reference;
+import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.util.Util.convert;
+import static com.readytalk.revori.util.Util.set;
 
 @NotThreadSafe
 public class SQLServer implements RevisionServer {
@@ -1484,20 +1484,6 @@ public class SQLServer implements RevisionServer {
       return count;
     } finally {
       popTransaction(client);
-    }
-  }
-
-  private static Object convert(Class<?> type,
-                                String value)
-  {
-    if (type == Integer.class
-        || type == Long.class)
-    {
-      return Long.parseLong(value);
-    } else if (type == String.class) {
-      return value;
-    } else {
-      throw new RuntimeException("unexpected type: " + type);
     }
   }
 
