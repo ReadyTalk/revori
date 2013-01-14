@@ -17,7 +17,7 @@ import javax.annotation.concurrent.ThreadSafe;
  * of interest in a query or update.
  */
 @ThreadSafe
-public final class Column<T> implements Comparable<Column<?>> {
+public class Column<T> implements Comparable<Column<?>> {
   @GuardedBy("Column.class")
   private static long nextId = 1;
 

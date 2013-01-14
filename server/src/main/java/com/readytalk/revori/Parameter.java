@@ -12,6 +12,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.google.common.base.Objects;
+
 
 /**
  * Type representing an expression whose value will be supplied
@@ -43,7 +45,7 @@ public class Parameter implements Expression {
   /**
    * {@inheritDoc}
    */
-  public Class typeConstraint() {
+  public Class<?> typeConstraint() {
     return null;
   }
 
@@ -68,5 +70,9 @@ public class Parameter implements Expression {
 
   public boolean equals(Object o) {
     return o instanceof Parameter && compareTo((Parameter) o) == 0;
+  }
+  
+  public int hashCode() {
+	  return order;
   }
 }

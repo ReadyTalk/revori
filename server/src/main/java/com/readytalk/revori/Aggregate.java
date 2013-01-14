@@ -14,8 +14,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.annotation.concurrent.ThreadSafe;
+
+import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 
+@ThreadSafe
 public class Aggregate<T> implements Expression {
   private static final AtomicInteger nextOrder = new AtomicInteger();
 
@@ -95,5 +99,9 @@ public class Aggregate<T> implements Expression {
 
   public boolean equals(Object o) {
     return o instanceof Aggregate && compareTo((Aggregate) o) == 0;
+  }
+  
+  public int hashCode() {
+	  return Objects.hashCode(type.getName(), expressions, function);
   }
 }
