@@ -41,8 +41,13 @@ import com.readytalk.revori.subscribe.Subscription;
 import com.readytalk.revori.util.BufferOutputStream;
 import com.readytalk.revori.util.Util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @ThreadSafe
 public class EpidemicServer implements NetworkServer {
+  private static final Logger log = LoggerFactory.getLogger(EpidemicServer.class);
+
   private static final boolean DebugHello = false;
   private static final boolean DebugView = false;
   private static final boolean DebugSend = false;
@@ -126,7 +131,7 @@ public class EpidemicServer implements NetworkServer {
   }
 
   private void debugMessage(String message) {
-    System.err.println(id + ": " + (localNode != null ? localNode.key.toString() : "(null)") + ": " + message);
+    log.debug(id + ": " + (localNode != null ? localNode.key.toString() : "(null)") + ": " + message);
   }
 
   public synchronized Subscription registerListener(final Runnable listener) {
