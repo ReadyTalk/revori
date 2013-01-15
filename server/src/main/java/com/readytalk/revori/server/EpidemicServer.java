@@ -21,6 +21,11 @@ import java.util.UUID;
 
 import javax.annotation.concurrent.ThreadSafe;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
+
 import com.readytalk.revori.Column;
 import com.readytalk.revori.ConflictResolver;
 import com.readytalk.revori.DiffResult;
@@ -41,20 +46,22 @@ import com.readytalk.revori.subscribe.Subscription;
 import com.readytalk.revori.util.BufferOutputStream;
 import com.readytalk.revori.util.Util;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 @ThreadSafe
 public class EpidemicServer implements NetworkServer {
 	private static final Logger log = LoggerFactory
 			.getLogger(EpidemicServer.class);
-
-	private static final boolean DebugHello = false;
-	private static final boolean DebugView = false;
-	private static final boolean DebugSend = false;
-	private static final boolean DebugReceive = false;
-	private static final boolean DebugState = false;
-	private static final boolean DebugUpdate = false;
+	private static final Marker DEBUG_HELLO = MarkerFactory
+			.getMarker("debug_hello");
+	private static final Marker DEBUG_VIEW = MarkerFactory
+			.getMarker("debug_view");
+	private static final Marker DEBUG_SEND = MarkerFactory
+			.getMarker("debug_send");
+	private static final Marker DEBUG_RECEIVE = MarkerFactory
+			.getMarker("debug_receive");
+	private static final Marker DEBUG_STATE = MarkerFactory
+			.getMarker("debug_state");
+	private static final Marker DEBUG_UPDATE = MarkerFactory
+			.getMarker("debug_update");
 
 	private static final UUID DefaultInstance = UUID
 			.fromString("1c8f9a38-aad4-0d8c-8d62-b52500a8dfa1");
@@ -122,16 +129,20 @@ public class EpidemicServer implements NetworkServer {
 		}
 	}
 
-	private void debugMessage(String message) {
-		log.debug(id + ": "
-				+ (localNode != null ? localNode.key.toString() : "(null)")
-				+ ": " + message);
+	private void debugMessage(Marker marker, String message) {
+		log.debug(marker,
+				id
+						+ ": "
+						+ (localNode != null ? localNode.key.toString()
+								: "(null)") + ": " + message);
 	}
 
+	@Override
 	public synchronized Subscription registerListener(final Runnable listener) {
 		listeners.add(listener);
 		listener.run();
 		return new Subscription() {
+			@Override
 			public void cancel() {
 				listeners.remove(listener);
 			}
@@ -153,19 +164,17 @@ public class EpidemicServer implements NetworkServer {
 		this.id = id;
 	}
 
+	@Override
 	public void updateView(Set<NodeID> directlyConnectedNodes) {
-		if (DebugView)
-			debugMessage("update view to " + directlyConnectedNodes);
+		debugMessage(DEBUG_VIEW, "update view to " + directlyConnectedNodes);
 
 		synchronized (lock) {
 			for (Iterator<NodeState> it = directlyConnectedStates.values()
 					.iterator(); it.hasNext();) {
 				NodeState state = it.next();
 				if (!directlyConnectedNodes.contains(state.key.id)) {
-					if (DebugView) {
-						debugMessage("remove directly connected state "
-								+ state.key.id);
-					}
+					debugMessage(DEBUG_VIEW, "remove directly connected state "
+							+ state.key.id);
 					it.remove();
 					state.connectionState = null;
 				}
@@ -180,10 +189,8 @@ public class EpidemicServer implements NetworkServer {
 				}
 
 				if (state.connectionState == null) {
-					if (DebugView) {
-						debugMessage("add directly connected state "
-								+ state.key.id);
-					}
+					debugMessage(DEBUG_VIEW, "add directly connected state "
+							+ state.key.id);
 					state.connectionState = new ConnectionState();
 					state.connectionState.readyToReceive = true;
 
@@ -193,10 +200,12 @@ public class EpidemicServer implements NetworkServer {
 		}
 	}
 
+	@Override
 	public Revision head() {
 		return localNode.head.revision;
 	}
 
+	@Override
 	public void merge(Revision base, Revision fork) {
 		synchronized (lock) {
 			Revision head = base.merge(localNode.head.revision, fork,
@@ -217,6 +226,7 @@ public class EpidemicServer implements NetworkServer {
 		return foreignKeyResolver;
 	}
 
+	@Override
 	public void accept(NodeID source, Readable message) {
 		synchronized (lock) {
 			((Message) message).deliver(source, this);
@@ -289,10 +299,8 @@ public class EpidemicServer implements NetworkServer {
 		state.head = tail(state);
 
 		for (NodeState s : states.values()) {
-			if (DebugState) {
-				debugMessage(s.key + " sees " + state.key + " at 0 "
-						+ state.head.hashCode());
-			}
+			debugMessage(DEBUG_STATE, s.key + " sees " + state.key + " at 0 "
+					+ state.head.hashCode());
 
 			if (!state.key.instance.equals(DefaultInstance)) {
 				s.acknowledged.put(state.key, state.head);
@@ -324,31 +332,27 @@ public class EpidemicServer implements NetworkServer {
 		ConnectionState cs = state.connectionState;
 
 		if (!cs.readyToReceive) {
-			if (DebugSend)
-				debugMessage("not ready to receive: " + state.key);
+			debugMessage(DEBUG_SEND, "not ready to receive: " + state.key);
 			return;
 		}
 
 		if (!cs.sentHello && readyForDataFromNewNode()) {
 			state.connectionState.sentHello = true;
 
-			if (DebugHello)
-				debugMessage("hello to " + state.key);
+			debugMessage(DEBUG_HELLO, "hello to " + state.key);
 			send(state, new Hello(localNode.key.instance));
 			return;
 		}
 
 		if (!cs.gotHello) {
-			if (DebugHello)
-				debugMessage("no hello: " + state.key);
+			debugMessage(DEBUG_HELLO, "no hello: " + state.key);
 			return;
 		}
 
 		for (NodeState other : states.values()) {
-			if (DebugUpdate) {
-				debugMessage("sendNext: other: " + other.key + ", state: "
-						+ state.key + ", nu: " + needsUpdate(state, other.head));
-			}
+			debugMessage(DEBUG_UPDATE,
+					"sendNext: other: " + other.key + ", state: " + state.key
+							+ ", nu: " + needsUpdate(state, other.head));
 			if (other != state && needsUpdate(state, other.head)) {
 				cs.sentSync = false;
 				sendUpdate(state, other.head);
@@ -358,8 +362,7 @@ public class EpidemicServer implements NetworkServer {
 
 		if (!cs.sentSync) {
 			cs.sentSync = true;
-			if (DebugSend)
-				debugMessage("sync to " + state.key);
+			debugMessage(DEBUG_SEND, "sync to " + state.key);
 			send(state, new Sync(localNode.key.instance));
 			return;
 		}
@@ -367,11 +370,10 @@ public class EpidemicServer implements NetworkServer {
 
 	private boolean needsUpdate(NodeState state, Record target) {
 		Record acknowledged = state.acknowledged.get(target.node);
-		if (DebugUpdate) {
-			debugMessage("needsUpdate(asn: " + acknowledged.sequenceNumber
-					+ " " + acknowledged.hashCode() + ", tsn: "
-					+ target.sequenceNumber + " " + target.hashCode() + ")");
-		}
+		debugMessage(DEBUG_UPDATE, "needsUpdate(asn: "
+				+ acknowledged.sequenceNumber + " " + acknowledged.hashCode()
+				+ ", tsn: " + target.sequenceNumber + " " + target.hashCode()
+				+ ")");
 		if (acknowledged.sequenceNumber < target.sequenceNumber) {
 			Record lastSent = state.connectionState.lastSent.get(target.node);
 			if (lastSent == null) {
@@ -381,11 +383,8 @@ public class EpidemicServer implements NetworkServer {
 				lastSent = acknowledged;
 				state.connectionState.lastSent.put(target.node, lastSent);
 			}
-
-			if (DebugUpdate) {
-				debugMessage("needsUpdate(lsn: " + lastSent.sequenceNumber
-						+ " " + lastSent.hashCode() + ")");
-			}
+			debugMessage(DEBUG_UPDATE, "needsUpdate(lsn: "
+					+ lastSent.sequenceNumber + " " + lastSent.hashCode() + ")");
 
 			return lastSent.sequenceNumber < target.sequenceNumber;
 		}
@@ -397,14 +396,13 @@ public class EpidemicServer implements NetworkServer {
 		while (true) {
 			Record lastSent = state.connectionState.lastSent.get(target.node);
 			Record record = lastSent.next;
-
-			if (DebugUpdate) {
-				debugMessage("ls: "
-						+ lastSent.hashCode()
-						+ ", rec: "
-						+ (record == null ? " null " : String.valueOf(record
-								.hashCode())));
-			}
+			debugMessage(
+					DEBUG_UPDATE,
+					"ls: "
+							+ lastSent.hashCode()
+							+ ", rec: "
+							+ (record == null ? " null " : String
+									.valueOf(record.hashCode())));
 
 			if (record.merged != null) {
 				if (needsUpdate(state, record.merged)) {
@@ -412,29 +410,26 @@ public class EpidemicServer implements NetworkServer {
 					continue;
 				}
 
-				if (DebugSend) {
-					debugMessage("send ack to " + state.key + ": "
-							+ record.node + " " + record.sequenceNumber
-							+ " merged " + record.merged.node + " "
-							+ record.merged.sequenceNumber);
-				}
+				debugMessage(DEBUG_SEND, "send ack to " + state.key + ": "
+						+ record.node + " " + record.sequenceNumber
+						+ " merged " + record.merged.node + " "
+						+ record.merged.sequenceNumber);
 
 				send(state, new Ack(record.node, record.sequenceNumber,
 						record.merged.node, record.merged.sequenceNumber));
 			} else if (!target.node.equals(state.key)) {
-				if (DebugSend) {
-					debugMessage("send diff to "
-							+ state.key
-							+ ": "
-							+ target.node
-							+ " "
-							+ lastSent.sequenceNumber
-							+ " "
-							+ record.sequenceNumber
-							+ " body "
-							+ new RevisionDiffBody(lastSent.revision,
-									record.revision));
-				}
+				debugMessage(DEBUG_SEND, "send diff to "
+						+ state.key
+						+ ": "
+						+ target.node
+						+ " "
+						+ lastSent.sequenceNumber
+						+ " "
+						+ record.sequenceNumber
+						+ " body "
+						+ new RevisionDiffBody(lastSent.revision,
+								record.revision));
+
 				send(state, new Diff(target.node, lastSent.sequenceNumber,
 						record.sequenceNumber, new RevisionDiffBody(
 								lastSent.revision, record.revision)));
@@ -462,9 +457,8 @@ public class EpidemicServer implements NetworkServer {
 	}
 
 	private void acceptSync(NodeKey origin) {
-		if (DebugReceive) {
-			debugMessage("sync from " + origin);
-		}
+		debugMessage(DEBUG_RECEIVE, "sync from " + origin);
+
 		NodeState state = accept(origin);
 
 		if (!state.connectionState.gotSync) {
@@ -481,9 +475,8 @@ public class EpidemicServer implements NetworkServer {
 	}
 
 	private void acceptHello(NodeKey origin) {
-		if (DebugHello) {
-			debugMessage("hello from " + origin);
-		}
+		debugMessage(DEBUG_HELLO, "hello from " + origin);
+
 		NodeState state = accept(origin);
 
 		state.connectionState.gotHello = true;
@@ -496,11 +489,9 @@ public class EpidemicServer implements NetworkServer {
 
 		Record head = head(state);
 
-		if (DebugReceive) {
-			debugMessage("accept diff " + origin + " " + startSequenceNumber
-					+ " " + endSequenceNumber + " head " + head + " body "
-					+ body);
-		}
+		debugMessage(DEBUG_RECEIVE, "accept diff " + origin + " "
+				+ startSequenceNumber + " " + endSequenceNumber + " head "
+				+ head + " body " + body);
 
 		if (startSequenceNumber <= head.sequenceNumber) {
 			Record record = head;
@@ -536,9 +527,9 @@ public class EpidemicServer implements NetworkServer {
 	private void insertRevision(NodeState state, long sequenceNumber,
 			Revision revision, Record merged) {
 		Record record = head(state);
-		if (DebugState) {
-			debugMessage("insertRevision: record: " + record.hashCode());
-		}
+		debugMessage(DEBUG_STATE,
+				"insertRevision: record: " + record.hashCode());
+
 		while (sequenceNumber < record.sequenceNumber) {
 			record = record.previous.get();
 		}
@@ -549,17 +540,15 @@ public class EpidemicServer implements NetworkServer {
 					merged);
 			record.next = newRecord;
 			newRecord.previous = new WeakReference<Record>(record);
-			if (DebugState) {
-				debugMessage("link " + record.sequenceNumber + " "
-						+ record.hashCode() + " to " + newRecord.sequenceNumber
-						+ " " + newRecord.hashCode());
-			}
+			debugMessage(DEBUG_STATE, "link " + record.sequenceNumber + " "
+					+ record.hashCode() + " to " + newRecord.sequenceNumber
+					+ " " + newRecord.hashCode());
+
 			if (next != null) {
-				if (DebugState) {
-					debugMessage("link " + newRecord.sequenceNumber + " "
-							+ newRecord.hashCode() + " to "
-							+ next.sequenceNumber + " " + next.hashCode());
-				}
+				debugMessage(DEBUG_STATE, "link " + newRecord.sequenceNumber
+						+ " " + newRecord.hashCode() + " to "
+						+ next.sequenceNumber + " " + next.hashCode());
+
 				newRecord.next = next;
 				next.previous = new WeakReference<Record>(newRecord);
 			}
@@ -571,9 +560,7 @@ public class EpidemicServer implements NetworkServer {
 			state.head = record;
 
 			if (state == localNode) {
-				if (DebugState) {
-					debugMessage("notify listeners " + head());
-				}
+				debugMessage(DEBUG_STATE, "notify listeners " + head());
 
 				// tell everyone we have updates!
 				// TODO: don't notify people twice for each update.
@@ -583,11 +570,10 @@ public class EpidemicServer implements NetworkServer {
 			}
 		}
 
-		if (DebugState) {
-			debugMessage("insertRevision state.key: " + state.key
-					+ ", sequenceNo: " + sequenceNumber + ", record: "
-					+ record.hashCode());
-		}
+		debugMessage(DEBUG_STATE,
+				"insertRevision state.key: " + state.key + ", sequenceNo: "
+						+ sequenceNumber + ", record: " + record.hashCode());
+
 	}
 
 	private Revision merge(Record base, Record head, Record fork,
@@ -613,11 +599,10 @@ public class EpidemicServer implements NetworkServer {
 	private void acceptAck(NodeKey acknowledger,
 			long acknowledgerSequenceNumber, NodeKey diffOrigin,
 			long diffSequenceNumber) {
-		if (DebugReceive) {
-			debugMessage("accept ack " + acknowledger + " "
-					+ acknowledgerSequenceNumber + " diff " + diffOrigin + " "
-					+ diffSequenceNumber);
-		}
+		debugMessage(DEBUG_RECEIVE, "accept ack " + acknowledger + " "
+				+ acknowledgerSequenceNumber + " diff " + diffOrigin + " "
+				+ diffSequenceNumber);
+
 		NodeState state = state(acknowledger);
 
 		Record record = state.acknowledged.get(diffOrigin);
@@ -714,6 +699,7 @@ public class EpidemicServer implements NetworkServer {
 		public Ack() {
 		}
 
+		@Override
 		public void writeTo(WriteContext context) throws IOException {
 			StreamUtil.writeString(context.out, acknowledger.asString());
 			StreamUtil.writeLong(context.out, acknowledgerSequenceNumber);
@@ -721,6 +707,7 @@ public class EpidemicServer implements NetworkServer {
 			StreamUtil.writeLong(context.out, diffSequenceNumber);
 		}
 
+		@Override
 		public void readFrom(ReadContext context) throws IOException {
 			acknowledger = new NodeKey(StreamUtil.readString(context.in));
 			acknowledgerSequenceNumber = StreamUtil.readLong(context.in);
@@ -728,10 +715,10 @@ public class EpidemicServer implements NetworkServer {
 			diffSequenceNumber = StreamUtil.readLong(context.in);
 		}
 
+		@Override
 		public void deliver(NodeID source, EpidemicServer server) {
-			if (DebugReceive) {
-				server.debugMessage("ack from " + source);
-			}
+			server.debugMessage(DEBUG_RECEIVE, "ack from " + source);
+
 			server.acceptAck(acknowledger, acknowledgerSequenceNumber,
 					diffOrigin, diffSequenceNumber);
 		}
@@ -756,6 +743,7 @@ public class EpidemicServer implements NetworkServer {
 		public Diff() {
 		}
 
+		@Override
 		public void writeTo(WriteContext context) throws IOException {
 			StreamUtil.writeString(context.out, origin.asString());
 			StreamUtil.writeLong(context.out, startSequenceNumber);
@@ -763,6 +751,7 @@ public class EpidemicServer implements NetworkServer {
 			((Writable) body).writeTo(context);
 		}
 
+		@Override
 		public void readFrom(ReadContext context) throws IOException {
 			origin = new NodeKey(StreamUtil.readString(context.in));
 			startSequenceNumber = StreamUtil.readLong(context.in);
@@ -772,14 +761,15 @@ public class EpidemicServer implements NetworkServer {
 			body = list;
 		}
 
+		@Override
 		public void deliver(NodeID source, EpidemicServer server) {
-			if (DebugReceive) {
-				server.debugMessage("diff from " + source);
-			}
+			server.debugMessage(DEBUG_RECEIVE, "diff from " + source);
+
 			server.acceptDiff(origin, startSequenceNumber, endSequenceNumber,
 					body);
 		}
 
+		@Override
 		public String toString() {
 			return "diff[" + body + "]";
 		}
@@ -795,10 +785,12 @@ public class EpidemicServer implements NetworkServer {
 			this.instance = instance;
 		}
 
+		@Override
 		public void writeTo(WriteContext context) throws IOException {
 			StreamUtil.writeString(context.out, instance.toString());
 		}
 
+		@Override
 		public void readFrom(ReadContext context) throws IOException {
 			instance = UUID.fromString(StreamUtil.readString(context.in));
 		}
@@ -813,6 +805,7 @@ public class EpidemicServer implements NetworkServer {
 			super(instance);
 		}
 
+		@Override
 		public void deliver(NodeID source, EpidemicServer server) {
 			server.acceptHello(new NodeKey(source, instance));
 		}
@@ -827,6 +820,7 @@ public class EpidemicServer implements NetworkServer {
 			super(instance);
 		}
 
+		@Override
 		public void deliver(NodeID source, EpidemicServer server) {
 			server.acceptSync(new NodeKey(source, instance));
 		}
@@ -845,10 +839,12 @@ public class EpidemicServer implements NetworkServer {
 			this.fork = fork;
 		}
 
+		@Override
 		public Revision apply(EpidemicServer server, Revision base) {
 			return fork;
 		}
 
+		@Override
 		public void writeTo(WriteContext context) throws IOException {
 			DiffResult result = base.diff(fork, true);
 			Table table = null;
@@ -912,6 +908,7 @@ public class EpidemicServer implements NetworkServer {
 			}
 		}
 
+		@Override
 		public String toString() {
 			// todo: reduce code duplication between this and the writeTo method
 			return Util.toString(base, fork);
@@ -922,6 +919,7 @@ public class EpidemicServer implements NetworkServer {
 		public BufferOutputStream buffer;
 		public InputStream input;
 
+		@Override
 		public Revision apply(EpidemicServer server, Revision base) {
 			RevisionBuilder builder = base.builder();
 			final int MaxDepth = 16;
@@ -994,6 +992,7 @@ public class EpidemicServer implements NetworkServer {
 			}
 		}
 
+		@Override
 		public void readFrom(ReadContext context) throws IOException {
 			if (context.in.markSupported()) {
 				context.in.mark(Integer.MAX_VALUE);
@@ -1030,6 +1029,7 @@ public class EpidemicServer implements NetworkServer {
 			}
 		}
 
+		@Override
 		public String toString() {
 			// todo: reduce code duplication between this and the apply method
 			StringBuilder sb = new StringBuilder();
@@ -1125,10 +1125,12 @@ public class EpidemicServer implements NetworkServer {
 			this.instance = UUID.fromString(string.substring(0, index));
 		}
 
+		@Override
 		public int hashCode() {
 			return id.hashCode() ^ instance.hashCode();
 		}
 
+		@Override
 		public boolean equals(Object o) {
 			return o instanceof NodeKey && compareTo((NodeKey) o) == 0;
 		}
@@ -1143,11 +1145,13 @@ public class EpidemicServer implements NetworkServer {
 			return instance.compareTo(o.instance);
 		}
 
+		@Override
 		public String toString() {
 			return "nodeKey[" + id + " " + instance.toString().substring(0, 8)
 					+ "]";
 		}
 
+		@Override
 		public String asString() {
 			return instance + ":" + id.asString();
 		}
@@ -1165,6 +1169,7 @@ public class EpidemicServer implements NetworkServer {
 			this.resolver = resolver;
 		}
 
+		@Override
 		public Object resolveConflict(Table table, Column column,
 				Object[] primaryKeyValues, Object baseValue, Object leftValue,
 				Object rightValue) {
