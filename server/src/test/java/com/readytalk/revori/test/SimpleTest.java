@@ -184,4 +184,10 @@ public class SimpleTest {
           fail("Expected IllegalArgumentException...");
         } catch(IllegalArgumentException expected){}
     }
+    
+    @Test
+    public void test() {
+    	
+    	System.out.println(getClass().getName());
+    }
 }

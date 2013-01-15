@@ -28,12 +28,16 @@ dependencies {
       slf4jVersion = '1.7.2'
       logbackVersion = '1.0.9'
       junitVersion = '4.11'
+      mockitoVersion = '1.9.5'
   }
 
   findbugs "com.google.code.findbugs:findbugs:${findbugsVersion}"
   
-  testCompile "junit:junit:${junitVersion}"
-  
+  testCompile (
+  	["junit:junit:${junitVersion}"],
+  	["org.mockito:mockito-all:${mockitoVersion}"],
+  )
+
   compile (
     ["com.google.code.findbugs:jsr305:${findbugsVersion}"],
     ["com.google.code.findbugs:annotations:${findbugsVersion}"],

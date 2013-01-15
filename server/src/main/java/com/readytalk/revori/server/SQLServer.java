@@ -73,6 +73,8 @@ import com.readytalk.revori.server.protocol.Stringable;
 import com.readytalk.revori.subscribe.Subscription;
 import com.readytalk.revori.util.BufferOutputStream;
 
+import static com.readytalk.revori.util.Util.convert;
+
 @NotThreadSafe
 public class SQLServer implements RevisionServer {
   private static final boolean Debug = true;
@@ -1483,20 +1485,6 @@ public class SQLServer implements RevisionServer {
       return count;
     } finally {
       popTransaction(client);
-    }
-  }
-
-  private static Object convert(Class<?> type,
-                                String value)
-  {
-    if (type == Integer.class
-        || type == Long.class)
-    {
-      return Long.parseLong(value);
-    } else if (type == String.class) {
-      return value;
-    } else {
-      throw new RuntimeException("unexpected type: " + type);
     }
   }
 
