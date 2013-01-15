@@ -19,8 +19,12 @@ import com.readytalk.revori.ForeignKey;
 import com.readytalk.revori.ForeignKeyException;
 import com.readytalk.revori.ForeignKeyResolver;
 import com.readytalk.revori.Table;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class ForeignKeys {
+  private static final Logger log = LoggerFactory.getLogger(ForeignKeys.class);
+
   public static void checkForeignKeys(NodeStack baseStack,
                                       MyRevision base,
                                       NodeStack forkStack,
@@ -235,7 +239,7 @@ class ForeignKeys {
       Object[] path = new Object[row.length + 1];
       path[0] = constraint.refererTable;
       System.arraycopy(row, 0, path, 1, row.length);
-      // System.err.println("delete " + java.util.Arrays.toString(path));
+      log.debug("delete {}", path);
       builder.delete(path);
     } break;
 

@@ -16,8 +16,11 @@ import com.readytalk.revori.QueryResult;
 import com.readytalk.revori.TableReference;
 import com.readytalk.revori.imp.DiffIterator.DiffPair;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 class TableIterator implements SourceIterator {
-  private static final boolean Verbose = false;
+  private static final Logger log = LoggerFactory.getLogger(TableIterator.class);
 
   public final TableReference tableReference;
   public final Node base;
@@ -109,7 +112,7 @@ class TableIterator implements SourceIterator {
     }
 
     while (true) {
-      // System.err.println("depth: " + depth + "\n\tkey: " + (Constants.IndexDataBodyDepth + tableReference.table.primaryKey.columns.size()));
+      log.trace("depth: {}\n\tkey: {}", depth, (Constants.IndexDataBodyDepth + tableReference.table.primaryKey.columns.size()));
       if (plan.iterators[depth].next(pair)) {
         if (depth == plan.size - 1) {
           if (test(pair.base)) {
@@ -226,7 +229,7 @@ class TableIterator implements SourceIterator {
     Object[] baseValues = evaluate(expressions, columnReferences, base);
 
     boolean equal = Arrays.equals(baseValues, forkValues);
-    // System.err.println("valuesEqual: " + equal + "\n\tbase: " + Arrays.toString(baseValues) + "\n\tfork: " + Arrays.toString(forkValues));
+    log.trace("valuesEqual: {}\n\tbase: {}\n\tfork: {}", equal, Arrays.toString(baseValues), Arrays.toString(forkValues));
     //    System.exit(0);
     return equal;
   }
@@ -241,12 +244,13 @@ class TableIterator implements SourceIterator {
 
       Object result = test.evaluate(false);
 
-      if (Verbose) {
-        System.out.print("test: ");
+      if (log.isDebugEnabled()) {
+        StringBuilder test = new StringBuilder("test: ");
         for (ColumnReferenceAdapter r: expressionContext.columnReferences) {
-          System.out.print(r.column + ":" + r.value + " ");
+          test.append(r.column).append(":").append(r.value).append(" ");
         }
-        System.out.println(": " + result);
+        test.append(": ").append(result);
+        log.debug(test.toString());
       }
 
       return result != Boolean.FALSE;
