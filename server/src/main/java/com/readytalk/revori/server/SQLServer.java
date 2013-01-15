@@ -486,7 +486,7 @@ public class SQLServer implements RevisionServer {
           channel.close();
         }
       } catch (Exception e) {
-        log.warn("Problem with channel.", e);
+        log.error("Problem with channel.", e);
       }
     }
   }
@@ -2618,7 +2618,7 @@ public class SQLServer implements RevisionServer {
     throws IOException
   {
     String s = tokenize(readString(in));
-    log.info("complete \"{}\"", s);
+    log.debug("complete \"{}\"", s);
     if (client.copyContext == null) {
       ParseResult result = client.server.parser.parse
         (new ParseContext(client, s), s, true);

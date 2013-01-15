@@ -342,7 +342,9 @@ class MyRevisionBuilder implements RevisionBuilder {
                              NodeStack baseStack,
                              NodeStack forkStack)
   {
-    log.debug("update " + view + " diff " + Util.toString(base, result));
+    if (log.isDebugEnabled()){ // Because Util.toString() may hurt performance.
+        log.debug("update {} diff {}", view, Util.toString(base, result));
+    }
 
     MyQueryResult qr = new MyQueryResult
       (base, baseStack, result, forkStack, view.query,
@@ -405,8 +407,10 @@ class MyRevisionBuilder implements RevisionBuilder {
            expressions.get(view.primaryKeyOffset + i).evaluate(true),
            keyColumns.get(i).comparator);
 
-        log.debug("inserted " +
-            Util.toString(keys, 0, Constants.IndexDataBodyDepth + i + 1));
+        if (log.isDebugEnabled()) { // Util.toString() potentially expensive.
+          log.debug("inserted " +
+              Util.toString(keys, 0, Constants.IndexDataBodyDepth + i + 1));
+        }
 
         if (view.query.hasAggregates) {
           int columnOffset = view.aggregateOffset;
