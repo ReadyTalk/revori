@@ -21,60 +21,47 @@ import com.readytalk.revori.Revisions;
 import com.readytalk.revori.subscribe.Subscription;
 
 public class SimpleRevisionServer implements RevisionServer {
-  private final ConflictResolver conflictResolver;
-  private final ForeignKeyResolver foreignKeyResolver;
-  private final AtomicReference<Revision> head = Atomics.newReference(Revisions.Empty);
-  public final AtomicReference<Set<Runnable>> listeners = Atomics.<Set<Runnable>>newReference(Sets.<Runnable>newHashSet());
+	private final ConflictResolver conflictResolver;
+	private final ForeignKeyResolver foreignKeyResolver;
+	private final AtomicReference<Revision> head = Atomics
+			.newReference(Revisions.Empty);
 
-  public SimpleRevisionServer(@Nullable ConflictResolver conflictResolver,
-		  @Nullable ForeignKeyResolver foreignKeyResolver)
-  {
-    this.conflictResolver = conflictResolver;
-    this.foreignKeyResolver = foreignKeyResolver;
-  }
+	private final Set<Runnable> listeners = Sets.newCopyOnWriteArraySet();
 
-  public Revision head() {
-    return head.get();
-  }
+	public SimpleRevisionServer(@Nullable ConflictResolver conflictResolver,
+			@Nullable ForeignKeyResolver foreignKeyResolver) {
+		this.conflictResolver = conflictResolver;
+		this.foreignKeyResolver = foreignKeyResolver;
+	}
 
-  public void merge(Revision base, Revision fork) {
-    if (base != fork || base != head.get()) {
-      while (! head.compareAndSet(base, fork)) {
-        Revision h = head.get();
-        fork = base.merge
-          (h, fork, conflictResolver, foreignKeyResolver);
-        base = h;
-      }
+	public Revision head() {
+		return head.get();
+	}
 
-      for (Runnable listener: listeners.get()) {
-        listener.run();
-      }
-    }
-  }
+	public void merge(Revision base, Revision fork) {
+		if (base != fork || base != head.get()) {
+			while (!head.compareAndSet(base, fork)) {
+				Revision h = head.get();
+				fork = base
+						.merge(h, fork, conflictResolver, foreignKeyResolver);
+				base = h;
+			}
 
-  public Subscription registerListener(final Runnable listener) {
-    while (true) {
-      Set<Runnable> oldListeners = listeners.get();
-      Set<Runnable> newListeners = Sets.newHashSet(oldListeners); 
-      newListeners.add(listener);
-      if (listeners.compareAndSet(oldListeners, newListeners)) {
-        break;
-      }
-    }
-    listener.run();
+			for (Runnable listener : listeners) {
+				listener.run();
+			}
+		}
+	}
 
-    return new Subscription() {
-      public void cancel() {
-        while (true) {
-          Set<Runnable> oldListeners = listeners.get();
-          Set<Runnable> newListeners = Sets.newHashSet(oldListeners); 
-          newListeners.remove(listener);
-          if (listeners.compareAndSet(oldListeners, newListeners)) {
-            break;
-          }
-        }
-      }
-    };
-  }
+	public Subscription registerListener(final Runnable listener) {
+		listeners.add(listener);
 
+		listener.run();
+
+		return new Subscription() {
+			public void cancel() {
+				listeners.remove(listener);
+			}
+		};
+	}
 }

@@ -13,9 +13,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -23,7 +24,6 @@ import com.readytalk.revori.Column;
 import com.readytalk.revori.ForeignKey;
 import com.readytalk.revori.Index;
 import com.readytalk.revori.Table;
-import com.readytalk.revori.server.EpidemicServer;
 import com.readytalk.revori.server.NetworkServer.NodeID;
 import com.readytalk.revori.server.StreamUtil;
 
@@ -34,9 +34,10 @@ public class Protocol {
   private static final int ClassReference = 7;
   private static final int Reference = 8;
 
-  private static volatile Map<Class<?>, Serializer<?>> serializers = new HashMap<Class<?>, Serializer<?>>();
-  private static volatile Map<Class<?>, Deserializer<?>> deserializers
-    = new HashMap<Class<?>, Deserializer<?>>();
+	private static final ConcurrentMap<Class<?>, Serializer<?>> serializers =
+			new ConcurrentHashMap<Class<?>, Serializer<?>>();
+	private static final ConcurrentMap<Class<?>, Deserializer<?>> deserializers =
+			new ConcurrentHashMap<Class<?>, Deserializer<?>>();
 
   static {
     serializers.put(Boolean.class, new Serializer<Boolean>() {
@@ -345,7 +346,7 @@ public class Protocol {
     deserializers.put(Enum.class, new Deserializer<Enum>() {
       public Enum readFrom(ReadContext context, Class<? extends Enum> c) throws IOException {
         // TODO: use the ordinal instead of the name
-        return (Enum) Enum.valueOf(c, readString(context.in));
+        return Enum.valueOf(c, readString(context.in));
       }
     });
   }
@@ -354,11 +355,7 @@ public class Protocol {
     Class<?> c = find(class_, serializers);
     Serializer<?> s = serializers.get(c);
     if (c != class_) {
-      synchronized (EpidemicServer.class) {
-        Map<Class<?>, Serializer<?>> map = new HashMap<Class<?>, Serializer<?>>(serializers);
-        map.put(class_, s);
-        serializers = map;
-      }
+      serializers.putIfAbsent(class_, s);
     }
     return (Serializer<T>)s;
   }
@@ -367,11 +364,7 @@ public class Protocol {
     Class<?> c = find(class_, deserializers);
     Deserializer<?> d = deserializers.get(c);
     if (c != class_) {
-      synchronized (EpidemicServer.class) {
-        Map<Class<?>, Deserializer<?>> map = new HashMap<Class<?>, Deserializer<?>>(deserializers);
-        map.put(class_, d);
-        deserializers = map;
-      }
+      deserializers.putIfAbsent(class_, d);
     }
     return (Deserializer<T>)d;
   }
