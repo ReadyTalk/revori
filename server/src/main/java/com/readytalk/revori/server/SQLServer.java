@@ -70,6 +70,7 @@ import com.readytalk.revori.TableReference;
 import com.readytalk.revori.UnaryOperation;
 import com.readytalk.revori.UpdateTemplate;
 import com.readytalk.revori.server.protocol.Stringable;
+import com.readytalk.revori.server.simple.SimpleRevisionServer;
 import com.readytalk.revori.subscribe.Subscription;
 import com.readytalk.revori.util.BufferOutputStream;
 
