@@ -34,7 +34,7 @@ class ColumnReferenceAdapter implements ExpressionAdapter {
     throw new UnsupportedOperationException();
   }
 
-  public Class type() {
+  public Class<?> type() {
     return column.type;
   }
 }

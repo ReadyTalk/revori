@@ -7,9 +7,9 @@
 
 package com.readytalk.revori.imp;
 
-import javax.annotation.Nullable;
-
 import static com.google.common.base.Preconditions.checkArgument;
+
+import javax.annotation.Nullable;
 
 class NodeStack {
   public static final NodeStack Null = new NodeStack((Node[]) null);

@@ -40,7 +40,7 @@ class ConstantAdapter implements ExpressionAdapter {
     visitor.visit(this);
   }
 
-  public Class type() {
+  public Class<? extends Object> type() {
     return value == null ? null : value.getClass();
   }
 }

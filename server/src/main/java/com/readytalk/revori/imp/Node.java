@@ -258,8 +258,7 @@ class Node {
                             NodeStack stack,
                             Node root,
                             Object key,
-                            Comparator comparator)
-  {
+                            Comparator comparator) {
     if (Debug) {
       token = new Object();
       validate(null, root);

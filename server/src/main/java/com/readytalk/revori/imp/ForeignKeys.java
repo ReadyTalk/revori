@@ -13,14 +13,15 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.readytalk.revori.Column;
 import com.readytalk.revori.DiffResult;
 import com.readytalk.revori.ForeignKey;
 import com.readytalk.revori.ForeignKeyException;
 import com.readytalk.revori.ForeignKeyResolver;
 import com.readytalk.revori.Table;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 class ForeignKeys {
   private static final Logger log = LoggerFactory.getLogger(ForeignKeys.class);

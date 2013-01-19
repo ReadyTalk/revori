@@ -12,12 +12,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.readytalk.revori.QueryResult;
 import com.readytalk.revori.TableReference;
 import com.readytalk.revori.imp.DiffIterator.DiffPair;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 class TableIterator implements SourceIterator {
   private static final Logger log = LoggerFactory.getLogger(TableIterator.class);

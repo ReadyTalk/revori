@@ -9,6 +9,7 @@ package com.readytalk.revori.server;
 
 import static com.readytalk.revori.ExpressionFactory.reference;
 import static com.readytalk.revori.util.Util.cols;
+import static com.readytalk.revori.util.Util.convert;
 import static com.readytalk.revori.util.Util.set;
 
 import java.io.BufferedInputStream;
@@ -35,11 +36,12 @@ import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -73,8 +75,6 @@ import com.readytalk.revori.server.protocol.Stringable;
 import com.readytalk.revori.server.simple.SimpleRevisionServer;
 import com.readytalk.revori.subscribe.Subscription;
 import com.readytalk.revori.util.BufferOutputStream;
-
-import static com.readytalk.revori.util.Util.convert;
 
 @NotThreadSafe
 public class SQLServer implements RevisionServer {

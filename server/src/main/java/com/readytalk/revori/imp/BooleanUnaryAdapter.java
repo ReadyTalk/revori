@@ -62,7 +62,7 @@ class BooleanUnaryAdapter implements ExpressionAdapter {
     }
   }
 
-  public Class type() {
+  public Class<Boolean> type() {
     return Boolean.class;
   }
 }

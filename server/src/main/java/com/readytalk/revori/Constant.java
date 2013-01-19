@@ -48,7 +48,7 @@ public class Constant implements Expression {
   /**
    * {@inheritDoc}
    */
-  public Class typeConstraint() {
+  public Class<?> typeConstraint() {
     return null;
   }
 

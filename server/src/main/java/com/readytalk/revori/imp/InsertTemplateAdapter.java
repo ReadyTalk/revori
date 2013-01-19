@@ -56,12 +56,12 @@ class InsertTemplateAdapter implements PatchTemplateAdapter {
     List<Column<?>> columns = index.columns;
     int i;
     for (i = 0; i < columns.size() - 1; ++i) {
-      Column c = columns.get(i);
+      Column<?> c = columns.get(i);
       builder.setKey
         (i + Constants.IndexDataBodyDepth, map.get(c), c.comparator);
     }
 
-    Column c = columns.get(i);
+    Column<?> c = columns.get(i);
     Node n = builder.blaze
       (i + Constants.IndexDataBodyDepth, map.get(c), c.comparator);
 

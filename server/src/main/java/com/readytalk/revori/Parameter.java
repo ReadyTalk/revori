@@ -12,8 +12,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.concurrent.ThreadSafe;
 
-import com.google.common.base.Objects;
-
 
 /**
  * Type representing an expression whose value will be supplied

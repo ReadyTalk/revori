@@ -8,6 +8,7 @@
 package com.readytalk.revori.imp;
 
 import static com.google.common.base.Preconditions.checkArgument;
+
 import com.readytalk.revori.Join;
 import com.readytalk.revori.QueryResult;
 
