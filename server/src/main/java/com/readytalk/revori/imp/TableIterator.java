@@ -12,34 +12,34 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.readytalk.revori.QueryResult;
 import com.readytalk.revori.TableReference;
 import com.readytalk.revori.imp.DiffIterator.DiffPair;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 class TableIterator implements SourceIterator {
   private static final Logger log = LoggerFactory.getLogger(TableIterator.class);
 
-  public final TableReference tableReference;
-  public final Node base;
-  public final Node fork;
+  private final TableReference tableReference;
+  private final Node base;
+  private final Node fork;
   public final ExpressionAdapter test;
-  public final ExpressionContext expressionContext;
-  public final boolean visitUnchanged;
-  public final List<ColumnReferenceAdapter> columnReferences = new ArrayList<ColumnReferenceAdapter>();
-  public final Plan plan;
+  private final ExpressionContext expressionContext;
+  private final boolean visitUnchanged;
+  private final List<ColumnReferenceAdapter> columnReferences = new ArrayList<ColumnReferenceAdapter>();
+  private final Plan plan;
   public final DiffPair pair = new DiffPair();
-  public NodeStack baseStack;
-  public NodeStack forkStack;
-  public int depth;
+  private NodeStack baseStack;
+  private NodeStack forkStack;
+  private int depth;
   public boolean testFork;
 
   public TableIterator(TableReference tableReference,
-                       MyRevision base,
+                       DefaultRevision base,
                        NodeStack baseStack,
-                       MyRevision fork,
+                       DefaultRevision fork,
                        NodeStack forkStack,
                        ExpressionAdapter test,
                        ExpressionContext expressionContext,
@@ -89,9 +89,9 @@ class TableIterator implements SourceIterator {
   }
 
   public TableIterator(TableReference tableReference,
-                       MyRevision base,
+                       DefaultRevision base,
                        NodeStack baseStack,
-                       MyRevision fork,
+                       DefaultRevision fork,
                        NodeStack forkStack,
                        ExpressionAdapter test,
                        ExpressionContext expressionContext,

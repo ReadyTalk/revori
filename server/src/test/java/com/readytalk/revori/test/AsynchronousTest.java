@@ -23,7 +23,7 @@ import com.readytalk.revori.Table;
 import com.readytalk.revori.server.RevisionServer;
 import com.readytalk.revori.server.Servers;
 import com.readytalk.revori.server.Servers.TaskHandler;
-import com.readytalk.revori.server.SimpleRevisionServer;
+import com.readytalk.revori.server.simple.SimpleRevisionServer;
 
 public class AsynchronousTest {
   @Test

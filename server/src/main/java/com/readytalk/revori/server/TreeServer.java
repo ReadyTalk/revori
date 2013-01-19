@@ -21,6 +21,7 @@ import com.readytalk.revori.ForeignKeyResolver;
 import com.readytalk.revori.Revision;
 import com.readytalk.revori.Table;
 import com.readytalk.revori.server.protocol.Readable;
+import com.readytalk.revori.server.simple.SimpleRevisionServer;
 import com.readytalk.revori.subscribe.Subscription;
 
 public class TreeServer implements NetworkServer {

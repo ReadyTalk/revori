@@ -18,30 +18,30 @@ import com.readytalk.revori.Index;
 import com.readytalk.revori.Table;
 import com.readytalk.revori.imp.DiffIterator.DiffPair;
 
-class MyDiffResult implements DiffResult {
-  public enum State {
+class DefaultDiffResult implements DiffResult {
+  private enum State {
     Flush, FlushKey() {
-      public Object fork(MyDiffResult r) {
+      public Object fork(DefaultDiffResult r) {
         Node n = r.pairs[r.clientDepth].fork;
         return n == null ? null : n.key;
       }
 
-      public Object base(MyDiffResult r) {
+      public Object base(DefaultDiffResult r) {
         Node n = r.pairs[r.clientDepth].base;
         return n == null ? null : n.key;
       }
 
-      public Node forkTree(MyDiffResult r) {
+      public Node forkTree(DefaultDiffResult r) {
         Node n = r.pairs[r.clientDepth].fork;
         return n == null ? Node.Null : (Node) n.value;
       }
 
-      public Node baseTree(MyDiffResult r) {
+      public Node baseTree(DefaultDiffResult r) {
         Node n = r.pairs[r.clientDepth].base;
         return n == null ? Node.Null : (Node) n.value;
       }
 
-      public void skip(MyDiffResult r) {
+      public void skip(DefaultDiffResult r) {
         int clientDepth = r.clientDepth;
         while (r.depth > clientDepth) {
           r.ascend();
@@ -50,57 +50,57 @@ class MyDiffResult implements DiffResult {
         r.state = Iterate;
       }  
     }, Descend, Ascend, Key, Value, PostValue() {
-      public Object fork(MyDiffResult r) {
+      public Object fork(DefaultDiffResult r) {
         Node n = r.pairs[r.clientDepth].fork;
         return n == null ? null : n.value;
       }
 
-      public Object base(MyDiffResult r) {
+      public Object base(DefaultDiffResult r) {
         Node n = r.pairs[r.clientDepth].base;
         return n == null ? null : n.value;
       }
     }, Iterate, End;
 
-    public Object fork(MyDiffResult r) {
+    public Object fork(DefaultDiffResult r) {
       throw new IllegalStateException();
     }
 
-    public Object base(MyDiffResult r) {
+    public Object base(DefaultDiffResult r) {
       throw new IllegalStateException();
     }
 
-    public Node forkTree(MyDiffResult r) {
+    public Node forkTree(DefaultDiffResult r) {
       throw new IllegalStateException();
     }
 
-    public Node baseTree(MyDiffResult r) {
+    public Node baseTree(DefaultDiffResult r) {
       throw new IllegalStateException();
     }
 
-    public void skip(MyDiffResult r) {
+    public void skip(DefaultDiffResult r) {
       throw new IllegalStateException();
     }
   }
 
-  public final DiffIterator[] iterators = new DiffIterator[Constants.MaxDepth];
-  public final DiffPair[] pairs = new DiffPair[Constants.MaxDepth];
-  public final boolean[] clientHasKey = new boolean[Constants.MaxDepth];
-  public final MyRevision fork;
-  public final boolean skipBrokenReferences;
-  public State state = State.Iterate;
-  public State nextState;
-  public NodeStack baseStack;
-  public NodeStack forkStack;
-  public Table table;
-  public int depth;
-  public int bottom;
-  public int clientDepth;
-  public Set<Column<?>> primaryKey;
-  public List<RefererForeignKeyAdapter> refererKeyAdapters;
+  private final DiffIterator[] iterators = new DiffIterator[Constants.MaxDepth];
+  private final DiffPair[] pairs = new DiffPair[Constants.MaxDepth];
+  private final boolean[] clientHasKey = new boolean[Constants.MaxDepth];
+  private final DefaultRevision fork;
+  private final boolean skipBrokenReferences;
+  private State state = State.Iterate;
+  private State nextState;
+  private NodeStack baseStack;
+  private NodeStack forkStack;
+  private Table table;
+  private int depth;
+  private int bottom;
+  private int clientDepth;
+  private Set<Column<?>> primaryKey;
+  private List<RefererForeignKeyAdapter> refererKeyAdapters;
 
-  public MyDiffResult(MyRevision base,
+  public DefaultDiffResult(DefaultRevision base,
                       NodeStack baseStack,
-                      MyRevision fork,
+                      DefaultRevision fork,
                       NodeStack forkStack,
                       boolean skipBrokenReferences)
   {
@@ -327,7 +327,7 @@ class MyDiffResult implements DiffResult {
   }
 
   private static boolean findBrokenReference
-    (MyRevision revision,
+    (DefaultRevision revision,
      Node tree,
      List<RefererForeignKeyAdapter> adapters)
   {

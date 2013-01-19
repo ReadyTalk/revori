@@ -7,37 +7,30 @@
 
 package com.readytalk.revori.imp;
 
-import java.util.HashMap;
-import java.util.Map;
-
+import com.google.common.collect.ImmutableMap;
 import com.readytalk.revori.Join;
 import com.readytalk.revori.Source;
 import com.readytalk.revori.TableReference;
 
 class SourceAdapterFactory {
-  public static final Map<Class<?>, Factory> factories = new HashMap<Class<?>, Factory>();
+	private static final ImmutableMap<Class<? extends Source>, Factory> factories = ImmutableMap
+			.<Class<? extends Source>, Factory> builder().put(TableReference.class, new Factory() {
+				public SourceAdapter make(Source source) {
+					return new TableAdapter((TableReference) source);
+				}
+			}).put(Join.class, new Factory() {
+				public SourceAdapter make(Source source) {
+					Join join = (Join) source;
+					return new JoinAdapter(join.type, makeAdapter(join.left),
+							makeAdapter(join.right));
+				}
+			}).build();
 
-  static {
-    factories.put(TableReference.class, new Factory() {
-      public SourceAdapter make(Source source) {
-        return new TableAdapter((TableReference) source);
-      }
-    });
+	public static SourceAdapter makeAdapter(Source source) {
+		return factories.get(source.getClass()).make(source);
+	}
 
-    factories.put(Join.class, new Factory() {
-      public SourceAdapter make(Source source) {
-        Join join = (Join) source;
-        return new JoinAdapter
-          (join.type, makeAdapter(join.left), makeAdapter(join.right));
-      }
-    });
-  }
-
-  public static SourceAdapter makeAdapter(Source source) {
-    return factories.get(source.getClass()).make(source);
-  }
-
-  private interface Factory {
-    public SourceAdapter make(Source source);
-  }
+	private interface Factory {
+		public SourceAdapter make(Source source);
+	}
 }

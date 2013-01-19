@@ -21,6 +21,9 @@ import java.util.UUID;
 
 import javax.annotation.concurrent.ThreadSafe;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.readytalk.revori.Column;
 import com.readytalk.revori.ConflictResolver;
 import com.readytalk.revori.DiffResult;
@@ -40,9 +43,6 @@ import com.readytalk.revori.server.protocol.WriteContext;
 import com.readytalk.revori.subscribe.Subscription;
 import com.readytalk.revori.util.BufferOutputStream;
 import com.readytalk.revori.util.Util;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class EpidemicServer implements NetworkServer {

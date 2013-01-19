@@ -16,9 +16,9 @@ class TableAdapter implements SourceAdapter {
     this.tableReference = tableReference;
   }
 
-  public TableIterator iterator(MyRevision base,
+  public TableIterator iterator(DefaultRevision base,
                                 NodeStack baseStack,
-                                MyRevision fork,
+                                DefaultRevision fork,
                                 NodeStack forkStack,
                                 ExpressionAdapter test,
                                 ExpressionContext expressionContext,

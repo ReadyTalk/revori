@@ -15,15 +15,15 @@ import com.readytalk.revori.imp.Interval.BoundType;
 class DiffIterator {
   private static final boolean Verbose = false;
 
-  public final Node baseRoot;
-  public final NodeStack base;
+  private final Node baseRoot;
+  private final NodeStack base;
   public final Node forkRoot;
-  public final NodeStack fork;
-  public final Iterator<Interval> intervalIterator;
-  public final boolean visitUnchanged;
+  private final NodeStack fork;
+  private final Iterator<Interval> intervalIterator;
+  private final boolean visitUnchanged;
   public final Comparator comparator;
-  public Interval currentInterval;
-  public boolean foundStart;
+  private Interval currentInterval;
+  private boolean foundStart;
 
   public DiffIterator(Node baseRoot,
                       NodeStack base,

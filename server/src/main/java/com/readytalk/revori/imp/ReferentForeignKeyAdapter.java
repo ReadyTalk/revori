@@ -27,8 +27,8 @@ import com.readytalk.revori.TableReference;
 
 public class ReferentForeignKeyAdapter {
   public final ForeignKey constraint;
-  public final QueryTemplate refererQuery;
-  public final QueryTemplate referentQuery;
+  private final QueryTemplate refererQuery;
+  private final QueryTemplate referentQuery;
 
   public ReferentForeignKeyAdapter(ForeignKey constraint) {
     this.constraint = constraint;
@@ -86,7 +86,7 @@ public class ReferentForeignKeyAdapter {
   private QueryResult query(QueryTemplate query,
                             Revision revision, List<Column<?>> columns, Node tree)
   {
-    return MyRevision.Empty.diff(revision, query, parameters(columns, tree));
+    return DefaultRevision.Empty.diff(revision, query, parameters(columns, tree));
   }
 
   public void visitBrokenReferences(Revision revision, Node tree,

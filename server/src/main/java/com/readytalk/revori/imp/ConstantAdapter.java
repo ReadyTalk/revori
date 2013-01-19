@@ -16,7 +16,7 @@ class ConstantAdapter implements ExpressionAdapter {
   public static final ConstantAdapter Dummy = new ConstantAdapter
     (Compare.Dummy);
 
-  public final Object value;
+  private final Object value;
     
   public ConstantAdapter(Object value) {
     this.value = value;
@@ -40,7 +40,7 @@ class ConstantAdapter implements ExpressionAdapter {
     visitor.visit(this);
   }
 
-  public Class type() {
+  public Class<? extends Object> type() {
     return value == null ? null : value.getClass();
   }
 }

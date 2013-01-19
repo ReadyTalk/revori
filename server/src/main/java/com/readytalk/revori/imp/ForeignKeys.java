@@ -13,27 +13,28 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.readytalk.revori.Column;
 import com.readytalk.revori.DiffResult;
 import com.readytalk.revori.ForeignKey;
 import com.readytalk.revori.ForeignKeyException;
 import com.readytalk.revori.ForeignKeyResolver;
 import com.readytalk.revori.Table;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 class ForeignKeys {
   private static final Logger log = LoggerFactory.getLogger(ForeignKeys.class);
 
   public static void checkForeignKeys(NodeStack baseStack,
-                                      MyRevision base,
+                                      DefaultRevision base,
                                       NodeStack forkStack,
-                                      MyRevisionBuilder builder,
+                                      DefaultRevisionBuilder builder,
                                       NodeStack scratchStack,
                                       ForeignKeyResolver resolver,
                                       @Nullable Table filter)
   {
-    MyRevision r = null;
+    DefaultRevision r = null;
     while (r != builder.result) {
       r = builder.result;
       check(baseStack, base, forkStack, builder, scratchStack, resolver,
@@ -42,19 +43,19 @@ class ForeignKeys {
   }
 
   private static void check(NodeStack baseStack,
-                            MyRevision base,
+                            DefaultRevision base,
                             NodeStack forkStack,
-                            final MyRevisionBuilder builder,
+                            final DefaultRevisionBuilder builder,
                             NodeStack scratchStack,
                             final ForeignKeyResolver resolver,
                             Table filter)
   {
-    MyRevision fork = builder.result;
+    DefaultRevision fork = builder.result;
 
     // ensure fork remains unmodified as we iterate over it:
     builder.setToken(new Object());
         
-    MyDiffResult result = new MyDiffResult
+    DefaultDiffResult result = new DefaultDiffResult
       (base, baseStack, fork, forkStack, false);
 
     int bottom = 0;
@@ -150,7 +151,7 @@ class ForeignKeys {
                           Compare.ColumnComparator).value;
 
               checkForeignKeys
-                (new NodeStack(), MyRevision.Empty,
+                (new NodeStack(), DefaultRevision.Empty,
                  new NodeStack(), builder,
                  new NodeStack(), resolver, constraint.refererTable);
             } else {
@@ -227,7 +228,7 @@ class ForeignKeys {
   }
 
   private static void handleBrokenReference(ForeignKeyResolver resolver,
-                                            MyRevisionBuilder builder,
+                                            DefaultRevisionBuilder builder,
                                             ForeignKey constraint,
                                             Object[] row)
   {

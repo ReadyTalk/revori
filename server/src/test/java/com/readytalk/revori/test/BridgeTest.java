@@ -19,7 +19,7 @@ import com.readytalk.revori.Table;
 import com.readytalk.revori.subscribe.Subscription;
 import com.readytalk.revori.server.Bridge;
 import com.readytalk.revori.server.RevisionServer;
-import com.readytalk.revori.server.SimpleRevisionServer;
+import com.readytalk.revori.server.simple.SimpleRevisionServer;
 
 public class BridgeTest {
   @Test
