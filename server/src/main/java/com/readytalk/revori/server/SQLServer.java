@@ -82,7 +82,7 @@ public class SQLServer implements RevisionServer {
 
   private static final Logger log = LoggerFactory.getLogger(SQLServer.class);
 
-  public enum Request {
+  private enum Request {
     Execute, Complete;
   }
 

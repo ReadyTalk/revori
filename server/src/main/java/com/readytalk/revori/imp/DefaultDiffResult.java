@@ -19,7 +19,7 @@ import com.readytalk.revori.Table;
 import com.readytalk.revori.imp.DiffIterator.DiffPair;
 
 class DefaultDiffResult implements DiffResult {
-  public enum State {
+  private enum State {
     Flush, FlushKey() {
       public Object fork(DefaultDiffResult r) {
         Node n = r.pairs[r.clientDepth].fork;
@@ -82,21 +82,21 @@ class DefaultDiffResult implements DiffResult {
     }
   }
 
-  public final DiffIterator[] iterators = new DiffIterator[Constants.MaxDepth];
-  public final DiffPair[] pairs = new DiffPair[Constants.MaxDepth];
-  public final boolean[] clientHasKey = new boolean[Constants.MaxDepth];
-  public final DefaultRevision fork;
-  public final boolean skipBrokenReferences;
-  public State state = State.Iterate;
-  public State nextState;
-  public NodeStack baseStack;
-  public NodeStack forkStack;
-  public Table table;
-  public int depth;
-  public int bottom;
-  public int clientDepth;
-  public Set<Column<?>> primaryKey;
-  public List<RefererForeignKeyAdapter> refererKeyAdapters;
+  private final DiffIterator[] iterators = new DiffIterator[Constants.MaxDepth];
+  private final DiffPair[] pairs = new DiffPair[Constants.MaxDepth];
+  private final boolean[] clientHasKey = new boolean[Constants.MaxDepth];
+  private final DefaultRevision fork;
+  private final boolean skipBrokenReferences;
+  private State state = State.Iterate;
+  private State nextState;
+  private NodeStack baseStack;
+  private NodeStack forkStack;
+  private Table table;
+  private int depth;
+  private int bottom;
+  private int clientDepth;
+  private Set<Column<?>> primaryKey;
+  private List<RefererForeignKeyAdapter> refererKeyAdapters;
 
   public DefaultDiffResult(DefaultRevision base,
                       NodeStack baseStack,

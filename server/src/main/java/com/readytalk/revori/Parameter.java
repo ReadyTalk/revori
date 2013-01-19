@@ -21,7 +21,7 @@ import javax.annotation.concurrent.ThreadSafe;
 public class Parameter implements Expression {
   private static final AtomicInteger nextOrder = new AtomicInteger();
 
-  public final int order;
+  private final int order;
 
   /**
    * Defines a placeholder as an expression for use when defining

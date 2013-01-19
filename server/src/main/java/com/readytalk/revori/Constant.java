@@ -26,7 +26,7 @@ public class Constant implements Expression {
    */
   public final Object value;
 
-  public final int order;
+  private final int order;
 
   /**
    * Defines a constant value as an expression.  Care should be taken

@@ -57,19 +57,19 @@ class DefaultRevisionBuilder implements RevisionBuilder {
 	public Object token;
 	public final NodeStack stack;
 	public final Object[] keys;
-	public final Comparator[] comparators;
-	public final Node[] blazedRoots;
-	public final Node[] blazedLeaves;
-	public final Node[] found;
-	public final Node.BlazeResult blazeResult = new Node.BlazeResult();
-	public NodeStack indexUpdateIterateStack;
-	public NodeStack indexUpdateBaseStack;
-	public NodeStack indexUpdateForkStack;
-	public DefaultRevision base;
-	public DefaultRevision indexBase;
+	private final Comparator[] comparators;
+	private final Node[] blazedRoots;
+	private final Node[] blazedLeaves;
+	private final Node[] found;
+	private final Node.BlazeResult blazeResult = new Node.BlazeResult();
+	private NodeStack indexUpdateIterateStack;
+	private NodeStack indexUpdateBaseStack;
+	private NodeStack indexUpdateForkStack;
+	private DefaultRevision base;
+	private DefaultRevision indexBase;
 	public DefaultRevision result;
-	public int max = -1;
-	public boolean dirtyIndexes;
+	private int max = -1;
+	private boolean dirtyIndexes;
 
 	public DefaultRevisionBuilder(Object token, DefaultRevision base,
 			NodeStack stack) {

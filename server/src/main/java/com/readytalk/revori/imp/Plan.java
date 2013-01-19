@@ -18,8 +18,8 @@ class Plan {
   public final ColumnReferenceAdapter[] references;
   public final Scan[] scans;
   public final DiffIterator[] iterators;
-  public boolean match;
-  public boolean complete = true;
+  private boolean match;
+  private boolean complete = true;
 
   public Plan(Index index) {
     this.index = index;

@@ -12,9 +12,9 @@ import com.readytalk.revori.OperationClass;
 import com.readytalk.revori.imp.Interval.BoundType;
 
 class ComparisonAdapter implements ExpressionAdapter {
-  public final BinaryOperation.Type type;
-  public final ExpressionAdapter left;
-  public final ExpressionAdapter right;
+  private final BinaryOperation.Type type;
+  private final ExpressionAdapter left;
+  private final ExpressionAdapter right;
     
   public ComparisonAdapter(BinaryOperation.Type type,
                            ExpressionAdapter left,

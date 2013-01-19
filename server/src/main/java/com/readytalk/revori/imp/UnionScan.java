@@ -13,9 +13,9 @@ import java.util.Iterator;
 import java.util.List;
 
 class UnionScan implements Scan {
-  public final Scan left;
-  public final Scan right;
-  public final Comparator comparator;
+  private final Scan left;
+  private final Scan right;
+  private final Comparator comparator;
 
   public UnionScan(Scan left,
                    Scan right,

@@ -22,18 +22,18 @@ import com.readytalk.revori.imp.DiffIterator.DiffPair;
 class TableIterator implements SourceIterator {
   private static final Logger log = LoggerFactory.getLogger(TableIterator.class);
 
-  public final TableReference tableReference;
-  public final Node base;
-  public final Node fork;
+  private final TableReference tableReference;
+  private final Node base;
+  private final Node fork;
   public final ExpressionAdapter test;
-  public final ExpressionContext expressionContext;
-  public final boolean visitUnchanged;
-  public final List<ColumnReferenceAdapter> columnReferences = new ArrayList<ColumnReferenceAdapter>();
-  public final Plan plan;
+  private final ExpressionContext expressionContext;
+  private final boolean visitUnchanged;
+  private final List<ColumnReferenceAdapter> columnReferences = new ArrayList<ColumnReferenceAdapter>();
+  private final Plan plan;
   public final DiffPair pair = new DiffPair();
-  public NodeStack baseStack;
-  public NodeStack forkStack;
-  public int depth;
+  private NodeStack baseStack;
+  private NodeStack forkStack;
+  private int depth;
   public boolean testFork;
 
   public TableIterator(TableReference tableReference,

@@ -16,7 +16,7 @@ class ConstantAdapter implements ExpressionAdapter {
   public static final ConstantAdapter Dummy = new ConstantAdapter
     (Compare.Dummy);
 
-  public final Object value;
+  private final Object value;
     
   public ConstantAdapter(Object value) {
     this.value = value;

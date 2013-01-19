@@ -28,7 +28,7 @@ import com.readytalk.revori.TableReference;
 
 public class RefererForeignKeyAdapter {
   public final ForeignKey constraint;
-  public final QueryTemplate query;
+  private final QueryTemplate query;
 
   public RefererForeignKeyAdapter(ForeignKey constraint) {
     this.constraint = constraint;

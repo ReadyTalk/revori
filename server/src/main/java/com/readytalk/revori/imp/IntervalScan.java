@@ -19,10 +19,10 @@ class IntervalScan implements Scan {
   public static final IntervalScan Empty
     = new IntervalScan(ConstantAdapter.Dummy, ConstantAdapter.Dummy);
 
-  public final ExpressionAdapter low;
-  public final BoundType lowBoundType;
-  public final ExpressionAdapter high;
-  public final BoundType highBoundType;
+  private final ExpressionAdapter low;
+  private final BoundType lowBoundType;
+  private final ExpressionAdapter high;
+  private final BoundType highBoundType;
 
   public IntervalScan(ExpressionAdapter low,
                       BoundType lowBoundType,

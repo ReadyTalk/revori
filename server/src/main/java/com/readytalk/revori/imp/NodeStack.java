@@ -18,13 +18,13 @@ class NodeStack {
 
   public Node[] array; // not final only so we can assign to null (for safety)
   public final int base;
-  public final NodeStack next;
-  public NodeStack previous;
+  private final NodeStack next;
+  private NodeStack previous;
   public Node top;
   public int index;
-  public boolean obsolete = false; // only for making sure we don't reuse popped NodeStacks
+  private boolean obsolete = false; // only for making sure we don't reuse popped NodeStacks
 
-  public NodeStack(@Nullable Node[] array) {
+  private NodeStack(@Nullable Node[] array) {
     this.array = array;
     this.base = 0;
     this.next = null;

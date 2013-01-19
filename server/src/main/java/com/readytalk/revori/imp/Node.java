@@ -26,12 +26,12 @@ class Node {
     Null.value = Null;
   }
 
-  public final Object token;
+  private final Object token;
   public Object key;
   public Object value;
   public Node left;
   public Node right;
-  public boolean red;
+  private boolean red;
     
   public Node(Object token, @Nullable Node basis) {
     this.token = token;

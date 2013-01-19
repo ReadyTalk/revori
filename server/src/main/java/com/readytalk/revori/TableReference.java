@@ -26,7 +26,7 @@ public class TableReference implements Source {
    */
   public final Table table;
 
-  public final int order;
+  private final int order;
 
   /**
    * Defines a table reference which may be used to unambiguously

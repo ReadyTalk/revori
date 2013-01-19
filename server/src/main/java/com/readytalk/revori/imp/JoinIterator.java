@@ -13,22 +13,22 @@ import com.readytalk.revori.Join;
 import com.readytalk.revori.QueryResult;
 
 public class JoinIterator implements SourceIterator {
-  public final JoinAdapter join;
-  public final DefaultRevision base;
-  public final DefaultRevision fork;
+  private final JoinAdapter join;
+  private final DefaultRevision base;
+  private final DefaultRevision fork;
   public final ExpressionAdapter test;
-  public final ExpressionContext expressionContext;
-  public final boolean visitUnchanged;
-  public final SourceIterator leftIterator;
-  public NodeStack rightBaseStack;
-  public NodeStack rightForkStack;
-  public QueryResult.Type leftType;
-  public SourceIterator rightIterator;
-  public boolean sawRightUnchanged;
-  public boolean sawRightInsert;
-  public boolean sawRightDelete;
-  public boolean sawRightEnd;
-  public boolean setUndefinedReferences;
+  private final ExpressionContext expressionContext;
+  private final boolean visitUnchanged;
+  private final SourceIterator leftIterator;
+  private NodeStack rightBaseStack;
+  private NodeStack rightForkStack;
+  private QueryResult.Type leftType;
+  private SourceIterator rightIterator;
+  private boolean sawRightUnchanged;
+  private boolean sawRightInsert;
+  private boolean sawRightDelete;
+  private boolean sawRightEnd;
+  private boolean setUndefinedReferences;
 
   public JoinIterator(JoinAdapter join,
                       DefaultRevision base,

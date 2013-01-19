@@ -22,7 +22,7 @@ public class Constants {
   public static final int TableDataDepth = 0;
   public static final int IndexDataDepth = 1;
   public static final int IndexDataBodyDepth = 2;
-  public static final int MaxIndexDataBodyDepth = 8;
+  private static final int MaxIndexDataBodyDepth = 8;
   public static final int MaxDepth
     = IndexDataBodyDepth + MaxIndexDataBodyDepth;
 

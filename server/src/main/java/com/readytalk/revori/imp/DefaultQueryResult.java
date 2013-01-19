@@ -42,16 +42,16 @@ class DefaultQueryResult implements QueryResult {
     }
   }
 
-  public final SourceAdapter source;
+  private final SourceAdapter source;
   public final List<ExpressionAdapter> expressions;
   public final ExpressionContext expressionContext;
   public final ExpressionAdapter test;
-  public final DefaultRevision base;
-  public final DefaultRevision fork;
-  public final NodeStack baseStack;
-  public final NodeStack forkStack;
-  public SourceIterator iterator;
-  public int nextItemIndex;
+  private final DefaultRevision base;
+  private final DefaultRevision fork;
+  private final NodeStack baseStack;
+  private final NodeStack forkStack;
+  private SourceIterator iterator;
+  private int nextItemIndex;
 
   public DefaultQueryResult(DefaultRevision base,
                        @Nullable NodeStack baseStack,
