@@ -20,7 +20,7 @@ import com.readytalk.revori.InsertTemplate;
 import com.readytalk.revori.PatchTemplate;
 
 class InsertTemplateAdapter implements PatchTemplateAdapter {
-	public int apply(MyRevisionBuilder builder, PatchTemplate template, Object[] parameters) {
+	public int apply(DefaultRevisionBuilder builder, PatchTemplate template, Object[] parameters) {
 		InsertTemplate insert = (InsertTemplate) template;
 
 		ExpressionContext expressionContext = new ExpressionContext(parameters, null);

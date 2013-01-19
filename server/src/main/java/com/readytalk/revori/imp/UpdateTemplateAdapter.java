@@ -20,7 +20,7 @@ import com.readytalk.revori.Table;
 import com.readytalk.revori.UpdateTemplate;
 
 class UpdateTemplateAdapter implements PatchTemplateAdapter {
-  public int apply(MyRevisionBuilder builder,
+  public int apply(DefaultRevisionBuilder builder,
                    PatchTemplate template,
                    Object[] parameters)
   {
@@ -44,7 +44,7 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
     builder.setKey(Constants.TableDataDepth, table, Compare.TableComparator);
 
     Plan plan = Plan.choosePlan
-      (MyRevision.Empty, NodeStack.Null, builder.result, builder.stack, test,
+      (DefaultRevision.Empty, NodeStack.Null, builder.result, builder.stack, test,
        update.tableReference);
 
     builder.updateIndex(plan.index);
@@ -52,14 +52,14 @@ class UpdateTemplateAdapter implements PatchTemplateAdapter {
     Object[] values = new Object[update.columns.size()];
     Node.BlazeResult result = new Node.BlazeResult();
     int count = 0;
-    MyRevision revision = builder.result;
+    DefaultRevision revision = builder.result;
 
     Index index = table.primaryKey;
 
     builder.setKey(Constants.IndexDataDepth, index, Compare.IndexComparator);
 
     TableIterator iterator = new TableIterator
-      (update.tableReference, MyRevision.Empty, NodeStack.Null, revision,
+      (update.tableReference, DefaultRevision.Empty, NodeStack.Null, revision,
        new NodeStack(), test, expressionContext, plan, false);
 
     List<Column<?>> keyColumns = index.columns;

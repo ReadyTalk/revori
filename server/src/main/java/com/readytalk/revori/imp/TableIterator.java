@@ -37,9 +37,9 @@ class TableIterator implements SourceIterator {
   public boolean testFork;
 
   public TableIterator(TableReference tableReference,
-                       MyRevision base,
+                       DefaultRevision base,
                        NodeStack baseStack,
-                       MyRevision fork,
+                       DefaultRevision fork,
                        NodeStack forkStack,
                        ExpressionAdapter test,
                        ExpressionContext expressionContext,
@@ -89,9 +89,9 @@ class TableIterator implements SourceIterator {
   }
 
   public TableIterator(TableReference tableReference,
-                       MyRevision base,
+                       DefaultRevision base,
                        NodeStack baseStack,
-                       MyRevision fork,
+                       DefaultRevision fork,
                        NodeStack forkStack,
                        ExpressionAdapter test,
                        ExpressionContext expressionContext,

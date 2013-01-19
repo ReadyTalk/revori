@@ -8,9 +8,9 @@
 package com.readytalk.revori.imp;
 
 interface SourceAdapter {
-  public SourceIterator iterator(MyRevision base,
+  public SourceIterator iterator(DefaultRevision base,
                                  NodeStack baseStack,
-                                 MyRevision fork,
+                                 DefaultRevision fork,
                                  NodeStack forkStack,
                                  ExpressionAdapter test,
                                  ExpressionContext expressionContext,

@@ -93,9 +93,9 @@ class Plan {
     return best;
   }
 
-  public static Plan choosePlan(MyRevision base,
+  public static Plan choosePlan(DefaultRevision base,
                                 NodeStack baseStack,
-                                MyRevision fork,
+                                DefaultRevision fork,
                                 NodeStack forkStack,
                                 ExpressionAdapter test,
                                 TableReference tableReference)

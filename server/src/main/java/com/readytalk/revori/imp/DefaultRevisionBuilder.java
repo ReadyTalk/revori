@@ -45,7 +45,7 @@ import com.readytalk.revori.UpdateTemplate;
 import com.readytalk.revori.View;
 import com.readytalk.revori.util.Util;
 
-class MyRevisionBuilder implements RevisionBuilder {
+class DefaultRevisionBuilder implements RevisionBuilder {
   private static final Logger log = LoggerFactory.getLogger(RevisionBuilder.class);
 
   private static final Map<Class, PatchTemplateAdapter> adapters
@@ -68,14 +68,14 @@ class MyRevisionBuilder implements RevisionBuilder {
   public NodeStack indexUpdateIterateStack;
   public NodeStack indexUpdateBaseStack;
   public NodeStack indexUpdateForkStack;
-  public MyRevision base;
-  public MyRevision indexBase;
-  public MyRevision result;
+  public DefaultRevision base;
+  public DefaultRevision indexBase;
+  public DefaultRevision result;
   public int max = -1;
   public boolean dirtyIndexes;
 
-  public MyRevisionBuilder(Object token,
-                           MyRevision base,
+  public DefaultRevisionBuilder(Object token,
+                           DefaultRevision base,
                            NodeStack stack)
   {
     this.token = token;
@@ -130,7 +130,7 @@ class MyRevisionBuilder implements RevisionBuilder {
   }
 
   public void deleteAll() {
-    result = MyRevision.Empty;
+    result = DefaultRevision.Empty;
     max = -1;
   }
 
@@ -249,7 +249,7 @@ class MyRevisionBuilder implements RevisionBuilder {
   }
 
   public void updateIndexTree(Index index,
-                              MyRevision base,
+                              DefaultRevision base,
                               NodeStack baseStack,
                               NodeStack forkStack)
   {
@@ -338,7 +338,7 @@ class MyRevisionBuilder implements RevisionBuilder {
   }
 
   public void updateViewTree(View view,
-                             MyRevision base,
+                             DefaultRevision base,
                              NodeStack baseStack,
                              NodeStack forkStack)
   {
@@ -346,7 +346,7 @@ class MyRevisionBuilder implements RevisionBuilder {
         log.debug("update {} diff {}", view, Util.toString(base, result));
     }
 
-    MyQueryResult qr = new MyQueryResult
+    DefaultQueryResult qr = new DefaultQueryResult
       (base, baseStack, result, forkStack, view.query,
        view.parameters.toArray(new Object[view.parameters.size()]), true);
 
@@ -775,7 +775,7 @@ class MyRevisionBuilder implements RevisionBuilder {
     checkStacks();
 
     updateIndexTree
-      (index, MyRevision.Empty, indexUpdateBaseStack, indexUpdateForkStack);
+      (index, DefaultRevision.Empty, indexUpdateBaseStack, indexUpdateForkStack);
 
     pathInsert(Constants.IndexTable, index.table, index);
   }
@@ -794,10 +794,10 @@ class MyRevisionBuilder implements RevisionBuilder {
 
   private void addView(View view)
   {
-    addView(view, MyRevision.Empty);
+    addView(view, DefaultRevision.Empty);
   }
 
-  void addView(final View view, MyRevision base)
+  void addView(final View view, DefaultRevision base)
   {
     final boolean isNew[] = new boolean[1];
     view.query.source.visit(new SourceVisitor() {
@@ -1034,7 +1034,7 @@ class MyRevisionBuilder implements RevisionBuilder {
 
       public RowBuilder delete(Column<?> key) {
         path[path.length - 2] = key;
-        MyRevisionBuilder.this.delete(path, 0, path.length - 1);
+        DefaultRevisionBuilder.this.delete(path, 0, path.length - 1);
         return this;
       }
 
@@ -1094,7 +1094,7 @@ class MyRevisionBuilder implements RevisionBuilder {
       for(int i = 0; i < key.length; i++) {
         path[i + 1] = key[i];
       }
-      MyRevisionBuilder.this.delete(path, 0, key.length + 1);
+      DefaultRevisionBuilder.this.delete(path, 0, key.length + 1);
       return this;
     }
 
@@ -1111,8 +1111,8 @@ class MyRevisionBuilder implements RevisionBuilder {
     }
 
     private RevisionBuilder up() {
-      MyRevisionBuilder.this.tableBuilder = this;
-      return MyRevisionBuilder.this;
+      DefaultRevisionBuilder.this.tableBuilder = this;
+      return DefaultRevisionBuilder.this;
     }
   }
 
@@ -1328,15 +1328,15 @@ class MyRevisionBuilder implements RevisionBuilder {
     return result;
   }
 
-  private static MyRevision getRevision(Object token,
-                                        MyRevision basis,
+  private static DefaultRevision getRevision(Object token,
+                                        DefaultRevision basis,
                                         Node root)
   {
     if (token == basis.token) {
       basis.root = root;
       return basis;
     } else {
-      return new MyRevision(token, root);
+      return new DefaultRevision(token, root);
     }
   }
 }

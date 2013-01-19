@@ -13,8 +13,8 @@ import com.readytalk.revori.QueryResult;
 
 public class JoinIterator implements SourceIterator {
   public final JoinAdapter join;
-  public final MyRevision base;
-  public final MyRevision fork;
+  public final DefaultRevision base;
+  public final DefaultRevision fork;
   public final ExpressionAdapter test;
   public final ExpressionContext expressionContext;
   public final boolean visitUnchanged;
@@ -30,9 +30,9 @@ public class JoinIterator implements SourceIterator {
   public boolean setUndefinedReferences;
 
   public JoinIterator(JoinAdapter join,
-                      MyRevision base,
+                      DefaultRevision base,
                       NodeStack baseStack,
-                      MyRevision fork,
+                      DefaultRevision fork,
                       NodeStack forkStack,
                       ExpressionAdapter test,
                       ExpressionContext expressionContext,
@@ -105,7 +105,7 @@ public class JoinIterator implements SourceIterator {
           }
 
           rightIterator = join.right.iterator
-            (MyRevision.Empty, NodeStack.Null, fork, rightForkStack, test,
+            (DefaultRevision.Empty, NodeStack.Null, fork, rightForkStack, test,
              expressionContext, true);
           break;
 
@@ -115,7 +115,7 @@ public class JoinIterator implements SourceIterator {
           }
 
           rightIterator = join.right.iterator
-            (MyRevision.Empty, NodeStack.Null, base, rightForkStack, test,
+            (DefaultRevision.Empty, NodeStack.Null, base, rightForkStack, test,
              expressionContext, true);
           break;
 

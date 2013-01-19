@@ -86,7 +86,7 @@ public class ReferentForeignKeyAdapter {
   private QueryResult query(QueryTemplate query,
                             Revision revision, List<Column<?>> columns, Node tree)
   {
-    return MyRevision.Empty.diff(revision, query, parameters(columns, tree));
+    return DefaultRevision.Empty.diff(revision, query, parameters(columns, tree));
   }
 
   public void visitBrokenReferences(Revision revision, Node tree,
