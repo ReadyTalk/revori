@@ -18,8 +18,8 @@ class Plan {
   public final ColumnReferenceAdapter[] references;
   public final Scan[] scans;
   public final DiffIterator[] iterators;
-  public boolean match;
-  public boolean complete = true;
+  private boolean match;
+  private boolean complete = true;
 
   public Plan(Index index) {
     this.index = index;
@@ -93,9 +93,9 @@ class Plan {
     return best;
   }
 
-  public static Plan choosePlan(MyRevision base,
+  public static Plan choosePlan(DefaultRevision base,
                                 NodeStack baseStack,
-                                MyRevision fork,
+                                DefaultRevision fork,
                                 NodeStack forkStack,
                                 ExpressionAdapter test,
                                 TableReference tableReference)

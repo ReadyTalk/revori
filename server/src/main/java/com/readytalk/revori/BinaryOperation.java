@@ -121,7 +121,7 @@ public class BinaryOperation implements Expression {
   /**
    * {@inheritDoc}
    */
-  public Class typeConstraint() {
+  public Class<?> typeConstraint() {
     switch (type.operationClass()) {
     case Boolean:
     case Comparison:

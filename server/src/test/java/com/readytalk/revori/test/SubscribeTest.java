@@ -30,7 +30,7 @@ import com.readytalk.revori.Revision;
 import com.readytalk.revori.RevisionBuilder;
 import com.readytalk.revori.Table;
 import com.readytalk.revori.TableReference;
-import com.readytalk.revori.server.SimpleRevisionServer;
+import com.readytalk.revori.server.simple.SimpleRevisionServer;
 import com.readytalk.revori.subscribe.DiffMachine;
 import com.readytalk.revori.subscribe.DiffServer;
 import com.readytalk.revori.subscribe.RowListener;

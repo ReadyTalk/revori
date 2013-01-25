@@ -20,7 +20,7 @@ import com.readytalk.revori.InsertTemplate;
 import com.readytalk.revori.PatchTemplate;
 
 class InsertTemplateAdapter implements PatchTemplateAdapter {
-	public int apply(MyRevisionBuilder builder, PatchTemplate template, Object[] parameters) {
+	public int apply(DefaultRevisionBuilder builder, PatchTemplate template, Object[] parameters) {
 		InsertTemplate insert = (InsertTemplate) template;
 
 		ExpressionContext expressionContext = new ExpressionContext(parameters, null);
@@ -56,12 +56,12 @@ class InsertTemplateAdapter implements PatchTemplateAdapter {
     List<Column<?>> columns = index.columns;
     int i;
     for (i = 0; i < columns.size() - 1; ++i) {
-      Column c = columns.get(i);
+      Column<?> c = columns.get(i);
       builder.setKey
         (i + Constants.IndexDataBodyDepth, map.get(c), c.comparator);
     }
 
-    Column c = columns.get(i);
+    Column<?> c = columns.get(i);
     Node n = builder.blaze
       (i + Constants.IndexDataBodyDepth, map.get(c), c.comparator);
 

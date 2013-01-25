@@ -18,7 +18,7 @@ public interface Expression extends Comparable<Expression> {
    */
   public void visit(ExpressionVisitor visitor);
 
-  public Class typeConstraint();
+  public Class<?> typeConstraint();
 
   public Iterable<Expression> children();
 }

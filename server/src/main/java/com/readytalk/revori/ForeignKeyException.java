@@ -11,11 +11,13 @@ import javax.annotation.concurrent.Immutable;
 
 @Immutable
 public class ForeignKeyException extends RuntimeException {
-  public ForeignKeyException() {
-    super();
-  }
+	private static final long serialVersionUID = 1L;
 
-  public ForeignKeyException(String message) {
-    super(message);
-  }
+	public ForeignKeyException() {
+		super();
+	}
+
+	public ForeignKeyException(String message) {
+		super(message);
+	}
 }

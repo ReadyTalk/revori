@@ -12,6 +12,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.readytalk.revori.DiffResult;
@@ -32,7 +33,8 @@ public class Bridge {
   private final TaskHandler taskHandler;
   private final Map<RevisionServer, Listener> listeners = Maps.newHashMap();
 
-  public Bridge(TaskHandler taskHandler) {
+  @VisibleForTesting
+  protected Bridge(TaskHandler taskHandler) {
     this.taskHandler = taskHandler;
   }
 

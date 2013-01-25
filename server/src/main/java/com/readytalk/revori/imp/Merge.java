@@ -21,10 +21,10 @@ import com.readytalk.revori.Table;
 import com.readytalk.revori.View;
 
 class Merge {
-  public static MyRevision mergeRevisions
-    (MyRevision base,
-     MyRevision left,
-     MyRevision right,
+  public static DefaultRevision mergeRevisions
+    (DefaultRevision base,
+     DefaultRevision left,
+     DefaultRevision right,
      ConflictResolver conflictResolver,
      ForeignKeyResolver foreignKeyResolver)
   {
@@ -53,7 +53,7 @@ class Merge {
     //
     //  4. Verify foreign key constraints.
 
-    MyRevisionBuilder builder = new MyRevisionBuilder
+    DefaultRevisionBuilder builder = new DefaultRevisionBuilder
       (new Object(), left, new NodeStack());
 
     Set<Index> indexes = new TreeSet<Index>();
@@ -326,12 +326,12 @@ class Merge {
 
     // build data trees for any new indexes
     for (Index index: newIndexes) {
-      builder.updateIndexTree(index, MyRevision.Empty, leftStack, baseStack);
+      builder.updateIndexTree(index, DefaultRevision.Empty, leftStack, baseStack);
     }
 
     // build data trees for any new views
     for (View view: newViews) {
-      builder.updateViewTree(view, MyRevision.Empty, leftStack, baseStack);
+      builder.updateViewTree(view, DefaultRevision.Empty, leftStack, baseStack);
     }
 
     // verify all foreign key constraints

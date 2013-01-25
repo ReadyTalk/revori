@@ -15,4 +15,6 @@ import javax.annotation.concurrent.Immutable;
  * primary key.
  */
 @Immutable
-public class DuplicateKeyException extends RuntimeException { }
+public class DuplicateKeyException extends RuntimeException {
+	private static final long serialVersionUID = 1L;
+}

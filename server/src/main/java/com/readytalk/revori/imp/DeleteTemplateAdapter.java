@@ -17,7 +17,7 @@ import com.readytalk.revori.QueryResult;
 import com.readytalk.revori.Table;
 
 class DeleteTemplateAdapter implements PatchTemplateAdapter {
-  public int apply(MyRevisionBuilder builder,
+  public int apply(DefaultRevisionBuilder builder,
                    PatchTemplate template,
                    Object[] parameters)
   {
@@ -33,20 +33,20 @@ class DeleteTemplateAdapter implements PatchTemplateAdapter {
        Compare.TableComparator);
 
     Plan plan = Plan.choosePlan
-      (MyRevision.Empty, NodeStack.Null, builder.result, builder.stack, test,
+      (DefaultRevision.Empty, NodeStack.Null, builder.result, builder.stack, test,
        delete.tableReference);
 
     builder.updateIndex(plan.index);
 
     int count = 0;
-    MyRevision revision = builder.result;
+    DefaultRevision revision = builder.result;
     Table table = delete.tableReference.table;
     Index index = table.primaryKey;
 
     builder.setKey(Constants.IndexDataDepth, index, Compare.IndexComparator);
 
     TableIterator iterator = new TableIterator
-      (delete.tableReference, MyRevision.Empty, NodeStack.Null, revision,
+      (delete.tableReference, DefaultRevision.Empty, NodeStack.Null, revision,
        new NodeStack(), test, expressionContext, plan, false);
 
     List<Column<?>> keyColumns = index.columns;
