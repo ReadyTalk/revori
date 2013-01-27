@@ -28,7 +28,7 @@ import com.readytalk.revori.TableReference;
 
 public class RefererForeignKeyAdapter {
   public final ForeignKey constraint;
-  public final QueryTemplate query;
+  private final QueryTemplate query;
 
   public RefererForeignKeyAdapter(ForeignKey constraint) {
     this.constraint = constraint;
@@ -67,11 +67,11 @@ public class RefererForeignKeyAdapter {
       throw new NullPointerException();
     }
 
-    return MyRevision.Empty.diff
+    return DefaultRevision.Empty.diff
       (revision, query, params).nextRow() == QueryResult.Type.End;
   }
 
-  public void handleInsert(MyRevisionBuilder builder, Node tree) {
+  public void handleInsert(DefaultRevisionBuilder builder, Node tree) {
     if (queryEmptyAndNotNull(query, builder.result, constraint.refererColumns, tree)) {
       throw new ForeignKeyException();
     }

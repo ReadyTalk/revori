@@ -8,9 +8,9 @@
 package com.readytalk.revori.imp;
 
 
-import java.util.Comparator;
+import static com.google.common.base.Preconditions.checkArgument;
 
-import static com.google.common.base.Preconditions.*;
+import java.util.Comparator;
 
 class MergeIterator {
   public final NodeStack base;

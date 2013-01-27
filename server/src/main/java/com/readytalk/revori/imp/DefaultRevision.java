@@ -27,8 +27,8 @@ import com.readytalk.revori.RevisionBuilder;
 import com.readytalk.revori.TableReference;
 import com.readytalk.revori.View;
 
-public class MyRevision implements Revision {
-  public static final MyRevision Empty = new MyRevision
+public class DefaultRevision implements Revision {
+  public static final DefaultRevision Empty = new DefaultRevision
     (new Object(), Node.Null);
 
   public final Object token;
@@ -38,7 +38,7 @@ public class MyRevision implements Revision {
     return Empty;
   }
 
-  public MyRevision(Object token, Node root) {
+  public DefaultRevision(Object token, Node root) {
     this.token = token;
     this.root = root;
   }
@@ -77,7 +77,7 @@ public class MyRevision implements Revision {
 
     final TableIterator it = new TableIterator
       (reference,
-       MyRevision.Empty, NodeStack.Null,
+       DefaultRevision.Empty, NodeStack.Null,
        this, new NodeStack(),
        ConstantAdapter.True,
        context,
@@ -167,9 +167,9 @@ public class MyRevision implements Revision {
                           QueryTemplate template,
                           Object ... parameters)
   {
-    MyRevision myFork;
+    DefaultRevision myFork;
     try {
-      myFork = (MyRevision) fork;
+      myFork = (DefaultRevision) fork;
     } catch (ClassCastException e) {
       throw new IllegalArgumentException
         ("revision not created by this implementation");        
@@ -194,7 +194,7 @@ public class MyRevision implements Revision {
       // between indexes and views.
 
       View view = new View(template, parameters);
-      MyRevisionBuilder builder = new MyRevisionBuilder
+      DefaultRevisionBuilder builder = new DefaultRevisionBuilder
         (new Object(), myFork, new NodeStack());
 
       builder.addView(view, this);
@@ -210,28 +210,28 @@ public class MyRevision implements Revision {
         (builder.commit(), new QueryTemplate
          (expressions, tableReference, new Constant(true)));
     } else {
-      return new MyQueryResult
+      return new DefaultQueryResult
         (this, null, myFork, null, template, parameters.clone());
     }
   }
 
   public DiffResult diff(Revision fork, boolean skipBrokenReferences)
   {
-    MyRevision myBase = this;
-    MyRevision myFork;
+    DefaultRevision myBase = this;
+    DefaultRevision myFork;
     try {
-      myFork = (MyRevision) fork;
+      myFork = (DefaultRevision) fork;
     } catch (ClassCastException e) {
       throw new IllegalArgumentException
         ("revision not created by this implementation");        
     }
 
-    return new MyDiffResult
+    return new DefaultDiffResult
       (myBase, new NodeStack(), myFork, new NodeStack(), skipBrokenReferences);
   }
 
   public RevisionBuilder builder() {
-    return new MyRevisionBuilder(new Object(), this, new NodeStack());
+    return new DefaultRevisionBuilder(new Object(), this, new NodeStack());
   }
 
   public Revision merge(Revision left,
@@ -239,12 +239,12 @@ public class MyRevision implements Revision {
                         ConflictResolver conflictResolver,
                         ForeignKeyResolver foreignKeyResolver)
   {
-    MyRevision myBase = this;
-    MyRevision myLeft;
-    MyRevision myRight;
+    DefaultRevision myBase = this;
+    DefaultRevision myLeft;
+    DefaultRevision myRight;
     try {
-      myLeft = (MyRevision) left;
-      myRight = (MyRevision) right;
+      myLeft = (DefaultRevision) left;
+      myRight = (DefaultRevision) right;
     } catch (ClassCastException e) {
       throw new IllegalArgumentException
         ("revision not created by this implementation");
@@ -276,7 +276,7 @@ public class MyRevision implements Revision {
     if(this == other) {
       return true;
     }
-    return (other instanceof MyRevision)
-      && diff((MyRevision)other, true).next() == DiffResult.Type.End;
+    return (other instanceof DefaultRevision)
+      && diff((DefaultRevision)other, true).next() == DiffResult.Type.End;
   }
 }

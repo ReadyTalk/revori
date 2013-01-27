@@ -59,8 +59,7 @@ public class Column<T> implements Comparable<Column<?>> {
   }
 
   public Column(Class<T> type, String id, Comparator comparator,
-                boolean serializable)
-  {
+                boolean serializable) {
     this.type = type;
     this.id = id;
     this.comparator = comparator;

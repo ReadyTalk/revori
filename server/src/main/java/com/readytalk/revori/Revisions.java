@@ -9,7 +9,7 @@ package com.readytalk.revori;
 
 import javax.annotation.concurrent.Immutable;
 
-import com.readytalk.revori.imp.MyRevision;
+import com.readytalk.revori.imp.DefaultRevision;
 
 /**
  * Uninstantiable utility class containing the empty database
@@ -23,5 +23,5 @@ public class Revisions {
    * This is the empty database revision from which new revisions may
    * be derived via <code>Revision.builder()</code>.
    */
-  public static final Revision Empty = MyRevision.Empty;
+  public static final Revision Empty = DefaultRevision.Empty;
 }

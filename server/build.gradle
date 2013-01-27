@@ -42,7 +42,8 @@ dependencies {
     ["com.google.code.findbugs:jsr305:${findbugsVersion}"],
     ["com.google.code.findbugs:annotations:${findbugsVersion}"],
     ["com.google.guava:guava:${guavaVersion}"],
-    ["org.slf4j:slf4j-api:${slf4jVersion}"]
+    ["org.slf4j:slf4j-api:${slf4jVersion}"],
+    ["javax.inject:javax.inject:1"],
   )
 
   runtime "ch.qos.logback:logback-classic:${logbackVersion}"

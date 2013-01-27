@@ -11,8 +11,8 @@ import com.readytalk.revori.OperationClass;
 import com.readytalk.revori.UnaryOperation;
 
 class BooleanUnaryAdapter implements ExpressionAdapter {
-  public final UnaryOperation.Type type;
-  public final ExpressionAdapter operand;
+  private final UnaryOperation.Type type;
+  private final ExpressionAdapter operand;
     
   public BooleanUnaryAdapter(UnaryOperation.Type type,
                              ExpressionAdapter operand)
@@ -62,7 +62,7 @@ class BooleanUnaryAdapter implements ExpressionAdapter {
     }
   }
 
-  public Class type() {
+  public Class<Boolean> type() {
     return Boolean.class;
   }
 }

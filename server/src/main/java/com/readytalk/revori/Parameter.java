@@ -12,8 +12,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.concurrent.ThreadSafe;
 
-import com.google.common.base.Objects;
-
 
 /**
  * Type representing an expression whose value will be supplied
@@ -23,7 +21,7 @@ import com.google.common.base.Objects;
 public class Parameter implements Expression {
   private static final AtomicInteger nextOrder = new AtomicInteger();
 
-  public final int order;
+  private final int order;
 
   /**
    * Defines a placeholder as an expression for use when defining

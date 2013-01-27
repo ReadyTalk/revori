@@ -74,7 +74,7 @@ public class UnaryOperation implements Expression {
   /**
    * {@inheritDoc}
    */
-  public Class typeConstraint() {
+  public Class<?> typeConstraint() {
     switch (type.operationClass()) {
     case Boolean:
       return Boolean.class;

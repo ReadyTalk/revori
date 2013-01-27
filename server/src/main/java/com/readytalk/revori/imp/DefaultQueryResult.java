@@ -17,13 +17,13 @@ import com.readytalk.revori.Expression;
 import com.readytalk.revori.QueryResult;
 import com.readytalk.revori.QueryTemplate;
 
-class MyQueryResult implements QueryResult {
+class DefaultQueryResult implements QueryResult {
   private static class ChangeFinder implements SourceAdapterVisitor {
-    public final MyRevision base;
-    public final MyRevision fork;
+    public final DefaultRevision base;
+    public final DefaultRevision fork;
     public boolean foundChanged;
 
-    public ChangeFinder(MyRevision base, MyRevision fork) {
+    public ChangeFinder(DefaultRevision base, DefaultRevision fork) {
       this.base = base;
       this.fork = fork;
     }
@@ -42,20 +42,20 @@ class MyQueryResult implements QueryResult {
     }
   }
 
-  public final SourceAdapter source;
+  private final SourceAdapter source;
   public final List<ExpressionAdapter> expressions;
   public final ExpressionContext expressionContext;
   public final ExpressionAdapter test;
-  public final MyRevision base;
-  public final MyRevision fork;
-  public final NodeStack baseStack;
-  public final NodeStack forkStack;
-  public SourceIterator iterator;
-  public int nextItemIndex;
+  private final DefaultRevision base;
+  private final DefaultRevision fork;
+  private final NodeStack baseStack;
+  private final NodeStack forkStack;
+  private SourceIterator iterator;
+  private int nextItemIndex;
 
-  public MyQueryResult(MyRevision base,
+  public DefaultQueryResult(DefaultRevision base,
                        @Nullable NodeStack baseStack,
-                       MyRevision fork,
+                       DefaultRevision fork,
                        @Nullable NodeStack forkStack,
                        QueryTemplate template,
                        Object[] parameters)
@@ -63,9 +63,9 @@ class MyQueryResult implements QueryResult {
     this(base, baseStack, fork, forkStack, template, parameters, false);
   }
 
-  public MyQueryResult(MyRevision base,
+  public DefaultQueryResult(DefaultRevision base,
                        @Nullable NodeStack baseStack,
-                       MyRevision fork,
+                       DefaultRevision fork,
                        @Nullable NodeStack forkStack,
                        QueryTemplate template,
                        Object[] parameters,

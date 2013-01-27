@@ -11,7 +11,7 @@ import java.util.NoSuchElementException;
 
 class NodeIterator {
   public NodeStack stack; // not final only so we can assign to null (for safety)
-  public boolean hasNext;
+  private boolean hasNext;
     
   public NodeIterator(NodeStack stack,
                       Node root)
