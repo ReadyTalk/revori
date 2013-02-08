@@ -86,7 +86,7 @@ public class UtilTest {
 		
 		Object output = Util.convert(Integer.class, input);
 
-		long result = (Long) output;
+		int result = (Integer) output;
 		assertEquals(value, result);
 	}
 }

@@ -150,9 +150,9 @@ public class Util {
   public static Object convert(Class<?> type,
                                 String value)
   {
-    if (type == Integer.class
-        || type == Long.class)
-    {
+    if (type == Integer.class) {
+      return Integer.parseInt(value.trim());
+    } else if (type == Long.class) {
       return Long.parseLong(value.trim());
     } else if (type == String.class) {
       return value;
