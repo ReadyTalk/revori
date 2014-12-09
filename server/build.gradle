@@ -38,10 +38,6 @@ dependencies {
   runtime "ch.qos.logback:logback-classic:${libVersions.logbackVersion}"
 }
 
-jar {
-  baseName = 'revori-server'
-}
-
 jacocoTestReport {
   reports {
     html.enabled = true

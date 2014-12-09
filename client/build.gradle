@@ -13,3 +13,4 @@ executables {
     baseName = 'revori-client'
   }
 }
+
