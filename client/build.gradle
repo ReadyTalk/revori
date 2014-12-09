@@ -1,21 +1,16 @@
-apply plugin: 'cpp-exe'
+apply plugin: 'cpp'
 
-executables {
-  main {
-    spec {
-      baseName = 'revori-client'
-      args  "-Werror",
-            "-Wall",
-            "-Wextra",
-            "-Wunused-parameter",
-            "-Winit-self",
-            "-fno-rtti",
-            "-fno-exceptions",
-            "-O0",
-            "-g3",
-            "-lreadline"
-    }
+binaries.all {
+  if (toolChain in Gcc) {
+    cppCompiler.args "-Werror", "-Wall", "-Wextra", "-Wunused-parameter",
+      "-Winit-self", "-fno-rtti", "-fno-exceptions", "-O0", "-g3"
+    linker.args "-lreadline"
   }
 }
 
-task build(dependsOn: compileMain)
+executables {
+  main {
+    baseName = 'revori-client'
+  }
+}
+

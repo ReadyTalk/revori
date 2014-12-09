@@ -2,14 +2,11 @@ buildscript {
   repositories {
     mavenCentral()
   }
-  dependencies {
-    classpath 'com.mapvine:gradle-cobertura-plugin:1.0'
-  }
 }
 
 apply plugin: 'java'
 apply plugin: 'findbugs'
-apply plugin: 'cobertura'
+apply plugin: 'jacoco'
 
 ext {
   mainClassName='com.readytalk.revori.server.SQLServer'
@@ -22,54 +19,42 @@ repositories {
 }
 
 dependencies {
-  ext {
-      findbugsVersion = '2.0.1'
-      guavaVersion = '14.0-rc1'
-      slf4jVersion = '1.7.2'
-      logbackVersion = '1.0.9'
-      junitVersion = '4.11'
-      mockitoVersion = '1.9.5'
-  }
 
-  findbugs "com.google.code.findbugs:findbugs:${findbugsVersion}"
-  
+  findbugs "com.google.code.findbugs:findbugs:${libVersions.findbugsVersion}"
+
   testCompile (
-  	["junit:junit:${junitVersion}"],
-  	["org.mockito:mockito-all:${mockitoVersion}"],
+  	["junit:junit:${libVersions.junitVersion}"],
+  	["org.mockito:mockito-all:${libVersions.mockitoVersion}"],
   )
 
   compile (
-    ["com.google.code.findbugs:jsr305:${findbugsVersion}"],
-    ["com.google.code.findbugs:annotations:${findbugsVersion}"],
-    ["com.google.guava:guava:${guavaVersion}"],
-    ["org.slf4j:slf4j-api:${slf4jVersion}"],
+    ["com.google.code.findbugs:jsr305:${libVersions.findbugsVersion}"],
+    ["com.google.code.findbugs:annotations:${libVersions.findbugsVersion}"],
+    ["com.google.guava:guava:${libVersions.guavaVersion}"],
+    ["org.slf4j:slf4j-api:${libVersions.slf4jVersion}"],
     ["javax.inject:javax.inject:1"],
   )
 
-  runtime "ch.qos.logback:logback-classic:${logbackVersion}"
+  runtime "ch.qos.logback:logback-classic:${libVersions.logbackVersion}"
 }
 
-jar {
-  baseName = 'revori-server'
+jacocoTestReport {
+  reports {
+    html.enabled = true
+    csv.enabled = true
+    xml.enabled = true
+  }
 }
 
-cobertura {
-  format = 'html'
-  includes = ['**/*.java']
+jacocoTestReport {
+  dependsOn test
 }
 
 findbugs {
   ignoreFailures = true
 }
 
-test {
-  //Here due to an issue with cobertura and jre7.
-  jvmArgs "-XX:-UseSplitVerifier"
-}
-
-task start {
-  dependsOn 'build'
-
+task start dependsOn build {
   group = 'application'
   description = 'Start the Revori server.'
 
@@ -92,6 +77,6 @@ task stop {
     ant.exec(executable: 'pkill') {
       arg(value: '-f')
       arg(value: mainClassName)
-    } 
+    }
   }
 }
